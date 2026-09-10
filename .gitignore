@@ -2,3 +2,6 @@
 dist/
 .DS_Store
 artifacts/
+graphify-out/
+releases/**/*.zip
+releases/**/SHA256SUMS.txt

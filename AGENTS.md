@@ -1,7 +1,35 @@
 # Agents
 
-Codex: project owner, architect, independent reviewer, QA and sole final approver.
-Claude Code: glm-5.3-flash; writes application code, tests, build scripts, README and revisions.
-Read PROJECT_SPEC.md and IMPLEMENTATION_PLAN.md. Maximum 5 implementation/review rounds; stop when all acceptance criteria pass. Never replace actual evidence with claims. No credential reads/logging, browser cookies, third-party telemetry or usage uploads. Do not modify global settings, unrelated files, accounts, or consume reset credits. No publishing.
-Codex owns REVIEW.md and acceptance decisions. Claude reports each round in ROUND_N_REPORT.md with files, commands, results, known issues and incomplete items.
-非必要情景不要用破折号和“不是……而是……”句型。结论有依据，准确注明来源。
+Codex 负责项目组织、架构、独立审核、质量验证和最终验收。Claude Code 负责编写应用代码、测试、构建脚本、实现说明和修订报告。
+
+## 开始工作前
+
+1. 阅读根目录的 `README.md`、`ROADMAP.md`、`PROVIDER_ENDPOINTS.md` 和当前版本目录。
+2. `docs/archive/v1.0/` 是已冻结的历史基线，不得用后续版本结论覆盖。
+3. 新版本资料放入 `docs/versions/<版本号>/`，至少包含需求、实施任务、审核和验收状态。
+4. 真实证据优先于实现报告。测试通过不能代替真实服务和真实界面的验收。
+
+## 协作与审核
+
+- Claude Code 在当前版本目录记录修改文件、执行命令、测试结果、已知问题和未完成事项。
+- Codex 独立检查代码差异、关键实现路径、自动测试、构建产物和必要的实际运行结果。
+- 不因实现耗时而中断、终止或重启正在工作的 Claude Code，除非用户明确要求。
+- `REVIEW.md` 仅记录当前版本状态，历史审核记录随版本归档。
+- 不发布、不推送远端、不消耗重置额度，除非用户明确要求。
+
+## 凭证与数据处理边界
+
+允许处理的凭证仅包括用户在应用内主动提供的 DeepSeek API Key，以及用户在应用自建窗口内完成智谱官方控制台登录后产生的会话数据。处理范围限于本地保存和读取对应平台余额。
+
+以下行为禁止：
+
+1. 读取、显示或修改全局 Claude 或 Codex 配置与认证文件，包括 `~/.codex/auth.json`。
+2. 读取任何现有浏览器的 Cookie、密码或会话。
+3. 把凭证写入源码、UserDefaults、日志、测试快照或文档。API Key 只能进入 macOS Keychain。
+4. 用模型请求验证任何 Key。网络层不得调用 chat/completions 或其他模型端点。
+5. 向第三方发送凭证。带认证的请求必须拒绝跨域重定向。
+6. 用 mock、估算值或错误字段冒充真实余额。接口口径未确认时不显示数字。
+
+公开接口和控制台接口的证据级别记录在 `PROVIDER_ENDPOINTS.md`，并随实现更新。
+
+非必要情景不要用破折号和“不是……而是……”句式。所有结论必须来自实际检查、测试、用户验证或明确的逻辑推理，并准确标明依据。

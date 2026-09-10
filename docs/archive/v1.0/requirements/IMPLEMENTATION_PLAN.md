@@ -28,3 +28,27 @@ All missing/null fields are unavailable, never zero. Classify by 300/10080 durat
 Round 1: Claude implements app, meaningful parser/transport/cache/lifecycle tests, build/bundle scripts, README and report.
 Codex independently reviews scope, build, tests, runtime, real data, correctness, security, cleanup, UI and DoD in that order.
 Rounds 2-5 only for specific findings. Final evidence must include app visible, real fetch, official Usage UI comparison including resets, manual/automatic refresh and owned child cleanup. Missing UI access is an explicit blocker, never PASS.
+
+## v1.1 revision (2026-09-09)
+Scope additions, in the order they were built:
+
+1. Unified provider result type `ProviderReport` (platform, account identifier, currency,
+   amount breakdown, last successful time, connection state). The UI depends on it, never on
+   provider JSON.
+2. Credentials only in the macOS Keychain, via `ProviderCredentialStoring`. Business caches
+   are separate and hold identifiers plus amounts, never credentials.
+3. Codex identity via `account/read` with `refreshToken: false`; the usage cache is keyed by
+   account, and the v1.0 unattributed store is never served when an account is known.
+4. DeepSeek `user/balance` with per-currency `Decimal` amounts.
+5. GLM candidate endpoint probe behind an explicit contract gate (`GLMContract.confirmed` is
+   empty), plus an in-app official console login with an app-owned web data store.
+6. `NSStatusItem` with a stable autosave name replacing `MenuBarExtra`, an adaptive
+   full/compact/icon label, and a pure geometry state machine in core so the decision is
+   testable without AppKit.
+7. Independent 5-minute provider refresh, 60-second panel-open threshold, in-flight
+   coalescing, stale-on-failure, auth suspension until reconnect.
+
+Design constraints carried over: no private API, no system-wide menu bar changes, no extra
+floating window, no network request added for the menu bar itself, no model endpoint reachable
+from the network layer. Endpoint evidence levels are recorded in PROVIDER_ENDPOINTS.md.
+

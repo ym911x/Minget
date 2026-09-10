@@ -1,0 +1,17 @@
+# UsageMonitor 1.0.0 archive manifest
+# Directory hashes are SHA-256 of the sorted per-file shasum output.
+# Reproduce a directory line with:
+# find <dir> -type f ! -name MANIFEST.sha256 -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256
+
+ad48d56bb70a32314d4e14d8cc6c3d072bc65eb4d9c501ce06e0b1d2481ff56d  Sources/
+e5971de7823098564726b3660d6b809b1334a1fa823837f9c33c6d775c330038  Tests/
+8af70f6b11a93cd98fd2acd9c5999d855543f9d8cb73129bea0cdcbb26d34b0c  docs/
+737280e85df15824ca3dd1c99c2e0754f0158eaf7de3467e252532f76881dab5  Package.swift
+43ba29c49e27986133f0778ef18ea2b2e34522a6b64f0bfdeac1440a474d9590  scripts/build.sh
+1cffb8d8c27336e2dd757a678bed58321aeb361f8fc977125c7b133643c9b2cf  README.md
+584059f8a26added0803d46f81f6d4e9ac0dc069cad7927cda540840d9b38493  AGENTS.md
+e21fdae6dfc2998c4f851ca69f462fb43478a6c2dae79ce7f8e04f54ecb86424  CHANGELOG.md
+90af16383f6b250abc26defec35ad36f4e96888e843ba43a7b07447220e32402  ROADMAP.md
+5716aed235a5db367694dbe0145f387750f4ae37e92ef15f749a8dc59f61bc38  REVIEW.md
+a582d26d870148d313f3db7fe8fcb604faa77aa08f7f6e0bea5ace53527c7918  PROVIDER_ENDPOINTS.md
+59854984853104df5c353e2f681a15fc7924742f9a2e468c29af248dce45ce03  VERSION
