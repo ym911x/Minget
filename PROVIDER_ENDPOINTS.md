@@ -66,3 +66,35 @@
 - 日志和诊断仅记录固定错误类别及脱敏结构，不记录凭据、Cookie 值、账号原始响应或上游错误正文。
 - 余额缺失、字段不合法或接口口径不明时显示不可用，不伪造为零。
 - 测试使用合成凭据，不包含真实 API Key。
+
+---
+
+## English summary
+
+This document records the data sources, evidence level, and security boundaries used by Minget 1.0.0.
+
+### Codex
+
+- `account/rateLimits/read` and `account/read` are called through the local `codex app-server` stdio JSON-RPC connection.
+- `account/read` uses `{"refreshToken": false}` and does not read `~/.codex/auth.json`.
+- Menu bar geometry checks are local and do not use network requests or model tokens.
+
+### DeepSeek
+
+- Minget calls the documented `GET https://api.deepseek.com/user/balance` endpoint.
+- Amounts use decimal arithmetic and currencies remain separate.
+- The API key is stored only in macOS Keychain and is never used for model inference.
+
+### Zhipu GLM
+
+- Minget calls `GET https://bigmodel.cn/api/biz/account/query-customer-account-report` from an isolated in-app console session.
+- The request uses session information created inside Minget's own `WKWebView`. Existing browser cookies are never read or imported.
+- This is a console-internal endpoint rather than a documented stable public API, so future console changes may require an adapter update.
+- The user verified the balance and account totals with a real account in the app.
+
+### Shared safeguards
+
+- Authenticated requests reject cross-origin redirects.
+- Provider clients use endpoint allow-lists and explicitly block model inference paths.
+- Logs and diagnostics exclude keys, cookie values, tokens, raw account responses, and upstream error bodies.
+- Missing or invalid balance fields are reported as unavailable and are never converted into fabricated zero values.

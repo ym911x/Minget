@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build dist/UsageMonitor.app from the Swift package.
+# Build the Minget app bundle from the UsageMonitor Swift package.
 #
 # Usage: scripts/build.sh [--debug]
 #   default: release build
@@ -15,7 +15,8 @@ if [[ "${1:-}" == "--debug" ]]; then
   CONFIG="debug"
 fi
 
-APP_NAME="UsageMonitor"
+APP_NAME="Minget"
+EXECUTABLE_NAME="UsageMonitor"
 BUNDLE_ID="local.usagemonitor.UsageMonitor"
 DIST="dist"
 CONTENTS="$DIST/$APP_NAME.app/Contents"
@@ -23,7 +24,7 @@ CONTENTS="$DIST/$APP_NAME.app/Contents"
 echo "== swift build ($CONFIG) =="
 swift build --package-path . -c "$CONFIG"
 
-BIN_DIR=".build/arm64-apple-macosx/$CONFIG"
+BIN_DIR="$(swift build --package-path . -c "$CONFIG" --show-bin-path)"
 EXEC_APP="$BIN_DIR/UsageMonitorApp"
 EXEC_CLI="$BIN_DIR/UsageMonitorCLI"
 [[ -x "$EXEC_APP" ]] || { echo "missing $EXEC_APP" >&2; exit 1; }
@@ -33,8 +34,9 @@ echo "== staging $DIST/$APP_NAME.app =="
 rm -rf "$DIST/$APP_NAME.app"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
-cp "$EXEC_APP" "$CONTENTS/MacOS/$APP_NAME"
+cp "$EXEC_APP" "$CONTENTS/MacOS/$EXECUTABLE_NAME"
 cp "$EXEC_CLI" "$CONTENTS/MacOS/${APP_NAME}CLI"   # QA smoke diagnostic, same production service
+cp "assets/brand/Minget.icns" "$CONTENTS/Resources/Minget.icns"
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -42,11 +44,12 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
-    <key>CFBundleDisplayName</key><string>Codex 用量</string>
-    <key>CFBundleExecutable</key><string>$APP_NAME</string>
+    <key>CFBundleDisplayName</key><string>明明有数 · Minget</string>
+    <key>CFBundleExecutable</key><string>$EXECUTABLE_NAME</string>
     <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>$APP_NAME</string>
+    <key>CFBundleIconFile</key><string>Minget</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$APP_VERSION</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -62,18 +65,21 @@ PLIST
 printf 'APPL????' > "$CONTENTS/PkgInfo"
 
 cat > "$CONTENTS/Resources/README.txt" <<'TXT'
-UsageMonitor (Codex 用量)
+明明有数 · Minget
+你的 AI 使用，心里有数。
+Your AI usage, at a glance.
 
 Runs a single `codex app-server` child process for the app's lifetime and reads
 account rate limits over stdio JSON-RPC. Only normalized usage numbers are cached.
 
-Contents/MacOS/UsageMonitorCLI is the QA smoke diagnostic:
-  UsageMonitor.app/Contents/MacOS/UsageMonitorCLI
+Contents/MacOS/MingetCLI is the QA smoke diagnostic:
+  Minget.app/Contents/MacOS/MingetCLI
 It prints normalized usage and child lifecycle events only.
 TXT
 
 echo "== codesign (ad-hoc) =="
 # Fail closed: a bundle that cannot be signed or verified must not be reported as built.
+xattr -cr "$DIST/$APP_NAME.app"
 if ! codesign --force --sign - "$DIST/$APP_NAME.app"; then
   echo "error: ad-hoc codesign failed" >&2
   exit 1

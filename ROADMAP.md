@@ -1,5 +1,9 @@
 # 后续版本路线图
 
+产品名称：明明有数 · Minget
+
+产品定位：统一查看和管理个人 AI 服务使用状态、可用资源与成本信息的 macOS 菜单栏工具。
+
 ## 当前基线
 
 `v1.0.0` 已冻结。新功能和行为调整从下一版本开始记录，不回写 v1.0 的历史方案、任务单和审核报告。
@@ -23,3 +27,11 @@
 3. Claude Code 按任务单实现，Codex 独立检查差异、测试结果和实际运行表现。
 4. 用户完成真实账号和真实界面的最终体验验收。
 5. 更新 `CHANGELOG.md`、`VERSION` 和归档清单，并建立对应 Git 标签。
+
+---
+
+## English summary
+
+The `v1.0.0` baseline is frozen. Candidate directions include stronger Zhipu session recovery, improved DeepSeek credential UX, optional provider balances in the menu bar, multiple Codex accounts, local threshold notifications, notarized distribution, and privacy-safe diagnostics export.
+
+Each future version receives its own requirements, implementation plan, review, and acceptance records under `docs/versions/<version>/`. Historical v1.0 documents remain unchanged.

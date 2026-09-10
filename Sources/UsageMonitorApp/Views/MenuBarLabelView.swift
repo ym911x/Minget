@@ -40,15 +40,13 @@ struct MenuBarLabelView: View {
 
     @ViewBuilder
     private func icon(size: CGFloat) -> some View {
-        Image(systemName: model.isStale ? "exclamationmark.triangle" : "gauge.with.needle")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: size, height: size)
+        Text("M²")
+            .font(.system(size: size, weight: .bold, design: .rounded))
             .foregroundStyle(model.isStale ? Color.orange : Color.primary)
     }
 
     private var accessibilityText: String {
         let staleness = model.isStale ? "，数据为缓存" : ""
-        return "Codex 用量菜单栏，\(model.menuBarTitle)\(staleness)"
+        return "明明有数 · Minget 菜单栏，\(model.menuBarTitle)\(staleness)"
     }
 }

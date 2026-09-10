@@ -15,6 +15,7 @@ struct UsagePanelView: View {
     /// interrupt typing (Round 7 requirement 4).
     @StateObject private var deepSeekForm: ConnectionFormState
     @StateObject private var glmForm: ConnectionFormState
+    @State private var showsAbout = false
 
     init(model: UsageViewModel,
          onDetailWindow: (() -> Void)? = nil,
@@ -48,6 +49,9 @@ struct UsagePanelView: View {
         }
         .frame(width: 320, height: 470)
         .onAppear { model.panelWillOpen() }
+        .sheet(isPresented: $showsAbout) {
+            MingetAboutView()
+        }
     }
 
     private var deepSeekReport: ProviderReport {
@@ -212,6 +216,7 @@ struct UsagePanelView: View {
                 }
 
                 Spacer()
+                Button("关于") { showsAbout = true }
                 Button("退出") { onQuit() }
             }
             .controlSize(.small)

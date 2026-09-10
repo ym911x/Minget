@@ -99,7 +99,7 @@ final class StatusItemController: NSObject {
         item.autosaveName = Self.autosaveName
         guard let button = item.button else { return }
 
-        button.setAccessibilityLabel("Codex 用量菜单栏")
+        button.setAccessibilityLabel("明明有数 · Minget 菜单栏")
 
         popover.behavior = .transient
         popover.animates = false

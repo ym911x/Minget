@@ -2,7 +2,7 @@
 
 ## 应用结构
 
-UsageMonitor 是基于 Swift Package Manager 构建的 macOS 菜单栏应用。主要代码位于 `Sources`，测试位于 `Tests`。
+明明有数 · Minget 是基于 Swift Package Manager 构建的 macOS 菜单栏应用。工程内部继续使用 `UsageMonitor` 标识，主要代码位于 `Sources`，测试位于 `Tests`。
 
 | 模块 | 职责 |
 | --- | --- |
@@ -48,3 +48,17 @@ flowchart LR
 - 智谱登录会话留在应用自己的 WebKit 数据存储中。
 - 调试与归档产物默认位于被 Git 忽略的 `artifacts/`。
 - 任何新增服务都应先验证官方取数路径、费用和凭据边界，再进入实现。
+
+---
+
+## English summary
+
+Minget is a Swift Package Manager based macOS menu bar application. The internal package and module names remain `UsageMonitor` for compatibility.
+
+- `UsageMonitorApp` owns the application lifecycle, status item, panel, connection UI, and settings.
+- `UsageMonitorCore` owns models, parsing, refresh scheduling, provider clients, caching, and security rules.
+- Codex data comes from the local `codex app-server` over stdio JSON-RPC.
+- DeepSeek data comes from its official balance endpoint; the API key is stored in macOS Keychain.
+- Zhipu GLM data comes from an isolated in-app `WKWebView` console session. Existing browser cookies are never imported.
+- Geometry checks for notch and menu bar visibility are fully local and do not consume model tokens.
+- Logs and diagnostics exclude API keys, access tokens, full cookies, and raw account responses.

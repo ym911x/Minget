@@ -99,7 +99,7 @@ final class StatusItemWiringTests: XCTestCase {
         let item = try XCTUnwrap(controller.statusItem)
         XCTAssertGreaterThan(item.length, 0, "the label width must be applied to the registered item")
         let button = try XCTUnwrap(item.button)
-        XCTAssertEqual(button.accessibilityLabel(), "Codex 用量菜单栏")
+        XCTAssertEqual(button.accessibilityLabel(), "明明有数 · Minget 菜单栏")
 
         controller.uninstall()
     }

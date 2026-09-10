@@ -1,5 +1,14 @@
 # 变更记录
 
+## 1.0.1（2026-09-10）
+
+### 品牌
+
+- 对外产品品牌由工程代号 UsageMonitor 更新为「明明有数 · Minget」。
+- 确立品牌视觉符号 `M²`，以及固定的中英文 Slogan。
+- 更新 README、应用显示名称、关于页面、菜单栏识别和应用图标。
+- Swift Package、Target、Bundle Identifier、缓存键以及 v1.0 历史归档继续保留原工程标识。
+
 ## 1.0.0（2026-09-10）
 
 首个完成实际运行验证的正式版本。
@@ -25,3 +34,17 @@
 - 智谱取数依赖控制台当前的网页接口和登录会话，控制台改版后可能需要适配。
 - 长时间运行下的智谱登录会话寿命仍需在后续版本持续观察。
 - 当前为 Apple Silicon 构建，尚未制作通用二进制或公证安装包。
+
+---
+
+## English summary
+
+### 1.0.1 (2026-09-10)
+
+- Updated the public product identity from the `UsageMonitor` engineering name to **明明有数 · Minget**.
+- Added the M² app icon, bilingual slogans, About view, branded app bundle name, and public documentation.
+- Retained internal package, target, bundle identifier, persistence keys, and frozen v1.0 archive names for compatibility.
+
+### 1.0.0 (2026-09-10)
+
+The first user-validated release. It displays Codex usage windows and account identity, DeepSeek balances, and Zhipu GLM console balances. The release passed 274 automated tests and a local Apple Silicon release build. The app is ad-hoc signed and is not yet notarized for public binary distribution.
