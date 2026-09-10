@@ -12,6 +12,17 @@ import XCTest
 @MainActor
 final class StatusItemWiringTests: XCTestCase {
 
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+
+        // GitHub-hosted macOS runners do not provide a WindowServer connection. AppKit
+        // status-item creation aborts there before XCTest can make an assertion. These
+        // integration tests still run in full on a logged-in local macOS session.
+        if ProcessInfo.processInfo.environment["CI"] == "true" {
+            throw XCTSkip("Status-item integration tests require a logged-in macOS window server")
+        }
+    }
+
     /// A service whose factory never launches `codex app-server`, and an engine over no
     /// real readers: fetching would fail without touching the outside world, which is
     /// exactly what these tests need.
