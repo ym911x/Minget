@@ -23,9 +23,27 @@ public protocol ProviderReading: AnyObject, Sendable {
     /// True when automatic refresh should run. Platforms whose contract is still
     /// unconfirmed opt out of the periodic cycle and are read on demand only.
     var isAutomaticRefreshEnabled: Bool { get }
+    /// What this reader knows about its credential, answered from memory only. Status
+    /// questions must never touch the keychain (KEYCHAIN_REVISION_PLAN.md P1.3).
+    var credentialState: ProviderCredentialState { get }
+    /// One background credential read, so later status questions can be answered from memory.
+    func primeCredentialState() async
+    /// One credential read the user asked for. Only this may show the system dialog.
+    @discardableResult
+    func authorizeCredentialAccess() async -> Bool
     func read() async throws -> ProviderReadResult
-    /// Removes the stored credential and any session state.
+    /// Removes the stored credential and any session state. Throwing means the credential is
+    /// still there, and the caller must not report a disconnect.
     func disconnect() throws
+}
+
+public extension ProviderReading {
+    /// Default for readings that own no keychain credential, such as test fakes: their own
+    /// `isConfigured` is the whole truth.
+    var credentialState: ProviderCredentialState { isConfigured ? .configured : .missing }
+    func primeCredentialState() async {}
+    @discardableResult
+    func authorizeCredentialAccess() async -> Bool { isConfigured }
 }
 
 /// A reader that can prove its connection with a read-only probe before the first balance
@@ -114,9 +132,23 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
 
         guard let reader else { return Self.emptyReport(platform: platform) }
 
-        if !reader.isConfigured {
+        // The credential question is answered from memory. A stored-but-unreadable credential
+        // is its own state: telling the user to enter a key they already entered would be
+        // wrong (KEYCHAIN_REVISION_PLAN.md P1.3 and P1.8).
+        switch reader.credentialState {
+        case .configured, .unknown:
+            break   // unknown is transient: the startup pass is still running
+        case .missing:
             return ProviderReport(platform: platform, accountID: nil, balances: [],
                                   lastSuccessAt: nil, connection: .notConfigured,
+                                  isLive: false, error: nil, consoleURL: consoleURL)
+        case .needsAuthorization:
+            return ProviderReport(platform: platform, accountID: nil, balances: [],
+                                  lastSuccessAt: nil, connection: .needsAuthorization,
+                                  isLive: false, error: .credentialAccessBlocked, consoleURL: consoleURL)
+        case .unavailable:
+            return ProviderReport(platform: platform, accountID: nil, balances: [],
+                                  lastSuccessAt: nil, connection: .unavailable,
                                   isLive: false, error: nil, consoleURL: consoleURL)
         }
         // Nothing has been read yet in this run: connect or wait for the in-flight read.
@@ -188,6 +220,25 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         return clock().timeIntervalSince(lastSuccessAt) > panelOpenRefreshAge
     }
 
+    // MARK: - Credential priming and authorisation
+
+    /// One background credential pass for every reader, so every later status question can be
+    /// answered from memory. Performs no network work and never shows UI.
+    public func primeCredentials() async {
+        for platform in [ProviderPlatform.deepseek, .glm] {
+            guard let reader = readers[platform] else { continue }
+            await reader.primeCredentialState()
+        }
+    }
+
+    /// One user-initiated credential read for a platform. True means a credential became
+    /// readable, so the caller should read the platform again.
+    @discardableResult
+    public func authorizeCredentialAccess(platform: ProviderPlatform) async -> Bool {
+        guard let reader = readers[platform] else { return false }
+        return await reader.authorizeCredentialAccess()
+    }
+
     // MARK: - Refreshing
 
     /// Refreshes one platform. Concurrent calls coalesce: a second caller awaiting the same
@@ -197,7 +248,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         // An open auth suspension stops automatic work. Only an explicit user action
         // (reconnect) clears it, so a revoked key is not retried forever.
         if !force && isAuthSuspended(platform) { return report(for: platform) }
-        if let reader = readers[platform], !reader.isConfigured { return report(for: platform) }
+        if let reader = readers[platform], !reader.credentialState.isConfigured { return report(for: platform) }
 
         // Reserve the in-flight slot atomically, so two callers cannot both start a read.
         // Reads from different credential generations never coalesce: a credential change
@@ -228,7 +279,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     public func refreshScheduled() async {
         for platform in [ProviderPlatform.deepseek, .glm] {
             guard let reader = readers[platform] else { continue }
-            guard reader.isConfigured, reader.isAutomaticRefreshEnabled else { continue }
+            guard reader.credentialState.isConfigured, reader.isAutomaticRefreshEnabled else { continue }
             await refresh(platform: platform, force: false)
         }
     }
@@ -262,7 +313,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     @discardableResult
     public func connectAfterCredentialChange(platform: ProviderPlatform) async -> ProviderReport {
         invalidateAttribution(platform: platform)
-        guard let reader = readers[platform], reader.isConfigured else {
+        guard let reader = readers[platform], reader.credentialState.isConfigured else {
             return report(for: platform)
         }
         if let probeable = reader as? ProviderProbeReading, !reader.isAutomaticRefreshEnabled {
@@ -288,18 +339,33 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
 
     /// Removes the credential and everything derived from it: the platform's cached
     /// numbers included, so a disconnected account leaves nothing behind.
-    public func disconnect(platform: ProviderPlatform) {
+    ///
+    /// Returns the failure when the credential could not be removed. The cached numbers and
+    /// the recorded state are then left untouched: reporting a disconnect that did not
+    /// happen would be a lie the user cannot see through
+    /// (KEYCHAIN_REVISION_PLAN.md P1.8).
+    @discardableResult
+    public func disconnect(platform: ProviderPlatform) -> ProviderFailure? {
         lock.lock(); defer { lock.unlock() }
         inFlight[platform] = nil
+        var failure: ProviderFailure?
         if let reader = readers[platform] {
-            try? reader.disconnect()
+            do {
+                try reader.disconnect()
+            } catch let providerFailure as ProviderFailure {
+                failure = providerFailure
+            } catch {
+                failure = .other
+            }
         }
+        guard failure == nil else { return failure }
         cache.clear(platform: platform)
         locked {
             states[platform] = nil
             // An in-flight read of the removed credential must not resurrect state.
             generations[platform, default: 0] += 1
         }
+        return nil
     }
 
     // MARK: - Internals

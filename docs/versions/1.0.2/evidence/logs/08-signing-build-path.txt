@@ -1,0 +1,43 @@
+== 采集时间 ==
+2026-09-10T18:13:34Z
+
+== 改动后的脚本语法检查 ==
+scripts/build.sh: bash -n OK
+scripts/make-signing-identity.sh: bash -n OK
+
+== 路径 1：默认（要求签名身份，fail closed）==
+-- 运行前 --
+  DR: # designated => cdhash H"aedb372dfff4c7c523b32b905cc870205f163a32"
+  mtime: 2026-09-11 02:13:13  size: 2279904
+exit=1
+error: signing identity 'Minget Local Signing' not found in the keychain
+       create it once:  scripts/make-signing-identity.sh
+       or build ad-hoc: MINGET_SIGN_IDENTITY=- scripts/build.sh
+-- 运行后（应与运行前逐字段一致）--
+  DR: # designated => cdhash H"aedb372dfff4c7c523b32b905cc870205f163a32"
+  mtime: 2026-09-11 02:13:13  size: 2279904
+
+== 路径 2：MINGET_SIGN_IDENTITY=- （ad-hoc 回退）==
+== verify ==
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+dist/Minget.app/Contents/Info.plist: OK
+built: dist/Minget.app
+
+-- 回退后的签名 --
+Identifier=local.usagemonitor.UsageMonitor
+CodeDirectory v=20400 size=4632 flags=0x2(adhoc) hashes=138+3 location=embedded
+Signature=adhoc
+TeamIdentifier=not set
+  DR: # designated => cdhash H"aedb372dfff4c7c523b32b905cc870205f163a32"
+  mtime: 2026-09-11 02:13:35  size: 2279904
+  CFBundleShortVersionString: 1.0.2
+
+== 关键观察：源码未变时重建，cdhash 不变 ==
+  重建前后 DR 均为 cdhash H"aedb372dfff4c7c523b32b905cc870205f163a32"。
+  据此修正 SIGNING_HANDOFF.md 2.3 第 2 条：cdhash 随二进制内容变化，不随「重建」这一动作本身变化。
+  结论不变：ad-hoc 的 DR 退化到 cdhash，代码一变（或与创建钥匙串条目时的版本不同）ACL 即失配。
+
+== 未执行的动作 ==
+  未创建证书、未 import 任何身份、未运行 security set-key-partition-list、未触碰钥匙串条目。
+  scripts/make-signing-identity.sh 目前仅通过 bash -n 语法检查，端到端未验证。

@@ -1,0 +1,37 @@
+== 采集时间 ==
+2026-09-10T18:56:42Z
+
+== 现象：staging 静默失败，dist/ 里留下 debug 构建 ==
+本回合内多次执行 ./scripts/build.sh 与 ./scripts/build.sh --debug 后，最后一次默认构建输出为：
+  == staging dist/Minget.app ==
+  [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":56,"threshold":50,"scope":"turn",...}
+  在受控环境里，rm -rf 因「单回合累计删除文件数超阈值」被拒。
+  原脚本对此没有检查，随后继续 mkdir/cp，于是把 debug 构建的二进制留在了 dist/Minget.app，
+  并以 exit=0 打印 built: dist/Minget.app。实测该包 CDHash=0173a4fc…（debug），而非 release 的 e4842fa1…。
+
+== 修复：staging 后加存在性检查，失败即非零退出 ==
+  rm -rf "$DIST/$APP_NAME.app"
+  if [[ -e "$DIST/$APP_NAME.app" ]]; then echo error...; exit 1; fi
+
+== 修复后的行为实测（同一回合，删除预算已耗尽）==
+  ./scripts/build.sh 输出：
+    == staging dist/Minget.app ==
+    exit=1
+  脚本在 staging 之前中止，未触碰已有产物。
+
+== 修复前后 dist/Minget.app 状态 ==
+  CDHash        : e4842fa16f617d4c5fb28d3dc39136e705d496eb
+  Authority     : Minget Local Signing
+  DR            : H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+  version       : 1.0.2
+  包内文件数    : 7
+  verify        : dist/Minget.app: valid on disk
+
+== 受损包的处置 ==
+  已移动到 /tmp/minget-broken/Minget.broken.app，未删除，可恢复对照。
+total 0
+drwxr-xr-x 3 yuyimeng staff 96 2026-09-11 02:54 Minget.broken.app
+
+== 结论 ==
+  该事件属受控执行环境的安全限制，不是源码问题；但它暴露了 build.sh 的一个真实脆弱点：
+  删除失败时脚本会产出「既不是上一版也不是新版」的混合包，并误报构建成功。现已 fail closed。

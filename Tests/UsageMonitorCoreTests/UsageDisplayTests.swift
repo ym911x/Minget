@@ -31,7 +31,8 @@ final class UsageDisplayTests: XCTestCase {
         }
         XCTAssertTrue(display.isStale)
         XCTAssertEqual(error.debugSummary, "rpcFailed(other)")
-        XCTAssertEqual(display.menuBarTitle, "5H 75% | W 42% ⚠")
+        // v1.0.2 requirement 4: the text is marker-free; the warning is drawn in front of it.
+        XCTAssertEqual(display.menuBarTitle, "5H 75% | W 42%")
     }
 
     func testCachedResultWithErrorShowsTheError() {
@@ -41,7 +42,8 @@ final class UsageDisplayTests: XCTestCase {
         let display = UsageDisplay(fetchResult: result)
         guard case .stale(_, let error) = display else { return XCTFail("expected stale, got \(display)") }
         XCTAssertEqual(error, .rpcFailed(.timedOut(method: "account/rateLimits/read")))
-        XCTAssertTrue(display.menuBarTitle.hasSuffix("⚠"))
+        XCTAssertEqual(display.menuBarTitle, "5H 75% | W 42%", "no trailing marker is built into the text")
+        XCTAssertEqual(MenuBarContentBuilder.attention(for: display, connectionState: .connected), .warning)
     }
 
     func testFailedFetchWithoutCacheIsUnavailable() {
@@ -56,7 +58,8 @@ final class UsageDisplayTests: XCTestCase {
         let display = UsageDisplay(error: .codexNotSignedIn, cached: snapshot(source: .cached))
         guard case .stale(_, let error) = display else { return XCTFail("expected stale, got \(display)") }
         XCTAssertEqual(error, .codexNotSignedIn)
-        XCTAssertEqual(display.menuBarTitle, "5H 75% | W 42% ⚠")
+        XCTAssertEqual(display.menuBarTitle, "5H 75% | W 42%")
+        XCTAssertEqual(MenuBarContentBuilder.attention(for: display, connectionState: .disconnected), .warning)
     }
 
     func testLiveFlagWithoutLiveSourceIsTreatedAsCached() {

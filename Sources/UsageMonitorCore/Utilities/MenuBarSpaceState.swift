@@ -4,11 +4,13 @@ import CoreGraphics
 /// How much of the two-quota title the menu bar can currently show.
 /// The progression required by v1.1 is full → compact → icon.
 public enum MenuBarSpaceMode: String, CaseIterable, Codable, Sendable {
-    /// `5H 78% | W 42%`
+    /// `5H 78% | W 42%`, with both time rows.
     case full
-    /// `78% / 42%`
+    /// `5H 78% W 42%`, with both time rows.
     case compact
-    /// Icon only.
+    /// Minimal-space fallback. The case name is kept for compatibility, but v1.0.2 changed the
+    /// visual to the plain text `5H` with no time rows: the brand icon is gone from the menu
+    /// bar, and at this width the two rows would be illegible.
     case icon
 
     public var nextSmaller: MenuBarSpaceMode? {
@@ -27,12 +29,13 @@ public enum MenuBarSpaceMode: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    /// Fixed display hint, used by tests and by the accessibility label.
+    /// Fixed display hint, used by tests and by diagnostics. `rawValue` stays `icon` so
+    /// persisted values keep working; this label reflects what is actually drawn.
     public var description: String {
         switch self {
         case .full: return "full"
         case .compact: return "compact"
-        case .icon: return "icon"
+        case .icon: return "minimalText"
         }
     }
 }

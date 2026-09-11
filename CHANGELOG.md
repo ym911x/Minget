@@ -1,5 +1,49 @@
 # 变更记录
 
+## 1.0.2（2026-09-12）
+
+状态：实现、独立审核与用户真实界面验收完成。资料见 [docs/versions/1.0.2](docs/versions/1.0.2/)。
+
+### 菜单栏
+
+- 移除菜单栏内的品牌图标 `M²`。三种空间模式都以纯文字显示额度，正常态从 `5H` 起头，不再保留图标占位空隙。
+- 在额度文字下方新增两排重置时间分段条：上排 5 段对应 5 小时窗口，下排 7 段对应周窗口。两排左右端严格对齐额度文字的实测宽度。
+- 亮区随时间从右向左缩退，到重置时间时整排变空并等待下一次真实刷新，不自行恢复满格。
+- 7 段按「每段 1 天、合计 7 天」实现，而不是每段一周。这是对用户原话的明确设计解释，详见 [需求与实施任务书](docs/versions/1.0.2/REVISION_SPEC.md) 第 1.3 节。
+- 重置时间未知或非法时，该排轨道变淡并以一个 `?` 区分「未知」与「已到期」，不新增第二处警告。
+- 菜单栏异常提示统一为文字前方的一个标记（SF Symbol 警告三角），删除字符串尾部追加的 `⚠`。同一时刻最多一个标记。
+
+### 交互
+
+- 菜单栏详情弹层支持点击外部收起，覆盖桌面、其他应用、其他状态项与本应用的独立窗口，收起后原点击仍作用到原目标。
+- 普通详情窗口与 GLM 登录窗口保持普通窗口行为，不因其他位置点击而自动关闭。
+
+### 修复
+
+- 修正状态项首次布局使用 fallback 宽度参与截断判定，导致空间充足的菜单栏被误判为截断、并降级到最小兜底且自动弹出详情窗口的问题。
+- 修正唤醒通知注册在默认通知中心因而从不触发的问题，改用 `NSWorkspace.shared.notificationCenter`。
+
+### 构建
+
+- `scripts/build.sh` 默认改用本地代码签名身份 `Minget Local Signing`，解决 ad-hoc 签名导致的钥匙串反复授权弹框。签名身份不存在时构建以非零退出，不产出未签名包；`MINGET_SIGN_IDENTITY=- ./scripts/build.sh` 可回退到 ad-hoc。
+- 新增 `scripts/make-signing-identity.sh`，用于生成并导入该自签名证书。本机已创建 `Minget Local Signing` 身份，当前候选包已使用该身份签名并通过严格校验。
+
+### 钥匙串与凭证（KEYCHAIN_REVISION_PLAN.md）
+
+- 凭证读取返回类型化结果（可用/不存在/需要交互/已拒绝/其他），失败不再全部折叠为"未配置"；只有 `errSecItemNotFound` 报告为不存在，其余保留原始状态码。
+- 新增凭证访问协调器：本进程全部钥匙串调用走一条串行队列，同一凭证的并发读取合并为一次访问，成功值仅存进程内存。
+- 启动、状态查询与后台刷新不再直接访问钥匙串：先做一次后台无交互读取，被拒后显示「需要授权」并暂停该平台自动尝试；只有用户点「授权读取」才会进行一次可能弹窗的读取。
+- DeepSeek 一次读取的凭证同时用于余额请求与账号指纹；GLM 只加载已选连接模式需要的凭证，控制台模式不再探测旧 API Key。
+- 钥匙串写入与删除失败会传播到界面：删除失败显示「断开失败」，授权拒绝不再引导重新输入 Key。
+- 面板新增「记录钥匙串访问诊断」开关，把每次凭证访问的类别、状态码与耗时写入应用自身目录，正常启动即可采集。
+- 构建脚本将候选包安装到 `~/Applications/Minget.app` 并做严格校验；`dist/Minget.app` 为归档副本（位于 iCloud 路径，严格校验受文件提供方属性影响，差异由脚本显式记录）。
+
+### 验证
+
+- 自动化测试：359 项通过，0 项失败，0 项跳过。
+- 候选包完成构建、Info.plist 校验与代码签名校验，`CFBundleShortVersionString` 为 `1.0.2`。
+- 真实进程运行验证了模式保持、测宽替换、退出清理与钥匙串读取。用户已确认钥匙串只弹一次，选择“始终允许”后不再重复弹出；点击菜单栏详情后再点击桌面或其他应用，详情会立即收起且原点击有效。
+
 ## 1.0.1（2026-09-10）
 
 ### 品牌
@@ -38,6 +82,19 @@
 ---
 
 ## English summary
+
+### 1.0.2 (2026-09-12)
+
+Implementation, independent review, and user validation are complete. See [docs/versions/1.0.2](docs/versions/1.0.2/).
+
+- Removed the `M²` brand mark from the menu bar in all space modes; the quota text now starts with `5H`.
+- Added two rows of reset-time segments under the quota text: 5 segments for the five-hour window and 7 for the weekly window, both spanning the measured text width. The bright region recedes from right to left and empties at the reset time without refilling locally.
+- The 7 weekly segments are one day each (7 days total), not one week each. This is a documented interpretation of the original wording.
+- Unified the abnormal marker into a single leading marker and removed the trailing `⚠` appended by the formatting layer.
+- The transient menu bar popover now collapses on an outside click while the click still reaches its original target; independent windows are unaffected.
+- Fixed a first-layout defect where the per-mode fallback width was used as the truncation baseline, which downgraded a roomy menu bar to the minimal fallback and auto-opened the detail window.
+- Fixed the wake notification being registered on the wrong notification centre.
+- 345 automated tests pass; the candidate bundle is built and signature-verified. Real menu bar screenshots and real click interactions remain unverified on this machine.
 
 ### 1.0.1 (2026-09-10)
 

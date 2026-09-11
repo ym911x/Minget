@@ -156,6 +156,13 @@ struct UsagePanelView: View {
                 sectionHeader(title: platform.displayName,
                               subtitle: subtitle(for: report))
                 Spacer()
+                // Only shown when the credential is stored but unreadable: one press, one
+                // controlled read that may show the system dialog, and nothing on a timer
+                // (KEYCHAIN_REVISION_PLAN.md P1.4).
+                if report.connection == .needsAuthorization {
+                    Button("授权读取") { model.authorizeCredentialAccess(platform) }
+                        .controlSize(.small)
+                }
                 Button(form.isExpanded ? "收起" : "连接") { form.toggle() }
                     .controlSize(.small)
             }
@@ -187,6 +194,7 @@ struct UsagePanelView: View {
         case .stale: return "已连接（数据已过期）"
         case .unavailable: return "无法连接"
         case .authSuspended: return "需要重新连接"
+        case .needsAuthorization: return "需要授权"
         case .unverified: return "暂无法连接"
         }
     }
@@ -220,6 +228,24 @@ struct UsagePanelView: View {
                 Button("退出") { onQuit() }
             }
             .controlSize(.small)
+
+            // In-app switch for the call-level credential diagnostics. Works on a normal
+            // launch, unlike the lifecycle log which needs an environment variable set before
+            // the process exists (KEYCHAIN_REVISION_PLAN.md P0.4).
+            Divider()
+            Toggle(isOn: Binding(get: { model.isCredentialDiagnosticOn },
+                                 set: { model.setCredentialDiagnostics($0) })) {
+                Text("记录钥匙串访问诊断")
+                    .font(.system(size: 10))
+            }
+            .controlSize(.small)
+            if model.isCredentialDiagnosticOn, let path = model.credentialDiagnosticPath {
+                Text(path)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+            }
         }
     }
 

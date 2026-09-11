@@ -1,0 +1,64 @@
+2026-09-10 17:45:23 +0000 [UsageMonitor] applicationDidFinishLaunching
+2026-09-10 17:45:36 +0000 [UsageMonitor] viewmodel start
+2026-09-10 17:45:36 +0000 [UsageMonitor] starting app-server child
+2026-09-10 17:45:36 +0000 [UsageMonitor] app-server child started pid 26586
+2026-09-10 17:45:37 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:45:37 +0000 [UsageMonitor] display live
+2026-09-10 17:45:37 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1316 w116 requested:132 mode:full
+2026-09-10 17:45:37 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1316 w110 requested:132 mode:compact
+2026-09-10 17:45:37 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1316 w44 requested:132 mode:minimalText
+2026-09-10 17:45:37 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:45:37 +0000 [UsageMonitor] status item not visible at launch, opening detail window
+2026-09-10 17:45:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:46:04 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:46:55 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:46:56 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:48:09 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:48:09 +0000 [UsageMonitor] display live
+2026-09-10 17:48:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:48:26 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:48:36 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:48:37 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:48:37 +0000 [UsageMonitor] display live
+2026-09-10 17:48:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:48:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:06 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:08 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:49:08 +0000 [UsageMonitor] display live
+2026-09-10 17:49:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:27 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:37 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:38 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:49:38 +0000 [UsageMonitor] display live
+2026-09-10 17:49:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:49:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:06 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:26 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:36 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:37 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:50:37 +0000 [UsageMonitor] display live
+2026-09-10 17:50:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:50:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:06 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:32 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:36 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:37 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:51:37 +0000 [UsageMonitor] display live
+2026-09-10 17:51:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:51:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:06 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:26 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:36 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:37 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:52:37 +0000 [UsageMonitor] display live
+2026-09-10 17:52:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:52:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:53:06 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:53:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:y frame:x1420 w44 requested:100 mode:minimalText
+2026-09-10 17:53:19 +0000 [UsageMonitor] termination requested
+2026-09-10 17:53:19 +0000 [UsageMonitor] service stopped (generation 1, drained=no)
+2026-09-10 17:53:19 +0000 [UsageMonitor] viewmodel stopped
+2026-09-10 17:53:19 +0000 [UsageMonitor] service stopped (generation 2, drained=no)

@@ -56,8 +56,12 @@ public enum UsageDisplay: Equatable {
         }
     }
 
-    /// Menu bar title: `5H 78% | W 42%`, with ⚠ whenever the data is cached.
+    /// Menu bar quota text: `5H 78% | W 42%`, with no marker in any state.
+    ///
+    /// v1.0.2 requirement 4: staleness is no longer expressed by appending `⚠` here. The
+    /// single leading marker is chosen by `MenuBarContentBuilder.attention(for:connectionState:)`
+    /// so that the cache hint and the failure hint cannot both appear.
     public var menuBarTitle: String {
-        UsageFormatting.menuBarTitle(fiveHour: snapshot?.fiveHour, weekly: snapshot?.weekly, isStale: isStale)
+        UsageFormatting.menuBarTitle(fiveHour: snapshot?.fiveHour, weekly: snapshot?.weekly)
     }
 }

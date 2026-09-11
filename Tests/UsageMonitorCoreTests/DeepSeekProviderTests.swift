@@ -5,14 +5,11 @@ import XCTest
 /// honest handling of HTTP 200 business failures.
 final class DeepSeekProviderTests: XCTestCase {
 
-    private func store(key: String?) -> InMemoryCredentialStore {
-        let store = InMemoryCredentialStore()
-        if let key { try? store.save(key, for: .deepseekAPIKey) }
-        return store
-    }
-
-    private func provider(transport: ProviderTransport, key: String?) -> DeepSeekProvider {
-        return DeepSeekProvider(transport: transport, credentials: store(key: key))
+    /// Fetches with a key the test states explicitly. The provider no longer reads
+    /// credentials itself: the key is passed into the request that needs it
+    /// (KEYCHAIN_REVISION_PLAN.md P1.7).
+    private func fetchBalances(transport: ProviderTransport, key: String?) async throws -> [ProviderBalance] {
+        return try await DeepSeekProvider(transport: transport).fetchBalances(apiKey: key ?? "")
     }
 
     func testSuccessfulBalanceIsParsedPerCurrency() async throws {
@@ -23,7 +20,7 @@ final class DeepSeekProviderTests: XCTestCase {
               {"currency":"CNY","total_balance":"110.00","granted_balance":"10.00","topped_up_balance":"100.00"}]}
             """.utf8))
         }
-        let balances = try await provider(transport: transport, key: "sk-test").fetchBalances()
+        let balances = try await fetchBalances(transport: transport, key: "sk-test")
 
         XCTAssertEqual(balances.count, 1)
         XCTAssertEqual(balances[0].currency, "CNY")
@@ -41,7 +38,7 @@ final class DeepSeekProviderTests: XCTestCase {
               {"currency":"USD","total_balance":"5.50","granted_balance":"0.50","topped_up_balance":"5.00"}]}
             """.utf8))
         }
-        let balances = try await provider(transport: transport, key: "sk-test").fetchBalances()
+        let balances = try await fetchBalances(transport: transport, key: "sk-test")
 
         XCTAssertEqual(balances.count, 2, "each currency is its own row")
         XCTAssertEqual(balances.map { $0.currency }, ["CNY", "USD"])
@@ -57,7 +54,7 @@ final class DeepSeekProviderTests: XCTestCase {
         transport.handler = { _ in
             ProviderHTTPResponse(status: 200, body: Data(#"{"balance_infos":[{"currency":"CNY","total_balance":"1"}]}"#.utf8))
         }
-        _ = try await provider(transport: transport, key: "sk-live-key").fetchBalances()
+        _ = try await fetchBalances(transport: transport, key: "sk-live-key")
 
         let request = try XCTUnwrap(transport.recordedRequests.first)
         XCTAssertEqual(request.url?.absoluteString, "https://api.deepseek.com/user/balance")
@@ -68,7 +65,7 @@ final class DeepSeekProviderTests: XCTestCase {
     func testNoCredentialIsReportedNotFaked() async {
         let transport = FakeTransport()
         do {
-            _ = try await provider(transport: transport, key: nil).fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: nil)
             XCTFail("no key configured must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .notConfigured)
@@ -84,7 +81,7 @@ final class DeepSeekProviderTests: XCTestCase {
             ProviderHTTPResponse(status: 200, body: Data(#"{"error":{"message":"Invalid API key","code":"invalid_request_error"}}"#.utf8))
         }
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("a business error must not yield balances")
         } catch {
             let failure = error as? ProviderFailure
@@ -98,7 +95,7 @@ final class DeepSeekProviderTests: XCTestCase {
         let transport = FakeTransport()
         transport.handler = { _ in ProviderHTTPResponse(status: 200, body: Data(#"{"ok":true}"#.utf8)) }
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("an unrecognised payload must not yield balances")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .unexpectedResponse)
@@ -111,7 +108,7 @@ final class DeepSeekProviderTests: XCTestCase {
             ProviderHTTPResponse(status: 200, body: Data(#"{"balance_infos":[{"currency":"CNY","granted_balance":"1.00"}]}"#.utf8))
         }
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("an entry without a total must not become 0")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .unexpectedResponse)
@@ -131,7 +128,7 @@ final class DeepSeekProviderTests: XCTestCase {
         let transport = FakeTransport()
         transport.handler = { _ in ProviderHTTPResponse(status: 401, body: Data()) }
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("401 must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .invalidCredential)
@@ -142,7 +139,7 @@ final class DeepSeekProviderTests: XCTestCase {
         let transport = FakeTransport()
         transport.handler = { _ in ProviderHTTPResponse(status: 503, body: Data()) }
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("503 must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .serverError(status: 503))
@@ -159,16 +156,20 @@ final class DeepSeekProviderTests: XCTestCase {
         XCTAssertEqual(fingerprint.count, 6)
     }
 
-    func testDeletingTheKeyLeavesNothingBehind() throws {
+    func testDeletingTheKeyLeavesNothingBehind() async throws {
         let credentials = InMemoryCredentialStore()
         try credentials.save("sk-test", for: .deepseekAPIKey)
-        let reading = DeepSeekReading(provider: DeepSeekProvider(transport: FakeTransport(), credentials: credentials),
+        let reading = DeepSeekReading(provider: DeepSeekProvider(transport: FakeTransport()),
                                       credentials: credentials)
+        // The reader answers status questions from memory, so the background pass has to run
+        // before anything is known.
+        await reading.primeCredentialState()
         XCTAssertTrue(reading.isConfigured)
 
         try reading.disconnect()
         XCTAssertFalse(reading.isConfigured)
-        XCTAssertNil(credentials.load(.deepseekAPIKey), "deleting the key removes it from the store")
+        XCTAssertEqual(credentials.load(.deepseekAPIKey), .missing,
+                       "deleting the key removes it from the store")
         XCTAssertEqual(credentials.deleteCallCount, 1)
     }
 
@@ -176,7 +177,7 @@ final class DeepSeekProviderTests: XCTestCase {
         let transport = FakeTransport()
         transport.thrownError = URLError(.notConnectedToInternet)
         do {
-            _ = try await provider(transport: transport, key: "sk-test").fetchBalances()
+            _ = try await fetchBalances(transport: transport, key: "sk-test")
             XCTFail("offline must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .networkUnreachable)

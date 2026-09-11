@@ -1,0 +1,44 @@
+== 采集时间 ==
+2026-09-10T19:03:24Z
+
+== 用户报告（关键事实）==
+  证书创建后、本轮三次 exec 启动过程中，钥匙串对话框弹出了 12 次。
+  结论：交接文件 §4 第 5 条未达成，弹框问题尚未解决。
+
+== 代码侧：条目数与访问点数 ==
+  钥匙串条目只有 3 个（ProviderModels.swift:144 起）：
+    deepseek.api-key / glm.api-key / glm.console-session
+  但 credentials.load 的调用点有 10 处（DeepSeekProvider:31,45；ProviderReadings:18,23,101,123,165,360；GLMProvider:54,73）。
+  结论：12 次弹框不可能是 12 个条目，只能是 12 次「访问」。即授权没有被记住，每次读取都重新弹框。
+
+== 观测方法差异（本轮的重要发现）==
+  执行方此前全部用 exec 直接运行包内可执行文件以获取应用内日志：
+    ./dist/Minget.app/Contents/MacOS/UsageMonitor
+  这不是用户打开应用的方式。正常方式是 LaunchServices（双击或 open）：
+    open dist/Minget.app
+  lsappinfo 确认正常方式启动的应用已注册为 App（ASN、bundleID、bundle path 均正确）。
+  两种启动方式下，系统判定钥匙串访问归属的依据可能不同，因此弹框次数也不能直接互推。
+  待用户确认正常启动时的弹框次数后，才能判断 12 次是否与 exec 启动方式有关。
+
+== 正常启动的间接计时（证据强度弱，不足以定论）==
+  探针：应用每次成功取数会写 ~/Library/Preferences/local.usagemonitor.UsageMonitor.plist，
+        以 open 时刻到该文件 mtime 变化的间隔近似启动耗时。
+  三次结果：4 秒、12 秒、7 秒。
+  缺点：该间隔包含 codex 子进程启动与一次真实网络取数，噪声大于要测的初始化阻塞，
+        因此不能据此判断阻塞是否消失。
+
+== 正常启动方式无法采集应用内日志的原因 ==
+  app 内的诊断日志需要环境变量 USAGE_MONITOR_LOG_FILE。实测：
+    open --env USAGE_MONITOR_LOG_FILE=... dist/Minget.app   （未生效，无日志产生）
+    launchctl setenv USAGE_MONITOR_LOG_FILE ...             （被拒绝：Not privileged to set domain environment）
+  因此正常启动路径的 applicationDidFinishLaunching 到 viewmodel start 间隔无法直接测量。
+
+== 下一步的一锤定音观察 ==
+  1) 正常打开应用，数一下弹框次数。
+  2) 打开「钥匙串访问」搜索 local.usagemonitor.credentials，查看条目的「访问控制」列表长度。
+     ad-hoc 时期每次重建的 cdhash 都不同，若每次「允许」都往 ACL 里追加一条记录，
+     该列表可能已被填满并触发上限，导致后续授权无法被记录，于是每次访问都弹框。
+     这是目前最能解释「点了始终允许仍然照旧弹」的机制，但尚未实测。
+
+== 明确不做 ==
+  未读取、未修改、未删除任何钥匙串条目；未运行 dump-keychain；未请求屏幕录制或辅助功能权限。

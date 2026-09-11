@@ -18,15 +18,17 @@ final class AppContainer {
     let statusItem: StatusItemController
 
     /// Credentials live only in the macOS Keychain. The in-memory store is never used here.
+    ///
+    /// The providers no longer hold a credential store: each reader owns a
+    /// `CredentialAccessCoordinator`, and the key is passed into the request that needs it
+    /// (KEYCHAIN_REVISION_PLAN.md P1.2 and P1.7).
     init(credentials: ProviderCredentialStoring = KeychainCredentialStore(),
          transport: ProviderTransport = URLSessionProviderTransport()) {
         codexService = UsageService()
         providerCache = ProviderCache()
-        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport,
-                                                                  credentials: credentials),
+        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport,
-                                                   credentials: credentials),
+        let glm = GLMReading(provider: GLMProvider(transport: transport),
                              credentials: credentials)
         glmReading = glm
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, glm], cache: providerCache)

@@ -1,0 +1,48 @@
+== 采集时间 ==
+2026-09-10T17:54:03Z
+
+== ./scripts/build.sh ==
+== swift build (release) ==
+[0/1] Planning build
+Building for production...
+[0/4] Write sources
+[1/4] Write swift-version--58304C5D6DBC2206.txt
+[3/4] Compiling UsageMonitorApp StatusItemController.swift
+[3/5] Write Objects.LinkFileList
+[4/5] Linking UsageMonitorApp
+Build complete! (2.17s)
+== staging dist/Minget.app ==
+== codesign (ad-hoc) ==
+dist/Minget.app: replacing existing signature
+== verify ==
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+dist/Minget.app/Contents/Info.plist: OK
+built: dist/Minget.app
+
+== plutil -lint ==
+dist/Minget.app/Contents/Info.plist: OK
+
+== Info.plist 关键字段 ==
+1.0.2
+local.usagemonitor.UsageMonitor
+Minget
+13.0
+
+== codesign --verify --verbose=1 ==
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+codesign exit=0
+
+== codesign -dv ==
+Executable=/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/dist/Minget.app/Contents/MacOS/UsageMonitor
+Identifier=local.usagemonitor.UsageMonitor
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20400 size=4632 flags=0x2(adhoc) hashes=138+3 location=embedded
+Signature=adhoc
+Info.plist entries=14
+TeamIdentifier=not set
+Sealed Resources version=2 rules=13 files=3
+
+== 二进制架构 ==
+dist/Minget.app/Contents/MacOS/UsageMonitor: Mach-O 64-bit executable arm64

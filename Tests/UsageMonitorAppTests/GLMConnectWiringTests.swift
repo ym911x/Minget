@@ -50,9 +50,9 @@ final class GLMConnectWiringTests: XCTestCase {
 
         store = InMemoryCredentialStore()
         transport = StubTransport()
-        glm = GLMReading(provider: GLMProvider(transport: transport, credentials: store),
+        glm = GLMReading(provider: GLMProvider(transport: transport),
                          credentials: store)
-        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport, credentials: store),
+        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: store)
         engine = ProviderRefreshEngine(readers: [deepSeek, glm],
                                        cache: ProviderCache(userDefaults: defaults))
@@ -403,7 +403,7 @@ final class GLMConnectWiringTests: XCTestCase {
         model.disconnectGLM()
 
         XCTAssertFalse(glm.isConfigured)
-        XCTAssertNil(store.load(.glmAPIKey))
+        XCTAssertEqual(store.load(.glmAPIKey), .missing)
         let report = model.providerReports.first { $0.platform == .glm }!
         XCTAssertEqual(report.connection, .notConfigured)
         XCTAssertTrue(report.balances.isEmpty, "a disconnect leaves no numbers behind")

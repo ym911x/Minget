@@ -1,0 +1,79 @@
+== 采集时间 ==
+2026-09-10T18:54:01Z
+
+== 步骤 1 复核：证书是否存在 ==
+-- security find-identity -p codesigning（build.sh 的判据，不带 -v）--
+  Matching identities
+  1) 5A48BB2B5305DD0AD0484581F1CE5173061BA395 "Minget Local Signing" (CSSMERR_TP_NOT_TRUSTED)
+     1 identities found
+-- security find-identity -v -p codesigning --
+     0 valid identities found
+  结论：证书已创建，SHA-1 5A48BB2B5305DD0AD0484581F1CE5173061BA395。
+  未设信任（CSSMERR_TP_NOT_TRUSTED），属 §3.3 的可选项；不带 -v 才能列出，与交接文件一致。
+
+== 步骤 2：./scripts/build.sh（默认身份）==
+-- 构建输出 --
+dist/Minget.app: replacing existing signature
+== verify ==
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+dist/Minget.app/Contents/Info.plist: OK
+built: dist/Minget.app
+-- §4-1 不再是 ad-hoc --
+CodeDirectory v=20400 size=4632 flags=0x0(none) hashes=138+3 location=embedded
+Signature size=1822
+Authority=Minget Local Signing
+TeamIdentifier=not set
+-- §4-2 DR 形态（注意实际为 certificate root，非 leaf）--
+designated => identifier "local.usagemonitor.UsageMonitor" and certificate root = H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+-- §4-4 结构校验 --
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+  exit=0
+
+== §4-3 DR 跨构建恒定（释放 → debug → 释放）==
+-- release --
+  CDHash        : e4842fa16f617d4c5fb28d3dc39136e705d496eb
+  DR cert root  : H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+-- debug（二进制内容改变）--
+  CDHash        : 0173a4fc66f2fbb0725d91775c203c6969c5ed55
+  DR cert root  : H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+-- 切回 release --
+  CDHash        : 0173a4fc66f2fbb0725d91775c203c6969c5ed55
+  DR cert root  : H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+  结论：CDHash 由 e4842fa1… 变为 0173a4fc… 再复原，DR 的证书哈希始终为 5a48bb2b…。
+  ad-hoc 时代正是「CDHash 变化」导致 ACL 失配，现在 CDHash 变化而 DR 不变，核心修复成立。
+
+== §4-5 真实弹框：尚未确认 ==
+-- 第一次启动（签名后）--
+2026-09-10 18:51:58 +0000 [UsageMonitor] applicationDidFinishLaunching
+2026-09-10 18:52:10 +0000 [UsageMonitor] viewmodel start
+2026-09-10 18:52:11 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1381 w116 requested:67 baseline:67 mode:full
+2026-09-10 18:52:11 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:52:22 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:52:30 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:52:40 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:52:50 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+-- 第二次启动 --
+2026-09-10 18:53:00 +0000 [UsageMonitor] applicationDidFinishLaunching
+2026-09-10 18:53:15 +0000 [UsageMonitor] viewmodel start
+2026-09-10 18:53:16 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1381 w116 requested:67 baseline:67 mode:full
+2026-09-10 18:53:17 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:53:30 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:53:36 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:53:46 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+2026-09-10 18:53:56 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1348 w116 requested:100 baseline:100 mode:full
+  观察：applicationDidFinishLaunching 到 viewmodel start 的间隔仍为 12 秒与 15 秒，
+        与 ad-hoc 时期的 11 至 14 秒同量级，未因换签名而消失。
+        这说明「该间隔由钥匙串授权对话框造成」这一推断尚未成立，或 ACL 尚未被授权。
+        弹框是否出现只有真实界面可见，需用户确认。
+
+------------------------------------------------------------------------
+更正（2026-09-11 15:4x GMT+8，执行者补注，未改动上文）
+
+上文「切回 release」一行仍列 debug 的 CDHash（0173a4fc…），与结论"再复原"不符。原因是当次
+release 构建的 `rm -rf dist/Minget.app` 被执行环境的安全限制拒绝，脚本继续 staging，把 debug
+二进制留在了 dist/。事件与修复见 `10-staging-fail-closed.txt` 与 `IMPLEMENTATION_REPORT.md`
+第 9.6 节。正确对照应以本文第一次构建的 release CDHash `e4842fa1…` 为准；§4 第 3 条的核心
+结论（CDHash 变化而 DR 证书哈希不变）不受影响，并已在修复后的构建中以
+release → debug → release 再次验证。

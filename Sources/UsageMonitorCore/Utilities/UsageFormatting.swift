@@ -6,22 +6,33 @@ public enum UsageFormatting {
 
     // MARK: Menu bar
 
-    /// `5H 78% | W 42%`. A window with no data shows `–`. A stale snapshot adds `⚠`.
-    public static func menuBarTitle(fiveHour: RateLimitWindow?, weekly: RateLimitWindow?, isStale: Bool) -> String {
-        let five = fiveHour.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "–"
-        let week = weekly.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "–"
-        var title = "5H \(five) | W \(week)"
-        if isStale { title += " ⚠" }
-        return title
+    /// `5H 78% | W 42%`. A window with no data shows `–`.
+    ///
+    /// v1.0.2 requirement 4: the quota text carries no marker at all. The single abnormal
+    /// marker is decided by `MenuBarContentBuilder` and drawn in front of this text, so a
+    /// cached snapshot can never produce a trailing `⚠` on top of a leading one.
+    public static func menuBarTitle(fiveHour: RateLimitWindow?, weekly: RateLimitWindow?) -> String {
+        "5H \(percent(fiveHour)) | W \(percent(weekly))"
     }
 
-    /// Compact variant used when menu bar space is tight: `78% / 42%`.
-    public static func compactMenuBarTitle(fiveHour: RateLimitWindow?, weekly: RateLimitWindow?, isStale: Bool) -> String {
-        let five = fiveHour.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "–"
-        let week = weekly.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "–"
-        var title = "\(five) / \(week)"
-        if isStale { title += " ⚠" }
-        return title
+    /// Compact variant used when menu bar space is tight: `5H 78% W 42%`.
+    ///
+    /// Still starts with `5H` and still carries both numbers; only the separator and the
+    /// padding are dropped (v1.0.2 §3.3).
+    public static func compactMenuBarTitle(fiveHour: RateLimitWindow?, weekly: RateLimitWindow?) -> String {
+        "5H \(percent(fiveHour)) W \(percent(weekly))"
+    }
+
+    /// Minimal-space fallback: plain `5H`. The two time rows are hidden in this mode, so the
+    /// text is the only content and stays legible (v1.0.2 §3.3).
+    public static func minimalMenuBarTitle() -> String {
+        windowShortName(.fiveHour)
+    }
+
+    /// Rounded remaining percent, or `–` when the window is missing. Never a fabricated 0.
+    private static func percent(_ window: RateLimitWindow?) -> String {
+        guard let window else { return "–" }
+        return "\(Int(window.remainingPercent.rounded()))%"
     }
 
     // MARK: Panel
@@ -50,13 +61,16 @@ public enum UsageFormatting {
     }
 
     /// Reset time: `重置 14:35` for today, `重置 09-13 11:20` otherwise.
-    /// A reset already in the past is rendered as a past time, never as a future one.
+    ///
+    /// A reset time that has been reached is reported as waiting for a refresh. The app only
+    /// knows the clock passed the time the service once reported; it does not know the
+    /// service has renewed the window, so it never claims `已于 … 重置` (v1.0.2 §4.3).
     public static func resetText(_ window: RateLimitWindow, now: Date = Date()) -> String {
         guard let resetsAt = window.resetsAt else { return "重置时间未知" }
-        let time = formatClock(resetsAt)
-        if resetsAt < now {
-            return "已于 \(formatDate(resetsAt)) \(time) 重置"
+        if resetsAt <= now {
+            return "已到重置时间，等待刷新确认"
         }
+        let time = formatClock(resetsAt)
         if Calendar.current.isDateInToday(resetsAt) {
             return "重置 \(time)"
         }

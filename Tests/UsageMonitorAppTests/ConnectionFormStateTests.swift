@@ -34,9 +34,10 @@ final class ConnectionFormStateTests: XCTestCase {
 
     final class FailingSaveCredentialStore: ProviderCredentialStoring, @unchecked Sendable {
         func save(_ secret: String, for key: ProviderCredentialKey) throws { throw ProviderFailure.other }
-        func load(_ key: ProviderCredentialKey) -> String? { return nil }
-        @discardableResult
-        func delete(_ key: ProviderCredentialKey) -> Bool { return false }
+        func load(_ key: ProviderCredentialKey, interaction: CredentialInteraction) -> CredentialAccessOutcome {
+            return .missing
+        }
+        func delete(_ key: ProviderCredentialKey) throws {}
     }
 
     private var defaults: UserDefaults!
@@ -54,9 +55,9 @@ final class ConnectionFormStateTests: XCTestCase {
     }
 
     private func makeModel(transport: StubTransport, credentials: ProviderCredentialStoring) -> UsageViewModel {
-        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport, credentials: credentials),
+        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport, credentials: credentials),
+        let glm = GLMReading(provider: GLMProvider(transport: transport),
                              credentials: credentials)
         let engine = ProviderRefreshEngine(readers: [deepSeek, glm],
                                            cache: ProviderCache(userDefaults: defaults))
@@ -138,7 +139,7 @@ final class ConnectionFormStateTests: XCTestCase {
 
         XCTAssertTrue(form.draft.isEmpty)
         XCTAssertEqual(model.credentialFeedback(for: .deepseek), .deleted(platform: .deepseek))
-        XCTAssertNil(store.load(.deepseekAPIKey))
+        XCTAssertEqual(store.load(.deepseekAPIKey), .missing)
     }
 
     /// A background balance refresh must not touch the form state: the draft and the

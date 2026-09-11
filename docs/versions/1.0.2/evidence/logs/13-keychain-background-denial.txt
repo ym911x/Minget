@@ -1,0 +1,44 @@
+== 采集时间 ==
+2026-09-11T15:27:50Z
+
+== 目的 ==
+  KEYCHAIN_REVISION_PLAN.md P1.4/P1.5 要求后台读取采用不弹窗的非交互方式。实施后经真实运行
+  验证，该机制在本机不成立，本文件记录对照证据与随之而来的策略修正。
+
+== 应用内凭证访问日志的两组对照（同一台机器、同一证书、同一 DR）==
+
+-- A. 交互被禁用（P1.4 原设计，15:17 的实例）--
+  key=deepseek.api-key purpose=startup-prime mode=background outcome=deniedOrCancelled osstatus=- ms=6.0
+  key=glm.console-session purpose=startup-prime mode=background outcome=deniedOrCancelled osstatus=- ms=1.3
+
+-- B. 交互允许（策略修正后，15:26 的实例）--
+  key=deepseek.api-key purpose=startup-prime mode=interactive outcome=available osstatus=- ms=8023.7
+  key=glm.console-session purpose=startup-prime mode=interactive outcome=available osstatus=- ms=2918.9
+
+== 结论 ==
+  A：SecKeychainSetUserInteractionAllowed(false) 之下，即使钥匙串 ACL 已含本应用的授权记录，
+     读取仍被拒（deniedOrCancelled）。结果就是每次启动面板都显示「需要授权」，用户每轮都要按一次按钮。
+  B：交互允许后，同样的读取直接成功（available），且用户未看到任何新弹框——授权由稳定 DR 承载，
+     已在本日 23:06-23:11 的用户实测中确认（一次弹框、始终允许、之后不再弹）。
+  故 P1.4 的「非交互后台读取」按其自身的验证要求（『经真实验证有效』）判为不成立，默认读取路径改回
+  交互允许；防弹框循环改由两条机制保证：稳定证书身份（授权按 DR 记住）与协调器的结果记忆
+  （自动用途不重试被拒的凭证）。
+
+== 策略修正后的端到端验证 ==
+  15:26:41 启动（新构建，CDHash 与上一轮不同，DR 不变）
+  15:26:44 deepseek.api-key available（8.0 s，首次访问的钥匙串评估耗时）
+  15:26:44 glm.console-session available（2.9 s）
+  15:26:45 真实取数成功写入缓存（用户偏好 plist lastSuccessAt）
+  全程无需要授权状态、无弹框报告。
+
+== 保留能力 ==
+  交互开关 .disallowed 仍保留在接口中并有测试覆盖，供未来需要严格禁 UI 的场景使用；
+  默认读取路径不再使用它。
+
+------------------------------------------------------------------------
+证据边界（如实说明）
+
+交互允许路径的日志无法区分「静默成功」与「用户在对话框中点了允许」：两者都会以 available 结束，
+8.0 秒的耗时理论上也可能包含应答时间。因此「15:26 这轮没有弹框」的判断依据是用户陈述
+（"只弹出一次，授权始终允许后就不弹了"）加上读取成功的客观结果，而不是日志单独证明。
+这正是方案 §四 要求真实界面验收的原因。

@@ -1,0 +1,15 @@
+2026-09-10 17:52:32 +0000 [UsageMonitor] applicationDidFinishLaunching
+2026-09-10 17:52:43 +0000 [UsageMonitor] viewmodel start
+2026-09-10 17:52:43 +0000 [UsageMonitor] starting app-server child
+2026-09-10 17:52:43 +0000 [UsageMonitor] app-server child started pid 30223
+2026-09-10 17:52:44 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:52:44 +0000 [UsageMonitor] display live
+2026-09-10 17:52:44 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1293 w116 requested:67 baseline:67 mode:full
+2026-09-10 17:52:45 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1260 w116 requested:100 baseline:100 mode:full
+2026-09-10 17:52:55 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1260 w116 requested:100 baseline:100 mode:full
+2026-09-10 17:53:03 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1260 w116 requested:100 baseline:100 mode:full
+2026-09-10 17:53:13 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1260 w116 requested:100 baseline:100 mode:full
+2026-09-10 17:53:19 +0000 [UsageMonitor] termination requested
+2026-09-10 17:53:19 +0000 [UsageMonitor] service stopped (generation 1, drained=no)
+2026-09-10 17:53:19 +0000 [UsageMonitor] viewmodel stopped
+2026-09-10 17:53:19 +0000 [UsageMonitor] service stopped (generation 2, drained=no)

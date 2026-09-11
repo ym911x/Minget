@@ -93,6 +93,21 @@ final class MenuBarSpaceStateTests: XCTestCase {
         XCTAssertFalse(facts.isRendered)
     }
 
+    /// v1.0.2 §3.2/§3.3: the item must not be judged truncated against a width that was never
+    /// measured. `StatusItemController` passes `requestedWidth: 0` for the observation that
+    /// precedes the first real measurement, so a granted frame that happens to be narrower
+    /// than the per-mode fallback is not a truncation signal.
+    func testNoMeasuredBaselineIsNotTruncation() {
+        var facts = roomyFacts(requestedWidth: 0)
+        facts.itemFrame = CGRect(x: 1300, y: 876, width: 116, height: 22)
+        XCTAssertFalse(facts.isTruncated, "an unknown baseline cannot prove truncation")
+        XCTAssertTrue(facts.isRendered, "a roomy menu bar must not be reported as squeezed")
+
+        // The same frame *is* a truncation once a real, wider baseline exists.
+        facts.requestedWidth = 132
+        XCTAssertTrue(facts.isTruncated)
+    }
+
     // MARK: Mode changes
 
     func testShrinksImmediatelyWhenTheItemIsNotRendered() {

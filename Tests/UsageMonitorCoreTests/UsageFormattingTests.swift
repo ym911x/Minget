@@ -7,13 +7,35 @@ final class UsageFormattingTests: XCTestCase {
     let weekly = RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080, usedPercent: 58,
                                  remainingPercent: 42, resetsAt: Date(timeIntervalSince1970: 1_789_453_767))
 
-    func testMenuBarTitleShowsBothWindowsAndStaleness() {
-        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly, isStale: false), "5H 78% | W 42%")
-        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly, isStale: true), "5H 78% | W 42% ⚠")
-        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: nil, weekly: weekly, isStale: false), "5H – | W 42%")
-        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: nil, weekly: nil, isStale: false), "5H – | W –")
-        XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly, isStale: false), "78% / 42%")
-        XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: nil, isStale: true), "78% / – ⚠")
+    func testMenuBarTitleShowsBothWindowsAndCarriesNoMarker() {
+        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly), "5H 78% | W 42%")
+        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: nil, weekly: weekly), "5H – | W 42%")
+        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: nil, weekly: nil), "5H – | W –")
+        // v1.0.2 requirement 4: the quota text never carries a warning, in any combination.
+        for title in [UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly),
+                      UsageFormatting.menuBarTitle(fiveHour: nil, weekly: nil),
+                      UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly),
+                      UsageFormatting.minimalMenuBarTitle()] {
+            XCTAssertFalse(title.contains("⚠"), "no trailing warning may be built here: \(title)")
+            XCTAssertFalse(title.contains("!"), "no trailing exclamation mark either: \(title)")
+            XCTAssertTrue(title.hasPrefix("5H"), "the text starts with 5H: \(title)")
+        }
+    }
+
+    func testCompactAndMinimalTitles() {
+        // Compact keeps both numbers and still starts with 5H; only the separator is dropped.
+        XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly), "5H 78% W 42%")
+        XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: nil), "5H 78% W –")
+        // Minimal-space fallback: plain 5H, no numbers, no rows.
+        XCTAssertEqual(UsageFormatting.minimalMenuBarTitle(), "5H")
+    }
+
+    func testMenuBarTitleRoundsToWholePercent() {
+        let low = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300, usedPercent: 91,
+                                  remainingPercent: 9, resetsAt: nil)
+        let full = RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080, usedPercent: 0,
+                                   remainingPercent: 100, resetsAt: nil)
+        XCTAssertEqual(UsageFormatting.menuBarTitle(fiveHour: low, weekly: full), "5H 9% | W 100%")
     }
 
     func testRemainingTextIsExplicit() {
@@ -57,8 +79,16 @@ final class UsageFormattingTests: XCTestCase {
         let past = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300, usedPercent: 10,
                                    remainingPercent: 90, resetsAt: now.addingTimeInterval(-3600))
         let text = UsageFormatting.resetText(past, now: now)
-        XCTAssertTrue(text.contains("已于"), "past reset must be marked as past: \(text)")
+        // v1.0.2 §4.3: reaching the reported time only means the clock arrived; the app must
+        // not claim the service has renewed the window.
+        XCTAssertEqual(text, "已到重置时间，等待刷新确认")
+        XCTAssertFalse(text.contains("已于"), "no certainty about a renewal may be stated: \(text)")
         XCTAssertFalse(text.hasPrefix("重置"), text)
+
+        // Exactly at the reported time counts as reached.
+        let exactly = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300, usedPercent: 10,
+                                      remainingPercent: 90, resetsAt: now)
+        XCTAssertEqual(UsageFormatting.resetText(exactly, now: now), "已到重置时间，等待刷新确认")
 
         let futureToday = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300, usedPercent: 10,
                                           remainingPercent: 90, resetsAt: now.addingTimeInterval(600))

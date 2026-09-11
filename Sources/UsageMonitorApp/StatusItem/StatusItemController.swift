@@ -36,6 +36,8 @@ enum MenuBarLabelMetrics {
 ///   with hysteresis in `MenuBarSpaceStateMachine` so the mode cannot flap,
 /// - the popover reuses the same SwiftUI detail view as before; no extra floating window is
 ///   created for it,
+/// - a click outside the popover closes it and still reaches its original target
+///   (v1.0.2 requirement 4), while the regular detail window keeps normal window behaviour,
 /// - when the item is not visible at launch (occluded by the notch or hidden by macOS), the
 ///   detail window opens automatically so the user still has a way to see the data,
 /// - `uninstall` reverses everything at exit: the geometry monitor stops, the popover and
@@ -43,7 +45,7 @@ enum MenuBarLabelMetrics {
 ///
 /// Only public AppKit API is used, and no system-wide menu bar setting is read or written.
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Stable autosave name: NSStatusItem persists its own frame under this key, which is
     /// what keeps the item's position stable across relaunches.
@@ -60,16 +62,23 @@ final class StatusItemController: NSObject {
     /// `uninstall`; never constructed directly.
     private(set) var statusItem: NSStatusItem?
     private let popover = NSPopover()
+    /// Closes the popover on an outside click. Installed only while the popover is on screen.
+    private let dismissMonitor = PopoverDismissMonitor()
     private var detailWindowController: DetailWindowController?
 
     private var model: UsageViewModel?
     private var stateMachine = MenuBarSpaceStateMachine()
-    private var widths: [MenuBarSpaceMode: CGFloat] = [:]
-    private var labelSignature: String?
+    /// Widths the three modes were last measured at. `private(set)` so the wiring tests can
+    /// prove the item is sized from a measurement rather than from the per-mode fallback.
+    private(set) var widths: [MenuBarSpaceMode: CGFloat] = [:]
+    /// Signature of the content the current widths were measured from. `private(set)` so the
+    /// wiring tests can prove a time-only update does not invalidate it.
+    private(set) var labelSignature: String?
     private var monitor: MenuBarSpaceMonitor?
     private var cancellables: Set<AnyCancellable> = []
     private var hasAutoOpenedDetailWindow = false
-    private var appliedWidth: CGFloat = 0
+    /// Width currently applied to the status item. `private(set)` for the wiring tests.
+    private(set) var appliedWidth: CGFloat = 0
     /// Until this moment, frame changes to our own window are not treated as space events.
     var selfResizeSettlesAt = Date.distantPast
 
@@ -81,6 +90,8 @@ final class StatusItemController: NSObject {
     var isMonitorRunning: Bool { monitor != nil }
     /// Introspection for the wiring tests: the popover is on screen.
     var isPopoverShown: Bool { popover.isShown }
+    /// Introspection for the wiring tests: the outside-click monitor is installed.
+    var isDismissMonitorInstalled: Bool { dismissMonitor.isInstalled }
 
     var isStatusItemRendered: Bool {
         guard let statusItem else { return false }
@@ -103,24 +114,31 @@ final class StatusItemController: NSObject {
 
         popover.behavior = .transient
         popover.animates = false
+        popover.delegate = self
 
         button.target = self
         button.action = #selector(statusItemClicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
 
+        // Measure before the first paint. `apply` then sizes the item from the real label
+        // content instead of from the per-mode fallback, and the first geometry check has a
+        // real baseline to compare the granted width against (v1.0.2 §3.2, §3.3).
+        measureWidths(for: model)
         apply(mode: stateMachine.mode)
 
         let monitor = MenuBarSpaceMonitor(controller: self, interval: Self.geometryCheckInterval)
         self.monitor = monitor
         monitor.start()
 
-        // Re-measure as soon as the displayed numbers change instead of waiting for the
+        // Re-measure as soon as the displayed content changes instead of waiting for the
         // periodic check, so a width change (78% → 100%) never shows a stale-sized item.
-        // The hop through the main queue keeps the work off the model's mutation stack.
+        // The hop through the main queue keeps the work off the model's mutation stack, and
+        // `noteContentMayHaveChanged` ignores the once-a-second tick, so the item is not
+        // re-measured every second (v1.0.2 §4.4).
         model.objectWillChange
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.refreshLabel() }
+                    MainActor.assumeIsolated { self?.noteContentMayHaveChanged() }
                 }
             }
             .store(in: &cancellables)
@@ -139,6 +157,8 @@ final class StatusItemController: NSObject {
         monitor = nil
         cancellables.removeAll()
         closePanel()
+        dismissMonitor.stop()   // idempotent: no callback survives the item
+        popover.delegate = nil
         detailWindowController?.window?.orderOut(nil)
         detailWindowController = nil
         if let item = statusItem {
@@ -152,10 +172,34 @@ final class StatusItemController: NSObject {
         appliedWidth = 0
     }
 
-    /// Applies the current numbers: refreshes the label content and re-measures the widths.
+    /// Requests a geometry check without assuming the width changed. Used by the geometry
+    /// monitor's own cadence; content-driven remeasurement goes through
+    /// `noteContentMayHaveChanged`.
     func refreshLabel() {
-        labelSignature = nil
         monitor?.requestCheck()
+    }
+
+    /// Called after any model change, including the once-a-second clock tick. The item is
+    /// re-measured only when the text or the warning marker actually changed, so a pure time
+    /// update costs one string comparison and no layout work (v1.0.2 §4.4).
+    func noteContentMayHaveChanged() {
+        guard let model, statusItem != nil else { return }
+        let signature = model.menuBarSizeSignature
+        guard signature != labelSignature else { return }
+        labelSignature = signature
+        measureWidths(for: model)
+        apply(mode: stateMachine.mode)
+    }
+
+    /// Measures the natural width of every mode from the real label content.
+    ///
+    /// This is the only place the widths come from, so the item is never sized by a guess for
+    /// longer than the first layout pass (v1.0.2 §3.2: the per-mode fallback is a starting
+    /// point that must be replaced by the real measurement).
+    private func measureWidths(for model: UsageViewModel) {
+        widths = MenuBarLabelMetrics.widths { mode in
+            AnyView(MenuBarLabelView(model: model, mode: mode))
+        }
     }
 
     /// Notification-driven entry point from the monitor.
@@ -163,17 +207,23 @@ final class StatusItemController: NSObject {
         guard let model, let item = statusItem else { return }
         if spaceEvent { stateMachine.noteSpaceEvent() }
 
-        let signature = model.menuBarTitle + "#" + model.menuBarStalenessMarker
+        let signature = model.menuBarSizeSignature
         let previousWidths = widths
         if signature != labelSignature {
             labelSignature = signature
-            widths = MenuBarLabelMetrics.widths { mode in
-                AnyView(MenuBarLabelView(model: model, mode: mode))
-            }
+            measureWidths(for: model)
         }
 
-        let facts = Self.facts(for: item, requestedWidth: appliedWidth)
-        Diagnostics.log("menu bar \(facts.diagnosticSummary) mode:\(stateMachine.mode.description)")
+        // The truncation rule compares the width macOS granted with the width the app asked
+        // for. Until the applied mode has a real measurement there is no honest baseline, so
+        // `requestedWidth` is 0 for that one observation and `isTruncated` stays false. Using
+        // the fallback as the baseline made a roomy menu bar look truncated and stepped the
+        // item down to the minimal fallback, which v1.0.2 §3.3 forbids.
+        let baseline = widths[stateMachine.mode] == nil ? 0 : appliedWidth
+        let facts = Self.facts(for: item, requestedWidth: baseline)
+        // `requested` is what the app measured and asked for; the frame width in `facts` is what
+        // macOS granted. Both are geometry only, no content.
+        Diagnostics.log("menu bar \(facts.diagnosticSummary) requested:\(Int(appliedWidth.rounded())) baseline:\(Int(baseline.rounded())) mode:\(stateMachine.mode.description)")
 
         let decision = stateMachine.apply(facts)
         if case .change(let mode, _) = decision {
@@ -232,10 +282,24 @@ final class StatusItemController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         popover.contentViewController = controller
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        // Installed after `show`, so the click that opened the panel cannot be seen by the
+        // monitor and close it again. `isShown` alone was not reliable enough across macOS
+        // versions; this makes the outside-click behaviour explicit and testable
+        // (v1.0.2 requirement 4).
+        dismissMonitor.install(popover: popover, statusButton: button) { [weak self] in
+            self?.closePanel()
+        }
     }
 
     func closePanel() {
         if popover.isShown { popover.performClose(nil) }
+        dismissMonitor.stop()
+    }
+
+    /// Every close path ends here, including the ones AppKit starts itself (escape key, app
+    /// deactivation, a click on another window), so no monitor outlives the popover.
+    func popoverDidClose(_ notification: Notification) {
+        dismissMonitor.stop()
     }
 
     /// Opens the detail in its own regular window. Used at launch when the menu bar item is
@@ -345,7 +409,9 @@ final class MenuBarSpaceMonitor {
     private weak var controller: StatusItemController?
     private let interval: TimeInterval
     private var timer: Timer?
-    private var observers: [NSObjectProtocol] = []
+    /// Observers together with the centre each was registered on: the workspace notifications
+    /// arrive on `NSWorkspace.shared.notificationCenter`, not on `NotificationCenter.default`.
+    private var observers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
     private var lastObservedFrame: NSRect = .zero
 
     init(controller: StatusItemController, interval: TimeInterval) {
@@ -357,26 +423,30 @@ final class MenuBarSpaceMonitor {
         let center = NotificationCenter.default
 
         // Screen set changed: a display was connected, removed, or the arrangement moved.
-        observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                            object: nil, queue: .main) { [weak self] _ in
+        observers.append((center, center.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
+                                                     object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.report(spaceEvent: true) }
-        })
+        }))
 
-        // The Mac woke: menu bar space is often renegotiated around sleep and wake.
-        observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification,
-                                            object: nil, queue: .main) { [weak self] _ in
+        // The Mac woke: menu bar space is often renegotiated around sleep and wake. This
+        // notification is posted on the workspace's own centre; observing it on
+        // `NotificationCenter.default` — which is what the baseline did — never fires
+        // (v1.0.2 §4.4).
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        observers.append((workspaceCenter, workspaceCenter.addObserver(forName: NSWorkspace.didWakeNotification,
+                                                                      object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.report(spaceEvent: true) }
-        })
+        }))
 
         // The item moved or was resized. AppKit has no single frame-change notification, so
         // the two halves are observed. A resize the app itself requested is not an
         // external event: treating it as one would feed the state machine its own output
         // and could grow/shrink in a loop.
         for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
-            observers.append(center.addObserver(forName: name,
-                                                object: nil, queue: .main) { [weak self] note in
+            observers.append((center, center.addObserver(forName: name,
+                                                         object: nil, queue: .main) { [weak self] note in
                 MainActor.assumeIsolated { self?.handleFrameChange(note) }
-            })
+            }))
         }
 
         // Fallback check. Pure local geometry: no network, no private API.
@@ -390,7 +460,7 @@ final class MenuBarSpaceMonitor {
     func stop() {
         timer?.invalidate()
         timer = nil
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        for (center, token) in observers { center.removeObserver(token) }
         observers.removeAll()
     }
 
@@ -429,7 +499,87 @@ extension MenuBarLabelMetrics {
         switch mode {
         case .full: return 132
         case .compact: return 78
-        case .icon: return 28
+        // v1.0.2 §3.3: the minimal fallback no longer draws an `M²` icon; it draws the plain
+        // text `5H`, which is narrower than the old 15 pt icon slot plus padding.
+        case .icon: return 26
         }
+    }
+}
+
+/// Closes the popover when the click lands outside it, without swallowing the click.
+///
+/// v1.0.2 requirement 4. `.transient` is kept, but its behaviour around accessory apps and
+/// the menu bar is not reliable enough to be the only mechanism, so this adds an explicit
+/// rule on top:
+/// - a local monitor sees clicks inside this app, so a click on the panel's own controls, on
+///   the status item button, or on a sheet presented by the panel keeps the popover open,
+/// - a global monitor sees clicks in other applications and on the desktop, which always
+///   dismiss,
+/// - the returned event is never consumed, so the click still reaches its original target.
+///
+/// The monitors exist only while the popover is on screen, and every stop path removes them.
+@MainActor
+final class PopoverDismissMonitor {
+
+    private var localMonitor: Any?
+    private var globalMonitor: Any?
+
+    /// How many times monitors were actually installed. A second `install` while the popover
+    /// is already open must not add a second pair (v1.0.2 §6.3.5); the wiring tests read this.
+    private(set) var installCount = 0
+
+    /// Introspection for the wiring tests.
+    var isInstalled: Bool { localMonitor != nil || globalMonitor != nil }
+
+    /// Installs both monitors. Idempotent, so a re-open cannot stack a second pair.
+    func install(popover: NSPopover, statusButton: NSButton?, onDismiss: @escaping () -> Void) {
+        guard !isInstalled else { return }
+        installCount += 1
+        let mask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown]
+
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
+            MainActor.assumeIsolated {
+                let target = Self.target(for: event, popover: popover, statusButton: statusButton)
+                if target == .outside { onDismiss() }
+            }
+            // Returning the event unchanged is what lets the click do its original job.
+            return event
+        }
+
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { _ in
+            MainActor.assumeIsolated { onDismiss() }
+        }
+    }
+
+    /// Removes both monitors. Safe to call more than once, and from any close path.
+    func stop() {
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        localMonitor = nil
+        globalMonitor = nil
+    }
+
+    /// Resolves an AppKit event into the pure click target. Window coordinates are converted
+    /// to screen coordinates here so the decision itself stays a plain rectangle test.
+    ///
+    /// A sheet presented by the panel (`MingetAboutView`) is a separate window whose
+    /// `sheetParent` is the popover's window; it belongs to the popover and must not be
+    /// treated as an outside click.
+    static func target(for event: NSEvent, popover: NSPopover, statusButton: NSButton?) -> PopoverClickTarget {
+        guard let window = event.window else { return .outside }
+        let popoverWindow = popover.isShown ? popover.contentViewController?.view.window : nil
+        if let popoverWindow, window.sheetParent === popoverWindow {
+            return .popoverContent
+        }
+        let clickPoint = window.convertPoint(toScreen: event.locationInWindow)
+        return PopoverDismissDecision.target(clickPoint: clickPoint,
+                                            popoverFrame: popoverWindow?.frame,
+                                            statusButtonFrame: Self.frame(of: statusButton))
+    }
+
+    /// The status button's frame in screen coordinates, or nil when it has no window.
+    static func frame(of button: NSButton?) -> CGRect? {
+        guard let button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 }

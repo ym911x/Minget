@@ -118,10 +118,10 @@ final class ConsoleCookieCaptureTests: XCTestCase {
         transport.handler = { _ in
             ProviderHTTPResponse(status: 200, body: Data(#"{"code":200,"success":true,"data":{"balance":{"balance":"9.00","availableBalance":"5.00"}}}"#.utf8))
         }
-        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport, credentials: InMemoryCredentialStore()),
+        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: InMemoryCredentialStore())
         let credentialStore = InMemoryCredentialStore()
-        let glm = GLMReading(provider: GLMProvider(transport: transport, credentials: credentialStore),
+        let glm = GLMReading(provider: GLMProvider(transport: transport),
                              credentials: credentialStore, preferences: defaults)
         let engine = ProviderRefreshEngine(readers: [deepSeek, glm], cache: ProviderCache(userDefaults: defaults))
         let service = UsageService(factory: { throw UsageError.appServerStartupFailed(.launchFailed) },

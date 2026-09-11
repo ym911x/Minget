@@ -84,6 +84,11 @@ public enum ProviderConnectionState: Equatable, Sendable {
     /// Authentication failed (401 / session expired). Automatic retries are paused until
     /// the user reconnects; the panel asks for a reconnect instead of hammering.
     case authSuspended
+    /// The credential is stored, but reading it needs the user's decision in the system
+    /// dialog (or the user declined). Distinct from `notConfigured` on purpose: telling a
+    /// user to enter a key they already entered is wrong. Automatic work stays paused until
+    /// the user asks for the read (KEYCHAIN_REVISION_PLAN.md P1.4).
+    case needsAuthorization
     /// The provider's endpoint contract could not be confirmed. No balance is shown and
     /// none is invented; the official console entry is offered instead.
     case unverified
@@ -145,4 +150,39 @@ public enum ProviderCredentialKey: String, CaseIterable, Sendable {
     case deepseekAPIKey = "deepseek.api-key"
     case glmAPIKey = "glm.api-key"
     case glmConsoleSession = "glm.console-session"
+}
+
+/// What a reader knows about its own credential, from memory only.
+///
+/// This is what `init`, `report` and every status query are allowed to consult: answering
+/// "do I have a credential?" must never itself touch the keychain
+/// (KEYCHAIN_REVISION_PLAN.md P1.3). The keychain is read once, on a background pass, and
+/// the result is remembered here.
+public enum ProviderCredentialState: Equatable, Sendable {
+    /// Nothing read yet in this process. Transient: the startup pass fills it in.
+    case unknown
+    case configured
+    /// Confirmed absent.
+    case missing
+    /// Present but unreadable without the user's decision, or the user declined.
+    case needsAuthorization
+    /// The read failed for another reason.
+    case unavailable
+}
+
+public extension ProviderCredentialState {
+    var isConfigured: Bool { self == .configured }
+
+    /// Maps one credential's phase onto the reader-level state. The two enums are separate
+    /// because a reader may own more than one credential: the rule for combining them
+    /// belongs to the reader, while the per-credential truth belongs to the coordinator.
+    init(phase: ProviderCredentialPhase) {
+        switch phase {
+        case .unknown: self = .unknown
+        case .available: self = .configured
+        case .missing: self = .missing
+        case .needsAuthorization: self = .needsAuthorization
+        case .unavailable: self = .unavailable
+        }
+    }
 }

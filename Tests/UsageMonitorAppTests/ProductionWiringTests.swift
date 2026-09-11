@@ -43,9 +43,10 @@ final class ProductionWiringTests: XCTestCase {
         func save(_ secret: String, for key: ProviderCredentialKey) throws {
             throw ProviderFailure.other
         }
-        func load(_ key: ProviderCredentialKey) -> String? { return nil }
-        @discardableResult
-        func delete(_ key: ProviderCredentialKey) -> Bool { return false }
+        func load(_ key: ProviderCredentialKey, interaction: CredentialInteraction) -> CredentialAccessOutcome {
+            return .missing
+        }
+        func delete(_ key: ProviderCredentialKey) throws {}
     }
 
     private let balanceBody = Data("""
@@ -87,9 +88,9 @@ final class ProductionWiringTests: XCTestCase {
     /// readings, no separate credential store on the view model.
     private func makeModel(transport: StubTransport,
                            credentials: ProviderCredentialStoring) -> UsageViewModel {
-        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport, credentials: credentials),
+        let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport, credentials: credentials),
+        let glm = GLMReading(provider: GLMProvider(transport: transport),
                              credentials: credentials)
         let engine = ProviderRefreshEngine(readers: [deepSeek, glm],
                                            cache: ProviderCache(userDefaults: defaults))
@@ -114,7 +115,7 @@ final class ProductionWiringTests: XCTestCase {
         let saved = container.model.saveDeepSeekKey("sk-production-root-test")
         XCTAssertTrue(saved, "the production save path must report success to the caller")
 
-        XCTAssertEqual(store.load(.deepseekAPIKey), "sk-production-root-test",
+        XCTAssertEqual(store.load(.deepseekAPIKey), .available("sk-production-root-test"),
                        "the key must reach the container's own credential store")
 
         let feedback = await waitForFeedback(on: container.model, .deepseek,
@@ -194,7 +195,7 @@ final class ProductionWiringTests: XCTestCase {
 
         let saved = model.saveDeepSeekKey("sk-offline")
         XCTAssertTrue(saved)
-        XCTAssertEqual(store.load(.deepseekAPIKey), "sk-offline",
+        XCTAssertEqual(store.load(.deepseekAPIKey), .available("sk-offline"),
                        "a network failure after a successful save must not lose the key")
 
         let feedback = await waitForFeedback(on: model, .deepseek, equals: .savedUnverified(platform: .deepseek))
@@ -222,7 +223,7 @@ final class ProductionWiringTests: XCTestCase {
 
         XCTAssertEqual(model.credentialFeedback(for: .deepseek), .deleted(platform: .deepseek),
                        "deletion must be visible, not silent")
-        XCTAssertNil(store.load(.deepseekAPIKey), "the key must be gone")
+        XCTAssertEqual(store.load(.deepseekAPIKey), .missing, "the key must be gone")
         XCTAssertEqual(model.providerReports.first { $0.platform == .deepseek }?.connection, .notConfigured)
         XCTAssertTrue(model.providerReports.first { $0.platform == .deepseek }!.balances.isEmpty,
                       "the cached balance must be cleared with the credential")

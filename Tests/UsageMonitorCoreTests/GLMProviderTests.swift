@@ -330,14 +330,17 @@ final class GLMProviderTests: XCTestCase {
             ProviderHTTPResponse(status: 200, body: Data(#"{"code":200,"success":true,"data":{"balance":{"balance":"9.00","availableBalance":"5.00"}}}"#.utf8))
         }
 
-        let first = GLMReading(provider: GLMProvider(transport: transport, credentials: store),
+        let first = GLMReading(provider: GLMProvider(transport: transport),
                                credentials: store, preferences: defaults)
         try first.storeAPIKey("glm-old-key")
         try first.storeSession(makeSession(cookies: "sid", capturedAt: Date(timeIntervalSince1970: 1_700_000_000)))
 
-        // A brand-new reader models the restarted app.
-        let restarted = GLMReading(provider: GLMProvider(transport: transport, credentials: store),
+        // A brand-new reader models the restarted app. Priming reads the credential the
+        // persisted mode selects, and only that one.
+        let restarted = GLMReading(provider: GLMProvider(transport: transport),
                                    credentials: store, preferences: defaults)
+        await restarted.primeCredentialState()
+        XCTAssertEqual(restarted.credentialState, .configured)
         _ = try await restarted.read()
 
         let requests = transport.recordedRequests
@@ -350,7 +353,12 @@ final class GLMProviderTests: XCTestCase {
         }
         // Session-derived numbers land in the session's own cache identity.
         _ = try XCTUnwrap(transport.recordedRequests.first)
-        XCTAssertTrue(restarted.hasAPIKey, "sanity: the old key is still stored, just not selected")
+        // And the reader never read the old key: a console connection must not probe a stored
+        // API key it is not using (KEYCHAIN_REVISION_PLAN.md P1.7). The count is read before
+        // the sanity assertion below, which itself performs a load.
+        XCTAssertEqual(store.loads(of: .glmAPIKey), 0)
+        XCTAssertEqual(store.load(.glmAPIKey), .available("glm-old-key"),
+                       "sanity: the old key is still stored, just not selected")
     }
 
     /// The last selected mode wins: storing a key after a session selects the key again.
@@ -362,7 +370,7 @@ final class GLMProviderTests: XCTestCase {
             ProviderHTTPResponse(status: 200, body: Data(#"{"code":200,"data":{"available_balance":"1.00"}}"#.utf8))
         }
 
-        let reading = GLMReading(provider: GLMProvider(transport: transport, credentials: store),
+        let reading = GLMReading(provider: GLMProvider(transport: transport),
                                  credentials: store, preferences: defaults)
         try reading.storeSession(makeSession(cookies: "sid", capturedAt: Date()))
         try reading.storeAPIKey("glm-new-key")
@@ -384,7 +392,7 @@ final class GLMProviderTests: XCTestCase {
     func testDisconnectClearsThePersistedMode() throws {
         let defaults = makeIsolatedDefaults()
         let store = InMemoryCredentialStore()
-        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport(), credentials: store),
+        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport()),
                                  credentials: store, preferences: defaults)
         try reading.storeAPIKey("glm-key")
         XCTAssertNotNil(defaults.string(forKey: GLMReading.connectionModeKey))
@@ -397,9 +405,11 @@ final class GLMProviderTests: XCTestCase {
     // MARK: Credential handling
 
     func testProbeWithoutKeyIsNotConfigured() async {
-        let provider = GLMProvider(transport: FakeTransport(), credentials: InMemoryCredentialStore())
+        let provider = GLMProvider(transport: FakeTransport())
         do {
-            _ = try await provider.probeBalance()
+            // An empty key is the "nothing stored" case a caller can produce; the provider
+            // must refuse it instead of asking the endpoint.
+            _ = try await provider.probeBalance(apiKey: "")
             XCTFail("no key must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .notConfigured)
@@ -409,12 +419,10 @@ final class GLMProviderTests: XCTestCase {
     func testProbeSendsTheKeyToTheBalanceEndpointOnly() async throws {
         let transport = FakeTransport()
         transport.handler = { _ in ProviderHTTPResponse(status: 401, body: Data()) }
-        let credentials = InMemoryCredentialStore()
-        try credentials.save("glm-key", for: .glmAPIKey)
-        let provider = GLMProvider(transport: transport, credentials: credentials)
+        let provider = GLMProvider(transport: transport)
 
         do {
-            _ = try await provider.probeBalance()
+            _ = try await provider.probeBalance(apiKey: "glm-key")
             XCTFail("401 must fail")
         } catch {
             XCTAssertEqual(error as? ProviderFailure, .invalidCredential)
@@ -430,7 +438,7 @@ final class GLMProviderTests: XCTestCase {
         }
     }
 
-    func testDeletingTheKeyAndSessionClearsTheStore() throws {
+    func testDeletingTheKeyAndSessionClearsTheStore() async throws {
         let credentials = InMemoryCredentialStore()
         try credentials.save("glm-key", for: .glmAPIKey)
         let session = GLMConsoleSessionPolicy.StoredSession(
@@ -439,23 +447,25 @@ final class GLMProviderTests: XCTestCase {
         try credentials.save(String(decoding: GLMConsoleSessionPolicy.encode(session), as: UTF8.self),
                              for: .glmConsoleSession)
 
-        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport(), credentials: credentials),
+        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport()),
                                  credentials: credentials)
+        await reading.primeCredentialState()
         XCTAssertTrue(reading.isConfigured)
 
         try reading.disconnect()
         XCTAssertFalse(reading.isConfigured)
-        XCTAssertNil(credentials.load(.glmAPIKey))
-        XCTAssertNil(credentials.load(.glmConsoleSession))
+        XCTAssertEqual(credentials.load(.glmAPIKey), .missing)
+        XCTAssertEqual(credentials.load(.glmConsoleSession), .missing)
     }
 
-    func testAutomaticRefreshFollowsTheConfirmedSchemaOfTheStoredCredential() throws {
+    func testAutomaticRefreshFollowsTheConfirmedSchemaOfTheStoredCredential() async throws {
         let credentials = InMemoryCredentialStore()
-        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport(), credentials: credentials),
+        let reading = GLMReading(provider: GLMProvider(transport: FakeTransport()),
                                  credentials: credentials)
         XCTAssertFalse(reading.isAutomaticRefreshEnabled, "nothing stored, nothing to poll")
 
         try credentials.save("glm-key", for: .glmAPIKey)
+        await reading.primeCredentialState()
         XCTAssertTrue(reading.isAutomaticRefreshEnabled,
                       "the balance schema is confirmed, so the key joins the periodic cycle")
     }

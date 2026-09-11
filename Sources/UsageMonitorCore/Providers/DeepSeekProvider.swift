@@ -17,18 +17,15 @@ public struct DeepSeekProvider: Sendable {
     public static let allowedPaths: Set<String> = [balancePath]
 
     public let client: ProviderHTTPClient
-    private let credentials: ProviderCredentialStoring
 
-    public init(transport: ProviderTransport, credentials: ProviderCredentialStoring) {
-        self.credentials = credentials
+    /// No credential store here on purpose: the key is passed in by the caller, which read it
+    /// exactly once through `CredentialAccessCoordinator`. One business read must not fetch
+    /// the same key twice (KEYCHAIN_REVISION_PLAN.md P1.7).
+    public init(transport: ProviderTransport) {
         self.client = ProviderHTTPClient(baseURL: Self.apiBaseURL,
                                          allowedPaths: Self.allowedPaths,
                                          transport: transport,
                                          defaultHeaders: ["Accept": "application/json"])
-    }
-
-    public var hasCredential: Bool {
-        return credentials.load(.deepseekAPIKey) != nil
     }
 
     /// Stable, non-secret identifier used to isolate the business cache. A 6-hex-character
@@ -40,9 +37,10 @@ public struct DeepSeekProvider: Sendable {
         return digest.prefix(3).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// Fetches the balance. Blocking network work; call from a background task.
-    public func fetchBalances(timeout: TimeInterval = 15) async throws -> [ProviderBalance] {
-        guard let apiKey = credentials.load(.deepseekAPIKey), !apiKey.isEmpty else {
+    /// Fetches the balance with a key the caller already read. Blocking network work; call
+    /// from a background task.
+    public func fetchBalances(apiKey: String, timeout: TimeInterval = 15) async throws -> [ProviderBalance] {
+        guard !apiKey.isEmpty else {
             throw ProviderFailure.notConfigured
         }
         let response: ProviderHTTPResponse

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Combine
 import UsageMonitorCore
@@ -42,6 +43,10 @@ public final class UsageViewModel: ObservableObject {
     @Published public private(set) var consoleObservations: [GLMConsoleResponseObserver.Observation] = []
     /// Bumped whenever relative timestamps should be re-evaluated (staleness ages).
     @Published public private(set) var tick = 0
+    /// Whether the call-level credential diagnostics are being written. Toggled from the
+    /// panel; works on a normal launch because it reads an app-owned preference instead of an
+    /// environment variable (KEYCHAIN_REVISION_PLAN.md P0.4).
+    @Published public private(set) var isCredentialDiagnosticOn = CredentialAccessLog.isEnabled
 
     private let service: UsageService
     /// Non-optional by design (Round 6): a view model without an engine has no save path
@@ -56,6 +61,9 @@ public final class UsageViewModel: ObservableObject {
     private var timer: AnyCancellable?
     private var providerTimer: AnyCancellable?
     private var clockTimer: AnyCancellable?
+    /// Wake and system-clock observers, with the centre each was registered on so `stop()` can
+    /// release exactly the right one.
+    private var clockObservers: [(NotificationCenter, NSObjectProtocol)] = []
     private var refreshTask: Task<Void, Never>?
     private var providerRefreshTask: Task<Void, Never>?
     private(set) var isStopped = false
@@ -79,6 +87,28 @@ public final class UsageViewModel: ObservableObject {
 
     public var menuBarTitle: String { displayState.menuBarTitle }
 
+    /// Everything the status item draws for one mode and one clock reading.
+    ///
+    /// `now` is read per frame rather than accumulated, so sleep, a delayed main thread or a
+    /// system clock change can never leave the two rows drifting away from the real time
+    /// (v1.0.2 §4.4).
+    public func menuBarContent(for mode: MenuBarSpaceMode, now: Date = Date()) -> MenuBarContent {
+        MenuBarContentBuilder.make(display: displayState,
+                                   connectionState: connectionState,
+                                   now: now,
+                                   mode: mode)
+    }
+
+    /// Identity of everything that can change the status item's width, across all modes. The
+    /// countdown is deliberately absent: the item is re-measured only when its content or its
+    /// warning changes, not once a second (v1.0.2 §4.4).
+    public var menuBarSizeSignature: String {
+        let now = Date()
+        return MenuBarSpaceMode.allCases
+            .map { menuBarContent(for: $0, now: now).sizeSignature }
+            .joined(separator: "|")
+    }
+
     public var currentSnapshot: UsageSnapshot? { displayState.snapshot }
 
     /// Cached data is always shown with a warning; it must never read as live data.
@@ -97,12 +127,70 @@ public final class UsageViewModel: ObservableObject {
         Diagnostics.log("viewmodel start")
         isStopped = false
         scheduleTimers()
-        // Age the relative timestamps once a second so "更新于 X 秒前" stays truthful.
+        observeClockChanges()
+        // Age the relative timestamps once a second so "更新于 X 秒前" stays truthful, and so
+        // the two reset-time rows advance without any network or service work.
         clockTimer = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.tick += 1 }
         refresh()
         refreshProviders(force: false)
+        // The credential pass runs after the first paint, off the main actor, and never shows
+        // UI. Until it finishes, status questions answer "still finding out" rather than
+        // asking the keychain (KEYCHAIN_REVISION_PLAN.md P0 and P1.3).
+        primeCredentialAccess()
+    }
+
+    /// One background credential pass for every provider, so the panel can answer
+    /// "connected?" from memory afterwards.
+    private func primeCredentialAccess() {
+        wireCredentialPhaseChanges()
+        Task { [weak self] in
+            guard let self else { return }
+            await self.providerEngine.primeCredentials()
+            self.publishProviderReports()
+            self.refreshProviders(force: false)
+        }
+    }
+
+    /// A credential phase change (a value that arrived late, a refusal) must reach the panel
+    /// without the panel ever having asked the keychain anything.
+    private func wireCredentialPhaseChanges() {
+        let publish: () -> Void = { [weak self] in
+            Task { @MainActor in self?.publishProviderReports() }
+        }
+        for platform in [ProviderPlatform.deepseek, .glm] {
+            switch engineReading(platform) {
+            case let reading as DeepSeekReading: reading.onCredentialPhaseChange = publish
+            case let reading as GLMReading: reading.onCredentialPhaseChange = publish
+            default: break
+            }
+        }
+    }
+
+    /// Recomputes the displayed countdowns immediately when the machine wakes or the system
+    /// clock is changed, instead of waiting for the next one-second tick. The observers are
+    /// released in `stop()`.
+    ///
+    /// `NSWorkspace.didWakeNotification` is posted on the workspace's own centre; observing it
+    /// on `NotificationCenter.default` never fires (v1.0.2 §4.4).
+    private func observeClockChanges() {
+        guard clockObservers.isEmpty else { return }
+        let wake = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick += 1 }
+        }
+        let clockChanged = NotificationCenter.default.addObserver(
+            forName: .NSSystemClockDidChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick += 1 }
+        }
+        clockObservers = [(NSWorkspace.shared.notificationCenter, wake),
+                          (NotificationCenter.default, clockChanged)]
+    }
+
+    private func stopObservingClockChanges() {
+        for (center, token) in clockObservers { center.removeObserver(token) }
+        clockObservers.removeAll()
     }
 
     /// Cancels in-flight Codex work, stops timers and joins the fetch plus the owned child
@@ -127,6 +215,7 @@ public final class UsageViewModel: ObservableObject {
         timer = nil
         providerTimer = nil
         clockTimer = nil
+        stopObservingClockChanges()
         providerRefreshTask?.cancel()
         providerRefreshTask = nil
 
@@ -304,10 +393,16 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Deletes the stored DeepSeek key, its cached numbers and any auth suspension
-    /// (Round 6: the form says so instead of failing silently).
+    /// (Round 6: the form says so instead of failing silently). A failed removal is reported
+    /// as a failure, never as a completed disconnect (KEYCHAIN_REVISION_PLAN.md P1.8).
     @discardableResult
     public func deleteDeepSeekKey() -> Bool {
-        providerEngine.disconnect(platform: .deepseek)
+        if let failure = providerEngine.disconnect(platform: .deepseek) {
+            setFeedback(.disconnectFailed(platform: .deepseek))
+            publishProviderReports()
+            Diagnostics.log("credential delete failed: \(failure.debugSummary)")
+            return false
+        }
         publishProviderReports()
         setFeedback(.deleted(platform: .deepseek))
         return true
@@ -359,10 +454,16 @@ public final class UsageViewModel: ObservableObject {
         return true
     }
 
-    /// Removes every GLM credential and any cached numbers for it (退出连接时清除).
+    /// Removes every GLM credential and any cached numbers for it (退出连接时清除). A failed
+    /// removal keeps the connection and says so.
     @discardableResult
     public func disconnectGLM() -> Bool {
-        providerEngine.disconnect(platform: .glm)
+        if let failure = providerEngine.disconnect(platform: .glm) {
+            setFeedback(.disconnectFailed(platform: .glm))
+            publishProviderReports()
+            Diagnostics.log("credential delete failed: \(failure.debugSummary)")
+            return false
+        }
         publishProviderReports()
         setFeedback(.deleted(platform: .glm))
         return true
@@ -370,7 +471,12 @@ public final class UsageViewModel: ObservableObject {
 
     @discardableResult
     public func disconnectDeepSeek() -> Bool {
-        providerEngine.disconnect(platform: .deepseek)
+        if let failure = providerEngine.disconnect(platform: .deepseek) {
+            setFeedback(.disconnectFailed(platform: .deepseek))
+            publishProviderReports()
+            Diagnostics.log("credential delete failed: \(failure.debugSummary)")
+            return false
+        }
         publishProviderReports()
         setFeedback(.deleted(platform: .deepseek))
         return true
@@ -395,7 +501,43 @@ public final class UsageViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Credential authorisation
+
+    /// The only path that may put a keychain dialog on screen, and only because the user
+    /// pressed a button. One press, one read per credential; nothing here is on a timer
+    /// (KEYCHAIN_REVISION_PLAN.md P1.4).
+    public func authorizeCredentialAccess(_ platform: ProviderPlatform) {
+        setFeedback(.authorizing(platform: platform))
+        isProviderRefreshing = true
+        Task { [weak self] in
+            guard let self else { return }
+            let granted = await self.providerEngine.authorizeCredentialAccess(platform: platform)
+            guard granted else {
+                self.setFeedback(.authorizationDenied(platform: platform))
+                self.publishProviderReports()
+                self.finishProviderRefresh()
+                return
+            }
+            _ = await self.providerEngine.reconnect(platform: platform)
+            self.finishProviderRefresh()
+            self.setFeedback(CredentialFeedback(report: self.providerEngine.report(for: platform)))
+        }
+    }
+
     // MARK: - Credential feedback
+
+    /// Flips the call-level credential diagnostics and records the change, so a log segment
+    /// always says when and why it started.
+    public func setCredentialDiagnostics(_ enabled: Bool) {
+        CredentialAccessLog.isEnabled = enabled
+        isCredentialDiagnosticOn = enabled
+        CredentialAccessLog.note(enabled ? "diagnostics enabled" : "diagnostics disabled")
+    }
+
+    /// Where the credential diagnostics are written, for display in the panel.
+    public var credentialDiagnosticPath: String? {
+        return CredentialAccessLog.logFileURL?.path
+    }
 
     private func setFeedback(_ feedback: CredentialFeedback) {
         credentialFeedback[feedback.platform] = feedback
@@ -469,13 +611,24 @@ public enum CredentialFeedback: Equatable, Sendable {
     case structureUnsupported(platform: ProviderPlatform)
     /// Credential removed, caches cleared, not connected.
     case deleted(platform: ProviderPlatform)
+    /// The user asked for a credential read; the system dialog may be on screen.
+    case authorizing(platform: ProviderPlatform)
+    /// The credential is stored but unreadable without the user's decision. Never rendered
+    /// as "nothing stored" (KEYCHAIN_REVISION_PLAN.md P1.8).
+    case authorizationRequired(platform: ProviderPlatform)
+    /// The user declined, or the request was cancelled. The credential is untouched.
+    case authorizationDenied(platform: ProviderPlatform)
+    /// The credential could not be removed, so the account is still connected.
+    case disconnectFailed(platform: ProviderPlatform)
 
     public var platform: ProviderPlatform {
         switch self {
         case .saving(let platform), .verifying(let platform), .connected(let platform),
              .invalidCredential(let platform), .saveFailed(let platform),
              .savedUnverified(let platform), .awaitingContract(let platform),
-             .structureUnsupported(let platform), .deleted(let platform):
+             .structureUnsupported(let platform), .deleted(let platform),
+             .authorizing(let platform), .authorizationRequired(let platform),
+             .authorizationDenied(let platform), .disconnectFailed(let platform):
             return platform
         }
     }
@@ -483,7 +636,8 @@ public enum CredentialFeedback: Equatable, Sendable {
     /// True when the state should draw attention (warning colour), false for neutral states.
     public var needsAttention: Bool {
         switch self {
-        case .invalidCredential, .saveFailed, .savedUnverified, .structureUnsupported:
+        case .invalidCredential, .saveFailed, .savedUnverified, .structureUnsupported,
+             .authorizationRequired, .authorizationDenied, .disconnectFailed:
             return true
         default:
             return false
@@ -510,6 +664,14 @@ public enum CredentialFeedback: Equatable, Sendable {
             return "已连接，但当前响应结构暂不支持"
         case .deleted:
             return "已删除，未连接"
+        case .authorizing:
+            return "正在请求钥匙串授权，请在系统对话框中选择允许…"
+        case .authorizationRequired:
+            return "凭证已保存在钥匙串，需要授权后才能读取。点「授权读取」并在系统对话框中选择允许。"
+        case .authorizationDenied:
+            return "已拒绝或取消钥匙串访问。凭证仍保留在钥匙串中，可稍后重新授权。"
+        case .disconnectFailed:
+            return "断开失败：凭证仍保留在钥匙串中，请稍后重试。"
         }
     }
 
@@ -535,6 +697,10 @@ public enum CredentialFeedback: Equatable, Sendable {
             // Only reachable if the credential vanished mid-flight; treated as a failed
             // cycle rather than an invented success.
             self = .saveFailed(platform: platform)
+        case .needsAuthorization:
+            // The credential is there; the system dialog has not been answered. Never
+            // reported as "save failed", which would invite overwriting a stored key.
+            self = .authorizationRequired(platform: platform)
         case .stale, .unavailable:
             // A previous value may still be on display, but this verification did not
             // complete: the key is stored locally either way.

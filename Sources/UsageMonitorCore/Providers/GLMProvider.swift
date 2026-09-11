@@ -34,14 +34,15 @@ public struct GLMProvider: Sendable {
 
     public let consoleClient: ProviderHTTPClient
     public let client: ProviderHTTPClient
-    private let credentials: ProviderCredentialStoring
 
-    public init(transport: ProviderTransport, credentials: ProviderCredentialStoring) {
+    /// No credential store here on purpose: the key is passed in by the caller, which read it
+    /// exactly once through `CredentialAccessCoordinator`, and only when the selected
+    /// connection mode actually needs it (KEYCHAIN_REVISION_PLAN.md P1.7).
+    public init(transport: ProviderTransport) {
         self.consoleClient = ProviderHTTPClient(baseURL: URL(string: "https://bigmodel.cn")!,
                                                 allowedPaths: [Self.accountReportPath],
                                                 transport: transport,
                                                 defaultHeaders: ["Accept": "application/json"])
-        self.credentials = credentials
         self.client = ProviderHTTPClient(baseURL: Self.openAPIBaseURL,
                                          allowedPaths: Self.allowedPaths,
                                          transport: transport,
@@ -49,10 +50,6 @@ public struct GLMProvider: Sendable {
     }
 
     // MARK: - API key
-
-    public var hasAPIKey: Bool {
-        return credentials.load(.glmAPIKey) != nil
-    }
 
     /// Stable, non-secret identifier for cache isolation: a 6-hex-character SHA-256 prefix
     /// of the key. Replacing the key invalidates the old cache; the value cannot be
@@ -69,8 +66,8 @@ public struct GLMProvider: Sendable {
     /// HTTP status preserved) so the caller can publish it. Two `Authorization` spellings
     /// have existed across GLM API generations; both are tried, and neither is treated as
     /// accepted until a payload survives the schema gate.
-    public func probeBalanceObservation(timeout: TimeInterval = 15) async -> GLMAccountReportObservation {
-        guard let apiKey = credentials.load(.glmAPIKey), !apiKey.isEmpty else {
+    public func probeBalanceObservation(apiKey: String, timeout: TimeInterval = 15) async -> GLMAccountReportObservation {
+        guard !apiKey.isEmpty else {
             return GLMAccountReportObservation(httpStatus: 0, topLevelKeys: [],
                                                businessCode: nil, candidateBalances: [],
                                                parseFailure: .notConfigured)
@@ -106,8 +103,8 @@ public struct GLMProvider: Sendable {
     /// Throwing form of the probe, for callers that want a failure instead of an
     /// observation. The classification comes from the same observation the non-throwing
     /// form publishes, so the two can never disagree.
-    public func probeBalance(timeout: TimeInterval = 15) async throws -> GLMAccountReportObservation {
-        let observation = await probeBalanceObservation(timeout: timeout)
+    public func probeBalance(apiKey: String, timeout: TimeInterval = 15) async throws -> GLMAccountReportObservation {
+        let observation = await probeBalanceObservation(apiKey: apiKey, timeout: timeout)
         if let failure = observation.parseFailure { throw failure }
         return observation
     }

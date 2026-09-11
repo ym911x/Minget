@@ -1,0 +1,43 @@
+== 采集时间 ==
+2026-09-11T07:44:52Z
+
+== KEYCHAIN_REVISION_PLAN.md 执行后的构建与严格校验 ==
+-- scripts/build.sh 输出（关键行）--
+== signing identity: Minget Local Signing ==
+== swift build (release) ==
+== staging /var/folders/fb/q2_7s2qs0mnd4zng7dpt7ncw0000gn/T//minget-staging/Minget.app ==
+== codesign (Minget Local Signing) ==
+== strict verification in staging ==
+--prepared:/private/var/folders/fb/q2_7s2qs0mnd4zng7dpt7ncw0000gn/T/minget-staging/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/var/folders/fb/q2_7s2qs0mnd4zng7dpt7ncw0000gn/T/minget-staging/Minget.app/Contents/MacOS/MingetCLI
+/var/folders/fb/q2_7s2qs0mnd4zng7dpt7ncw0000gn/T//minget-staging/Minget.app: valid on disk
+/var/folders/fb/q2_7s2qs0mnd4zng7dpt7ncw0000gn/T//minget-staging/Minget.app: satisfies its Designated Requirement
+== install to /Users/yuyimeng/Applications/Minget.app ==
+--prepared:/Users/yuyimeng/Applications/Minget.app/Contents/MacOS/MingetCLI
+--validated:/Users/yuyimeng/Applications/Minget.app/Contents/MacOS/MingetCLI
+/Users/yuyimeng/Applications/Minget.app: valid on disk
+/Users/yuyimeng/Applications/Minget.app: satisfies its Designated Requirement
+== archive copy to dist/Minget.app ==
+dist/Minget.app: valid on disk
+dist/Minget.app: satisfies its Designated Requirement
+built:   /Users/yuyimeng/Applications/Minget.app
+archive: dist/Minget.app
+
+== 严格校验的两条结论 ==
+  staging（本地目录）与运行路径（~/Applications/Minget.app）严格校验通过。
+  dist/Minget.app 普通校验通过，严格校验因 iCloud file provider 重新写入的属性而失败，
+  差异由脚本显式打印并记录，不再隐藏。
+
+== 运行路径候选包 ==
+  Authority: Minget Local Signing
+  CDHash   : 817cc2579106f7c45e6ecc044b0a2924e8bf3fd4
+  DR       : identifier "local.usagemonitor.UsageMonitor" and certificate root = H"5a48bb2b5305dd0ad0484581f1ce5173061ba395"
+  版本     : 1.0.2
+  扩展属性 : com.apple.provenance
+  严格校验 : 通过
+
+== 自动化测试 ==
+	 Executed 359 tests, with 0 failures (0 unexpected) in 10.801 (10.837) seconds
+
+== 未执行 ==
+  真实弹窗验收（计划 §四 的后四行）需用户在真实界面完成，未执行。

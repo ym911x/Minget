@@ -1,29 +1,64 @@
 import Foundation
 
 /// DeepSeek reader wired to the keychain-backed key.
+///
+/// Every credential access goes through `CredentialAccessCoordinator`. The reader itself only
+/// ever reads *memory* state: `credentialState` answers status questions without touching the
+/// keychain, and `read()` performs at most one access, whose value serves both the network
+/// request and the account fingerprint (KEYCHAIN_REVISION_PLAN.md P1.3 and P1.7).
 public final class DeepSeekReading: ProviderReading, @unchecked Sendable {
 
     public let platform: ProviderPlatform = .deepseek
     public var isAutomaticRefreshEnabled: Bool { true }
 
     private let provider: DeepSeekProvider
-    private let credentials: ProviderCredentialStoring
+    private let access: CredentialAccessCoordinator
 
-    public init(provider: DeepSeekProvider, credentials: ProviderCredentialStoring) {
+    public init(provider: DeepSeekProvider,
+                credentials: ProviderCredentialStoring,
+                accessQueue: DispatchQueue? = nil) {
         self.provider = provider
-        self.credentials = credentials
+        self.access = accessQueue.map { CredentialAccessCoordinator(store: credentials, queue: $0) }
+            ?? CredentialAccessCoordinator(store: credentials)
     }
 
-    public var isConfigured: Bool {
-        guard let key = credentials.load(.deepseekAPIKey) else { return false }
-        return !key.isEmpty
+    /// Memory only. Never touches the keychain, so it is safe from `init`, `report` and any
+    /// redraw.
+    public var credentialState: ProviderCredentialState {
+        ProviderCredentialState(phase: access.phase(for: .deepseekAPIKey))
+    }
+
+    public var isConfigured: Bool { credentialState.isConfigured }
+
+    /// Forwards credential-phase changes so the owner can publish a fresh report.
+    public var onCredentialPhaseChange: (() -> Void)? {
+        get { access.onPhaseChange }
+        set { access.onPhaseChange = newValue }
+    }
+
+    /// One background read, which is what a launch needs to know whether this platform is
+    /// worth connecting.
+    public func primeCredentialState() async {
+        await access.prime([.deepseekAPIKey])
+    }
+
+    /// One read the user asked for. It may show the system dialog; nothing else may.
+    @discardableResult
+    public func authorizeCredentialAccess() async -> Bool {
+        let outcome = await access.value(for: .deepseekAPIKey,
+                                         purpose: .userRequestedRead,
+                                         interaction: .allowed)
+        return outcome.isAvailable
     }
 
     public func read() async throws -> ProviderReadResult {
-        guard let key = credentials.load(.deepseekAPIKey), !key.isEmpty else {
-            throw ProviderFailure.notConfigured
+        let outcome = await access.value(for: .deepseekAPIKey,
+                                        purpose: .providerRead,
+                                        interaction: .allowed)
+        guard let key = outcome.secret, !key.isEmpty else {
+            throw Self.failure(for: outcome)
         }
-        let balances = try await provider.fetchBalances()
+        let balances = try await provider.fetchBalances(apiKey: key)
         return ProviderReadResult(accountID: DeepSeekProvider.accountFingerprint(forAPIKey: key),
                                   balances: balances,
                                   consoleURL: nil)
@@ -33,11 +68,24 @@ public final class DeepSeekReading: ProviderReading, @unchecked Sendable {
     /// moment the user saves a key; the reading owns its own credential, so there is no
     /// second, separately-wired store that could be left unconnected (Round 6).
     public func storeAPIKey(_ key: String) throws {
-        try credentials.save(key, for: .deepseekAPIKey)
+        try access.store(key, for: .deepseekAPIKey)
     }
 
+    /// Removes the key. A failure is propagated so the caller cannot claim a disconnect that
+    /// did not happen.
     public func disconnect() throws {
-        credentials.delete(.deepseekAPIKey)
+        try access.remove(.deepseekAPIKey)
+    }
+
+    /// Fixed category for a credential that could not be produced. A refusal is never
+    /// reported as "nothing saved" (KEYCHAIN_REVISION_PLAN.md P1.8).
+    static func failure(for outcome: CredentialAccessOutcome) -> ProviderFailure {
+        switch outcome {
+        case .available: return .other
+        case .missing: return .notConfigured
+        case .interactionRequired, .deniedOrCancelled: return .credentialAccessBlocked
+        case .unavailable: return .other
+        }
     }
 }
 
@@ -55,20 +103,27 @@ public final class DeepSeekReading: ProviderReading, @unchecked Sendable {
 /// schema. A business-successful body that matches no known shape reports
 /// `structureUnsupported` together with a redacted structure observation, so a new real
 /// shape can be identified without exposing a single value.
+///
+/// Credential handling: construction reads nothing. The selected connection mode decides
+/// which credential is loaded, so a console connection never probes a stored API key it is
+/// not using (KEYCHAIN_REVISION_PLAN.md P1.7).
 public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked Sendable {
 
     public let platform: ProviderPlatform = .glm
 
     private let provider: GLMProvider
-    private let credentials: ProviderCredentialStoring
+    private let access: CredentialAccessCoordinator
     private let clock: () -> Date
-    private let sessionLock = NSLock()
-    private var cachedSession: GLMConsoleSessionPolicy.StoredSession?
+    private let stateLock = NSLock()
+    /// Decoded session, keyed by the raw string it was decoded from, so a decode cannot be
+    /// served for a different stored value.
+    private var decodedSession: (raw: String, session: GLMConsoleSessionPolicy.StoredSession)?
     /// The credential the app is currently connected with: the one saved or captured most
     /// recently. **Persisted** (a non-secret mode choice in UserDefaults), so a restart
     /// keeps using the selected console connection instead of silently falling back to an
     /// old stored API key (REVIEW round 7 finding 1).
     private var preferredCredential: PreferredCredential?
+    private let preferences: UserDefaults
 
     /// UserDefaults key for the non-secret connection-mode choice. App-owned defaults
     /// only; never a credential value.
@@ -77,6 +132,13 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     private enum PreferredCredential: String {
         case apiKey
         case consoleSession
+    }
+
+    /// Which stored credential the app should use.
+    public enum SelectedCredential: Equatable, Sendable {
+        case apiKey
+        case consoleSession
+        case none
     }
 
     /// Last probe observation. Field names and codes only; never key material. Surfaced to
@@ -89,57 +151,128 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     public init(provider: GLMProvider,
                 credentials: ProviderCredentialStoring,
                 clock: @escaping () -> Date = Date.init,
-                preferences: UserDefaults = .standard) {
+                preferences: UserDefaults = .standard,
+                accessQueue: DispatchQueue? = nil) {
         self.provider = provider
-        self.credentials = credentials
         self.clock = clock
         self.preferences = preferences
+        self.access = accessQueue.map { CredentialAccessCoordinator(store: credentials, queue: $0) }
+            ?? CredentialAccessCoordinator(store: credentials)
         if let raw = preferences.string(forKey: Self.connectionModeKey),
            let mode = PreferredCredential(rawValue: raw) {
             self.preferredCredential = mode
         }
-        if let data = credentials.load(.glmConsoleSession).flatMap({ Data($0.utf8) }),
-           let session = GLMConsoleSessionPolicy.decode(data) {
-            self.cachedSession = session
+        // Construction deliberately reads no credential. Loading the console session here used
+        // to make `AppContainer` construction wait on the keychain, which is what turned an
+        // authorisation prompt into a startup stall (KEYCHAIN_REVISION_PLAN.md P1.3).
+    }
+
+    // MARK: - Credential state (memory only)
+
+    public var credentialState: ProviderCredentialState {
+        if selectedCredential() != .none { return .configured }
+        let keyPhase = access.phase(for: .glmAPIKey)
+        let sessionPhase = access.phase(for: .glmConsoleSession)
+        if keyPhase == .needsAuthorization || sessionPhase == .needsAuthorization { return .needsAuthorization }
+        if keyPhase == .unknown || sessionPhase == .unknown { return .unknown }
+        if keyPhase == .unavailable || sessionPhase == .unavailable { return .unavailable }
+        return .missing
+    }
+
+    public var isConfigured: Bool { credentialState.isConfigured }
+
+    /// True when the stored credential's endpoint schema is confirmed. Platforms whose
+    /// contract is unconfirmed opt out of the periodic cycle and are read on demand only.
+    public var isAutomaticRefreshEnabled: Bool {
+        switch selectedCredential() {
+        case .apiKey: return GLMContract.isConfirmed(.apiBalanceV1)
+        case .consoleSession: return GLMContract.isConfirmed(.consoleReportV1)
+        case .none: return false
         }
     }
 
-    private let preferences: UserDefaults
+    /// Memory only: the credential exists and was readable in this process.
+    public var hasAPIKey: Bool { access.phase(for: .glmAPIKey).isConfigured }
+    public var hasSession: Bool { access.phase(for: .glmConsoleSession).isConfigured }
 
-    public var isConfigured: Bool {
-        return hasAPIKey || hasSession
-    }
-
-    /// The periodic cycle runs only when the stored credential's endpoint schema is
-    /// confirmed. Until then the endpoint is probed on connect and on explicit request,
-    /// not on a timer.
-    public var isAutomaticRefreshEnabled: Bool {
-        guard isConfigured else { return false }
-        if hasAPIKey { return GLMContract.isConfirmed(.apiBalanceV1) }
-        return GLMContract.isConfirmed(.consoleReportV1)
-    }
-
-    public var hasAPIKey: Bool {
-        guard let key = credentials.load(.glmAPIKey) else { return false }
-        return !key.isEmpty
-    }
-
-    public var hasSession: Bool {
-        return session() != nil
-    }
-
-    /// State of the stored console session.
+    /// State of the stored console session, from the value already in memory.
     public var sessionState: GLMConsoleSessionPolicy.SessionState {
-        return GLMConsoleSessionPolicy.evaluate(session(), now: clock())
+        guard let session = sessionFromMemory() else { return .absent }
+        return GLMConsoleSessionPolicy.evaluate(session, now: clock())
     }
+
+    /// Which credential the persisted mode and the known phases select.
+    public func selectedCredential() -> SelectedCredential {
+        let keyConfigured = access.phase(for: .glmAPIKey).isConfigured
+        let sessionConfigured = access.phase(for: .glmConsoleSession).isConfigured
+        let preference = stateLock.withLock { preferredCredential }
+        switch preference {
+        case .apiKey where keyConfigured: return .apiKey
+        case .consoleSession where sessionConfigured: return .consoleSession
+        default:
+            if keyConfigured { return .apiKey }
+            if sessionConfigured { return .consoleSession }
+            return .none
+        }
+    }
+
+    // MARK: - Lifecycle
+
+    public var onCredentialPhaseChange: (() -> Void)? {
+        get { access.onPhaseChange }
+        set { access.onPhaseChange = newValue }
+    }
+
+    /// Background pass at launch: the credential the persisted mode needs, and the other one
+    /// only when the preferred credential turns out to be absent, so a fallback can still be
+    /// offered without probing a key that is not in use.
+    public func primeCredentialState() async {
+        switch stateLock.withLock({ preferredCredential }) {
+        case .apiKey:
+            await access.prime([.glmAPIKey])
+            if access.phase(for: .glmAPIKey) == .missing { await access.prime([.glmConsoleSession]) }
+        case .consoleSession:
+            await access.prime([.glmConsoleSession])
+            if access.phase(for: .glmConsoleSession) == .missing { await access.prime([.glmAPIKey]) }
+        case nil:
+            await access.prime([.glmAPIKey, .glmConsoleSession])
+        }
+    }
+
+    /// One read the user asked for: it may show the system dialog, and it always gets its own
+    /// attempt even when the background read was refused.
+    @discardableResult
+    public func authorizeCredentialAccess() async -> Bool {
+        let keys: [ProviderCredentialKey]
+        switch selectedCredential() {
+        case .apiKey: keys = [.glmAPIKey]
+        case .consoleSession: keys = [.glmConsoleSession]
+        case .none:
+            // Nothing is known yet: ask for the credential the persisted mode expects first.
+            switch stateLock.withLock({ preferredCredential }) {
+            case .consoleSession: keys = [.glmConsoleSession, .glmAPIKey]
+            case .apiKey, nil: keys = [.glmAPIKey, .glmConsoleSession]
+            }
+        }
+        for key in keys {
+            let outcome = await access.refresh(key, purpose: .userRequestedRead, interaction: .allowed)
+            if case .available(let raw) = outcome, key == .glmConsoleSession {
+                rememberSession(raw)
+            }
+            if outcome.isAvailable {
+                return true
+            }
+        }
+        return false
+    }
+
+    // MARK: - Writing
 
     /// Saves the API key (keychain only) and marks it the credential the next connection
     /// probe exercises. Called by the settings flow the moment the user saves a key.
     public func storeAPIKey(_ key: String) throws {
-        try credentials.save(key, for: .glmAPIKey)
-        sessionLock.lock()
-        preferredCredential = .apiKey
-        sessionLock.unlock()
+        try access.store(key, for: .glmAPIKey)
+        stateLock.withLock { preferredCredential = .apiKey }
         preferences.set(PreferredCredential.apiKey.rawValue, forKey: Self.connectionModeKey)
     }
 
@@ -148,35 +281,46 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     /// session becomes the credential the next connection probe exercises.
     public func storeSession(_ session: GLMConsoleSessionPolicy.StoredSession) throws {
         let data = try GLMConsoleSessionPolicy.encode(session)
-        try credentials.save(String(decoding: data, as: UTF8.self), for: .glmConsoleSession)
-        sessionLock.lock()
-        cachedSession = session
-        preferredCredential = .consoleSession
-        sessionLock.unlock()
+        let raw = String(decoding: data, as: UTF8.self)
+        try access.store(raw, for: .glmConsoleSession)
+        stateLock.withLock {
+            decodedSession = (raw, session)
+            preferredCredential = .consoleSession
+        }
         preferences.set(PreferredCredential.consoleSession.rawValue, forKey: Self.connectionModeKey)
     }
 
-    public func read() async throws -> ProviderReadResult {
-        guard isConfigured else { throw ProviderFailure.notConfigured }
-
-        // The selected connection mode decides which endpoint is exercised; it survives
-        // restarts, so a console connection is not silently switched back to an old key.
-        let useSession = useConsoleSession()
-        if !useSession, let key = credentials.load(.glmAPIKey), !key.isEmpty {
-            return try await readWithAPIKey(key)
+    /// Removes the API key, the console session and the cached numbers. Stops at the first
+    /// failure so the caller learns the disconnect was incomplete.
+    public func disconnect() throws {
+        try access.remove(.glmAPIKey)
+        try access.remove(.glmConsoleSession)
+        stateLock.withLock {
+            decodedSession = nil
+            preferredCredential = nil
         }
-        guard let session = session() else { throw ProviderFailure.notConfigured }
-        return try await readWithSession(session)
+        preferences.removeObject(forKey: Self.connectionModeKey)
     }
 
-    /// True when the stored credential set and the persisted mode select the console
-    /// session. Falls back to "only the session exists" when no mode was ever recorded.
-    private func useConsoleSession() -> Bool {
-        let preference = sessionLock.withLock { preferredCredential }
-        switch preference {
-        case .consoleSession where hasSession: return true
-        case .apiKey where hasAPIKey: return false
-        default: return !hasAPIKey && hasSession
+    // MARK: - Reading
+
+    public func read() async throws -> ProviderReadResult {
+        switch selectedCredential() {
+        case .apiKey:
+            let outcome = await access.value(for: .glmAPIKey, purpose: .providerRead, interaction: .allowed)
+            guard let key = outcome.secret, !key.isEmpty else { throw DeepSeekReading.failure(for: outcome) }
+            return try await readWithAPIKey(key)
+
+        case .consoleSession:
+            let outcome = await access.value(for: .glmConsoleSession, purpose: .providerRead, interaction: .allowed)
+            guard let raw = outcome.secret,
+                  let session = GLMConsoleSessionPolicy.decode(Data(raw.utf8)) else {
+                throw DeepSeekReading.failure(for: outcome)
+            }
+            return try await readWithSession(session)
+
+        case .none:
+            throw ProviderFailure.notConfigured
         }
     }
 
@@ -200,7 +344,8 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
         let primaryFailure = primary.parseFailure ?? .unexpectedResponse
         switch primaryFailure {
         case .invalidCredential, .notConfigured, .networkUnreachable, .timedOut,
-             .serverError, .crossDomainRedirectBlocked, .cancelled, .other, .suspended:
+             .serverError, .crossDomainRedirectBlocked, .cancelled, .other, .suspended,
+             .credentialAccessBlocked:
             throw primaryFailure
         case .unexpectedResponse, .businessError, .structureUnsupported, .contractUnconfirmed:
             break   // worth one fallback attempt with the same key
@@ -222,7 +367,7 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     /// Console-session path: the report endpoint with the captured cookies. A hard-expired
     /// session is never replayed.
     private func readWithSession(_ session: GLMConsoleSessionPolicy.StoredSession) async throws -> ProviderReadResult {
-        guard case .present = sessionState else {
+        guard case .present = GLMConsoleSessionPolicy.evaluate(session, now: clock()) else {
             record(GLMAccountReportObservation(httpStatus: 0, topLevelKeys: [],
                                                businessCode: nil, candidateBalances: [],
                                                parseFailure: .invalidCredential))
@@ -267,7 +412,7 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     }
 
     /// One-shot read-only probe, used by the 探测一次 button and by tests. Exercises the
-    /// most recently saved credential against its own endpoint (API key → balance
+    /// credential the selected mode uses against its own endpoint (API key → balance
     /// endpoint, console session → report endpoint). Records what the endpoint answered
     /// (HTTP status, business code, top-level key names, redacted structure) without
     /// displaying or caching any amount.
@@ -277,14 +422,20 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
     /// hard-expired session is never replayed.
     @discardableResult
     public func probe() async -> GLMAccountReportObservation? {
-        guard isConfigured else { return nil }
+        switch selectedCredential() {
+        case .apiKey:
+            let outcome = await access.value(for: .glmAPIKey, purpose: .userRequestedRead, interaction: .allowed)
+            guard let key = outcome.secret, !key.isEmpty else { return nil }
+            let observation = await provider.probeBalanceObservation(apiKey: key)
+            record(observation)
+            return observation
 
-        let useSession = useConsoleSession()
-        let observation: GLMAccountReportObservation
-        if !useSession {
-            observation = await provider.probeBalanceObservation()
-        } else if let session = session() {
-            switch sessionState {
+        case .consoleSession:
+            let outcome = await access.value(for: .glmConsoleSession, purpose: .userRequestedRead, interaction: .allowed)
+            guard let raw = outcome.secret,
+                  let session = GLMConsoleSessionPolicy.decode(Data(raw.utf8)) else { return nil }
+            let observation: GLMAccountReportObservation
+            switch GLMConsoleSessionPolicy.evaluate(session, now: clock()) {
             case .present:
                 observation = await probeConsoleSession(session)
             case .absent, .expired:
@@ -293,11 +444,12 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
                                                           businessCode: nil, candidateBalances: [],
                                                           parseFailure: .invalidCredential)
             }
-        } else {
+            record(observation)
+            return observation
+
+        case .none:
             return nil
         }
-        record(observation)
-        return observation
     }
 
     /// Connection probe for the engine's save-then-connect flow: probes with the most
@@ -334,32 +486,33 @@ public final class GLMReading: ProviderReading, ProviderProbeReading, @unchecked
         }
     }
 
-    /// Removes the API key, the console session and the cached numbers.
-    public func disconnect() throws {
-        credentials.delete(.glmAPIKey)
-        credentials.delete(.glmConsoleSession)
-        sessionLock.lock()
-        cachedSession = nil
-        preferredCredential = nil
-        sessionLock.unlock()
-        preferences.removeObject(forKey: Self.connectionModeKey)
-    }
-
     // MARK: - Internals
 
     private func record(_ observation: GLMAccountReportObservation) {
-        sessionLock.lock()
+        stateLock.lock()
         lastObservation = observation
-        sessionLock.unlock()
+        stateLock.unlock()
         onObservation?(observation)
     }
 
-    private func session() -> GLMConsoleSessionPolicy.StoredSession? {
-        sessionLock.lock(); defer { sessionLock.unlock() }
-        if let cachedSession { return cachedSession }
-        guard let raw = credentials.load(.glmConsoleSession),
-              let session = GLMConsoleSessionPolicy.decode(Data(raw.utf8)) else { return nil }
-        cachedSession = session
+    /// The stored session, from memory only. Nil when nothing has been read in this process.
+    private func sessionFromMemory() -> GLMConsoleSessionPolicy.StoredSession? {
+        guard let raw = access.cachedSecret(for: .glmConsoleSession) else { return nil }
+        return decodedSessionLocked(raw: raw)
+    }
+
+    private func rememberSession(_ raw: String) {
+        _ = decodedSessionLocked(raw: raw)
+    }
+
+    private func decodedSessionLocked(raw: String) -> GLMConsoleSessionPolicy.StoredSession? {
+        stateLock.lock(); defer { stateLock.unlock() }
+        if let decodedSession, decodedSession.raw == raw { return decodedSession.session }
+        guard let session = GLMConsoleSessionPolicy.decode(Data(raw.utf8)) else {
+            decodedSession = nil
+            return nil
+        }
+        decodedSession = (raw, session)
         return session
     }
 

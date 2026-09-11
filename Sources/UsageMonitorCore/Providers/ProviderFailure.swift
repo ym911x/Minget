@@ -27,6 +27,11 @@ public enum ProviderFailure: Error, Equatable, Sendable {
     case crossDomainRedirectBlocked
     /// Automatic retries are paused until the user reconnects.
     case suspended
+    /// The stored credential exists, but reading it needs the user's decision in the system
+    /// dialog, or the user declined. Not the same as "nothing stored": the UI must ask for
+    /// authorisation instead of inviting the user to enter a key again
+    /// (KEYCHAIN_REVISION_PLAN.md P1.8).
+    case credentialAccessBlocked
     /// The request was cancelled because a newer one replaced it.
     case cancelled
     case other
@@ -71,6 +76,7 @@ public enum ProviderFailure: Error, Equatable, Sendable {
         case .contractUnconfirmed: return "contractUnconfirmed"
         case .crossDomainRedirectBlocked: return "crossDomainRedirectBlocked"
         case .suspended: return "suspended"
+        case .credentialAccessBlocked: return "credentialAccessBlocked"
         case .cancelled: return "cancelled"
         case .other: return "other"
         }
@@ -101,6 +107,8 @@ public enum ProviderFailure: Error, Equatable, Sendable {
             return "请求被重定向到其他站点，已中止"
         case .suspended:
             return "已暂停自动刷新，请重新连接"
+        case .credentialAccessBlocked:
+            return "需要钥匙串授权才能读取凭证"
         case .cancelled:
             return "请求已取消"
         case .other:

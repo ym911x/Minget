@@ -1,0 +1,47 @@
+== 采集时间 ==
+2026-09-10T18:02:36Z
+
+== git status --short scripts/build.sh ==
+(无输出 = 未改动)
+
+== 构建脚本签名段 ==
+
+echo "== codesign (ad-hoc) =="
+# Fail closed: a bundle that cannot be signed or verified must not be reported as built.
+xattr -cr "$DIST/$APP_NAME.app"
+if ! codesign --force --sign - "$DIST/$APP_NAME.app"; then
+  echo "error: ad-hoc codesign failed" >&2
+  exit 1
+fi
+
+echo "== verify =="
+
+== security find-identity -v -p codesigning ==
+     0 valid identities found
+
+== security find-identity -p codesigning ==
+
+Policy: Code Signing
+  Matching identities
+     0 identities found
+
+  Valid identities only
+     0 valid identities found
+
+== codesign -dv --verbose=2 dist/Minget.app ==
+Identifier=local.usagemonitor.UsageMonitor
+CodeDirectory v=20400 size=4632 flags=0x2(adhoc) hashes=138+3 location=embedded
+Signature=adhoc
+TeamIdentifier=not set
+
+== codesign -d -r- 各副本 ==
+-- dist/Minget.app
+# designated => cdhash H"aedb372dfff4c7c523b32b905cc870205f163a32"
+-- dist/UsageMonitor 2.app
+# designated => cdhash H"aaf6d6ab320e07a85903d0ad7fda5ceeb329be3d"
+-- dist/UsageMonitor.app
+# designated => cdhash H"fc52e09881a29c7ffb28a1e76401cb3215ae1e32"
+
+== 说明 ==
+本文件记录 1.0.2 执行结束时（本轮未执行签名交接）的签名现状，用于与 SIGNING_HANDOFF.md 的验收标准对照。
+未读取任何钥匙串条目内容，未修改任何签名或凭证。

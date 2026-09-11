@@ -1,0 +1,26 @@
+2026-09-10 17:37:30 +0000 [UsageMonitor] applicationDidFinishLaunching
+2026-09-10 17:37:44 +0000 [UsageMonitor] viewmodel start
+2026-09-10 17:37:44 +0000 [UsageMonitor] starting app-server child
+2026-09-10 17:37:44 +0000 [UsageMonitor] app-server child started pid 23260
+2026-09-10 17:37:45 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:37:45 +0000 [UsageMonitor] display live
+2026-09-10 17:37:45 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1216 w116 mode:full
+2026-09-10 17:37:45 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1183 w116 mode:full
+2026-09-10 17:37:54 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1183 w116 mode:full
+2026-09-10 17:37:58 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:04 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:14 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:24 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:34 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:44 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:38:45 +0000 [UsageMonitor] fetch ok windows=5h:true/weekly:true account:chatgpt(plus)
+2026-09-10 17:38:45 +0000 [UsageMonitor] display live
+2026-09-10 17:38:54 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:39:04 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:39:14 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:39:24 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:39:34 +0000 [UsageMonitor] menu bar notch:y occluded:n outside:n truncated:n frame:x1315 w116 mode:full
+2026-09-10 17:39:38 +0000 [UsageMonitor] termination requested
+2026-09-10 17:39:38 +0000 [UsageMonitor] service stopped (generation 1, drained=no)
+2026-09-10 17:39:38 +0000 [UsageMonitor] viewmodel stopped
+2026-09-10 17:39:38 +0000 [UsageMonitor] service stopped (generation 2, drained=no)
