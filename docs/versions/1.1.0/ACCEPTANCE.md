@@ -16,7 +16,7 @@
 | A09 | 缓存、局部失败与顶部新鲜度真实 | 逻辑已接入，真实状态待验证 | `UsagePanelView.updateStatusText` |
 | A10 | 外部点击、Esc、20 次开关、设置和登录窗口焦点 | 待真实交互 | CUA 只短暂返回 accessibility snapshot，后续截图/滚动调用无窗口 |
 | A11 | 菜单栏回归、唤醒、签名和稳定授权 | 构建/签名已验证，菜单栏和授权待验证 | `build.sh` 输出；真实 UI 未完成 |
-| A12 | 浅深色、长文本、缩放、屏幕边界真实截图 | 待真实视觉 | CUA 截图调用超时，不能用生成图替代 |
+| A12 | 浅深色、长文本、缩放、屏幕边界真实截图 | 默认浅色界面已有用户实测截图；其余边界待验证 | `assets/screenshots/v1.1.0/menu-bar.png`、`settings.png`；详情页公开文件为脱敏展示副本 |
 | A13 | 自动测试、构建、版本与安全边界检查 | 已验证 | 371 项测试、1.1.0 构建、`git diff --check` |
 | A14 | Codex 独立审核与用户最终体验确认 | 已完成 | `REVIEW.md`、用户 2026-09-13 发布确认 |
 | A15 | DeepSeek 官方状态页整体状态摘要、状态页入口、失败不伪造 | 自动测试完成；CUA 文本确认“服务正常”和入口，真实网络持续性/视觉待验证 | `DeepSeekStatusProviderTests`、`DeepSeekStatusProvider.swift` |

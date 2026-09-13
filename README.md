@@ -9,9 +9,19 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看 Codex、DeepSeek、智谱 GLM 等 AI 服务的额度、余额和使用状态。
 
-![Minget 菜单栏显示](assets/minget-menubar-v1.0.2.png)
+## v1.1.0 界面
 
-*v1.0.2 菜单栏实测截图。文字显示 5 小时额度和周额度；下方两排短线分别显示距离 5 小时窗口和周窗口重置的剩余时间。短线表达时间进度，不代表剩余额度。1.1.0 的详情页参考图和实施状态见对应版本目录。*
+<img src="assets/screenshots/v1.1.0/menu-bar.png" alt="Minget 1.1.0 菜单栏额度与重置时间进度" width="232">
+
+*菜单栏显示 5 小时额度和周额度；下方两排短线表示距离两个窗口重置的时间进度，不代表剩余额度。*
+
+<img src="assets/screenshots/v1.1.0/detail-redacted.png" alt="Minget 1.1.0 详情页" width="680">
+
+*详情页脱敏展示副本。账号已替换为示例地址，其余内容来自用户提供的 1.1.0 实测界面。*
+
+<img src="assets/screenshots/v1.1.0/settings.png" alt="Minget 1.1.0 设置页" width="560">
+
+*设置页实测截图。当前仅提供已有功能所需的详情显示、服务连接和诊断入口。*
 
 长期定位：统一查看和管理个人 AI 服务使用状态、可用资源与成本信息的 macOS 菜单栏工具。
 
