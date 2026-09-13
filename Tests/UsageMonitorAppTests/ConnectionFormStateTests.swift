@@ -57,9 +57,7 @@ final class ConnectionFormStateTests: XCTestCase {
     private func makeModel(transport: StubTransport, credentials: ProviderCredentialStoring) -> UsageViewModel {
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport),
-                             credentials: credentials)
-        let engine = ProviderRefreshEngine(readers: [deepSeek, glm],
+        let engine = ProviderRefreshEngine(readers: [deepSeek],
                                            cache: ProviderCache(userDefaults: defaults))
         let service = UsageService(factory: { throw UsageError.appServerStartupFailed(.launchFailed) },
                                    cache: UsageCache(userDefaults: defaults))

@@ -398,38 +398,21 @@ final class ProviderRefreshEngineTests: XCTestCase {
         XCTAssertEqual(engine.report(for: .deepseek).connection, .connected)
     }
 
-    // MARK: Contract gate
-
-    func testConfirmedContractJoinsThePeriodicCycle() async {
-        // The engine polls a platform exactly when its reader opts in; GLMReading opts in
-        // per stored credential's confirmed schema (see GLMProviderTests for that rule).
-        let reader = FakeReader(platform: .glm)
-        reader.automatic = GLMContract.isConfirmed(.apiBalanceV1)
-        let engine = ProviderRefreshEngine(readers: [reader], cache: ProviderCache(userDefaults: makeDefaults()))
-
-        _ = await engine.refreshScheduled()
-        XCTAssertEqual(reader.readCount, GLMContract.isConfirmed(.apiBalanceV1) ? 1 : 0)
-    }
-
     // MARK: Provider cache
 
-    func testProviderCacheIsolatesPlatformsAndAccounts() {
+    func testProviderCacheIsolatesAccounts() {
         let cache = ProviderCache(userDefaults: makeDefaults())
         let at = Date(timeIntervalSince1970: 1_700_000_000)
 
         cache.save(platform: .deepseek, accountID: "a", balances: [balance("CNY", "1.00")], lastSuccessAt: at)
         cache.save(platform: .deepseek, accountID: "b", balances: [balance("CNY", "2.00")], lastSuccessAt: at)
-        cache.save(platform: .glm, accountID: "a", balances: [balance("CNY", "3.00")], lastSuccessAt: at)
 
         XCTAssertEqual(cache.load(platform: .deepseek, accountID: "a")?.providerBalances.first?.total, dec("1.00"))
         XCTAssertEqual(cache.load(platform: .deepseek, accountID: "b")?.providerBalances.first?.total, dec("2.00"))
-        XCTAssertEqual(cache.load(platform: .glm, accountID: "a")?.providerBalances.first?.total, dec("3.00"))
-        XCTAssertNil(cache.load(platform: .glm, accountID: "b"))
 
         cache.clear(platform: .deepseek, accountID: "a")
         XCTAssertNil(cache.load(platform: .deepseek, accountID: "a"))
         XCTAssertNotNil(cache.load(platform: .deepseek, accountID: "b"))
-        XCTAssertNotNil(cache.load(platform: .glm, accountID: "a"))
     }
 
     func testProviderCacheRejectsAnEmptyAccountIdentifier() {

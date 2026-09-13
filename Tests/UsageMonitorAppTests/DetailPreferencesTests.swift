@@ -11,15 +11,11 @@ final class DetailPreferencesTests: XCTestCase {
 
         let preferences = DetailPreferences(defaults: defaults)
         XCTAssertTrue(preferences.showDeepSeek)
-        XCTAssertTrue(preferences.showGLM)
 
         preferences.showDeepSeek = false
-        preferences.showGLM = false
 
         let restored = DetailPreferences(defaults: defaults)
         XCTAssertFalse(restored.showDeepSeek)
-        XCTAssertFalse(restored.showGLM)
         XCTAssertNotNil(defaults.object(forKey: "detail.showDeepSeek"))
-        XCTAssertNotNil(defaults.object(forKey: "detail.showGLM"))
     }
 }

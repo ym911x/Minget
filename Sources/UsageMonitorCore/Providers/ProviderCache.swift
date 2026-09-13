@@ -163,6 +163,17 @@ public final class ProviderCache: @unchecked Sendable {
         }
     }
 
+    /// Removes retired GLM entries from the legacy storage without decoding them through the
+    /// current provider enum. DeepSeek entries are retained byte-for-byte in the same store.
+    public func removeRetiredGLMEntries() {
+        queue.sync {
+            var entries = loadEntries()
+            let before = entries.count
+            entries = entries.filter { !$0.key.hasPrefix("glm#") }
+            if entries.count != before { saveEntries(entries) }
+        }
+    }
+
     /// Storage keys currently held. Diagnostics and tests only; it exposes identifiers,
     /// never credentials.
     public func allKeys() -> [String] {

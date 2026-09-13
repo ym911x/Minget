@@ -45,7 +45,6 @@ final class ConnectionFormState: ObservableObject {
         let saved: Bool
         switch platform {
         case .deepseek: saved = model.saveDeepSeekKey(draft)
-        case .glm: saved = model.saveGLMAPIKey(draft)
         case .codex: return false
         }
         if saved {
@@ -60,20 +59,9 @@ final class ConnectionFormState: ObservableObject {
     func deleteCredential() {
         switch platform {
         case .deepseek: model.deleteDeepSeekKey()
-        case .glm: model.disconnectGLM()
         case .codex: return
         }
         draft = ""
     }
 
-    /// The 探测一次 action (GLM only).
-    func probe() {
-        guard platform == .glm else { return }
-        model.probeGLM()
-    }
-
-    /// Test/UI seam for the console-login sheet, which needs the model directly.
-    var modelForConsoleLogin: UsageViewModel {
-        return model
-    }
 }

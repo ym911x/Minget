@@ -35,12 +35,7 @@ struct UsagePanelView: View {
     }
 
     static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
-        let visibleCount = [preferences.showDeepSeek, preferences.showGLM].filter({ $0 }).count
-        switch visibleCount {
-        case 0: return 300
-        case 1: return preferences.showDeepSeek ? 370 : 400
-        default: return 475
-        }
+        preferences.showDeepSeek ? 370 : 300
     }
 
     private var preferredHeight: CGFloat {
@@ -96,7 +91,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.1"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -111,7 +106,6 @@ struct UsagePanelView: View {
         let visibleReports = model.providerReports.filter { report in
             switch report.platform {
             case .deepseek: return preferences.showDeepSeek
-            case .glm: return preferences.showGLM
             case .codex: return false
             }
         }
@@ -183,20 +177,13 @@ struct UsagePanelView: View {
     @ViewBuilder
     private var providerCards: some View {
         let deepSeek = report(for: .deepseek)
-        let glm = report(for: .glm)
         let showDeepSeek = preferences.showDeepSeek
-        let showGLM = preferences.showGLM
 
         VStack(spacing: 12) {
             if showDeepSeek {
                 DeepSeekOverviewCard(report: deepSeek,
                                      status: model.deepSeekStatus,
                                      openSettings: { onSettings?() })
-            }
-            if showGLM {
-                ProviderOverviewCard(report: glm, icon: "circle.grid.3x3.fill", tint: .blue) {
-                    onSettings?()
-                }
             }
         }
     }
@@ -210,7 +197,7 @@ struct UsagePanelView: View {
                               connection: .notConfigured,
                               isLive: false,
                               error: nil,
-                              consoleURL: platform == .glm ? GLMProvider.consoleURL : nil)
+                              consoleURL: nil)
     }
 }
 

@@ -36,11 +36,6 @@ final class ProviderRequestGuardTests: XCTestCase {
         XCTAssertEqual(DeepSeekProvider.balancePath, "/user/balance")
     }
 
-    func testGLMClientMayOnlyAskForTheTwoGLMPaths() {
-        XCTAssertEqual(GLMProvider.allowedPaths, [GLMProvider.balancePath, GLMProvider.accountReportPath])
-        XCTAssertEqual(GLMProvider.balancePath, "/api/paas/v4/balance")
-    }
-
     // MARK: Redirects
 
     func testSameOriginRedirectIsAllowed() {

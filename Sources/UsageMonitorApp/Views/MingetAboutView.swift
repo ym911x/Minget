@@ -3,7 +3,7 @@ import SwiftUI
 
 struct MingetAboutView: View {
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.1"
     }
 
     var body: some View {
@@ -34,6 +34,9 @@ struct MingetAboutView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 250)
+
+            Link("github.com/ym911x/Minget", destination: URL(string: "https://github.com/ym911x/Minget")!)
+                .font(.system(size: 11))
         }
         .padding(28)
         .frame(width: 320, height: 300)

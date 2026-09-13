@@ -22,6 +22,9 @@ public protocol ProviderCredentialStoring: AnyObject, Sendable {
     /// Removes the item. Absent counts as removed; any other failure is thrown, so a caller
     /// can never report a disconnect that did not happen.
     func delete(_ key: ProviderCredentialKey) throws
+    /// Removes only the two account names used by pre-1.1.1 GLM builds. This is a retirement
+    /// seam, deliberately separate from supported runtime credentials.
+    func deleteRetiredGLMCredentials() throws
 }
 
 public extension ProviderCredentialStoring {
@@ -29,6 +32,7 @@ public extension ProviderCredentialStoring {
     func load(_ key: ProviderCredentialKey) -> CredentialAccessOutcome {
         return load(key, interaction: .allowed)
     }
+    func deleteRetiredGLMCredentials() throws {}
 }
 
 /// macOS Keychain generic-password store.
@@ -112,6 +116,14 @@ public final class KeychainCredentialStore: ProviderCredentialStoring, @unchecke
         }
     }
 
+    public func deleteRetiredGLMCredentials() throws {
+        lock.lock(); defer { lock.unlock() }
+        for account in ["glm.api-key", "glm.console-session"] {
+            let status = SecItemDelete(baseQuery(account: account) as CFDictionary)
+            guard status == errSecSuccess || status == errSecItemNotFound else { throw ProviderFailure.other }
+        }
+    }
+
     /// Turns off keychain UI for the duration of one call and returns the closure that puts
     /// the previous value back. The previous value is read first, so a nested or interrupted
     /// call can never leave the process with interaction permanently disabled.
@@ -161,10 +173,14 @@ public final class KeychainCredentialStore: ProviderCredentialStoring, @unchecke
     }
 
     private func baseQuery(for key: ProviderCredentialKey) -> [String: Any] {
+        baseQuery(account: key.rawValue)
+    }
+
+    private func baseQuery(account: String) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
+            kSecAttrAccount as String: account,
         ]
         if #available(macOS 13.0, *) {
             // Shared across this app only; not synchronised to other devices, so a

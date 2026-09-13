@@ -128,7 +128,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         let (state, busy) = (states[platform] ?? State(), inFlight[platform] != nil)
         let reader = readers[platform]
-        let consoleURL = platform == .glm ? GLMProvider.consoleURL : nil
+        let consoleURL: URL? = nil
 
         guard let reader else { return Self.emptyReport(platform: platform) }
 
@@ -195,7 +195,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     }
 
     public func allReports() -> [ProviderReport] {
-        return [ProviderPlatform.deepseek, .glm].map { report(for: $0) }
+        return [ProviderPlatform.deepseek].map { report(for: $0) }
     }
 
     public func isAuthSuspended(_ platform: ProviderPlatform) -> Bool {
@@ -206,8 +206,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         return locked { inFlight[platform] != nil }
     }
 
-    /// The reader behind a platform, so the UI layer can reach reader-specific entry points
-    /// (GLM console session storage, GLM probe) without the engine knowing about them.
+    /// The reader behind a platform for app-owned credential flows.
     public func reading(for platform: ProviderPlatform) -> ProviderReading? {
         return readers[platform]
     }
@@ -225,7 +224,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     /// One background credential pass for every reader, so every later status question can be
     /// answered from memory. Performs no network work and never shows UI.
     public func primeCredentials() async {
-        for platform in [ProviderPlatform.deepseek, .glm] {
+        for platform in [ProviderPlatform.deepseek] {
             guard let reader = readers[platform] else { continue }
             await reader.primeCredentialState()
         }
@@ -277,7 +276,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     /// contract is unconfirmed are skipped: they are probed on connect and on manual
     /// refresh, not on a timer.
     public func refreshScheduled() async {
-        for platform in [ProviderPlatform.deepseek, .glm] {
+        for platform in [ProviderPlatform.deepseek] {
             guard let reader = readers[platform] else { continue }
             guard reader.credentialState.isConfigured, reader.isAutomaticRefreshEnabled else { continue }
             await refresh(platform: platform, force: false)
@@ -322,7 +321,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
             return locked {
                 guard generation == (generations[platform] ?? 0) else { return report(for: platform) }
                 return recordFailure(platform: platform, failure: failure ?? .contractUnconfirmed,
-                                     consoleURL: platform == .glm ? GLMProvider.consoleURL : nil)
+                                     consoleURL: nil)
             }
         }
         return await refresh(platform: platform, force: true)
@@ -334,7 +333,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     public func recordProbeOutcome(platform: ProviderPlatform, failure: ProviderFailure) -> ProviderReport {
         return recordFailure(platform: platform,
                              failure: failure,
-                             consoleURL: platform == .glm ? GLMProvider.consoleURL : nil)
+                             consoleURL: nil)
     }
 
     /// Removes the credential and everything derived from it: the platform's cached
@@ -372,7 +371,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
 
     private func performRead(platform: ProviderPlatform, generation: Int) async -> ProviderReport {
         guard let reader = readers[platform] else { return Self.emptyReport(platform: platform) }
-        let consoleURL = platform == .glm ? GLMProvider.consoleURL : nil
+        let consoleURL: URL? = nil
 
         do {
             let result = try await reader.read()
@@ -492,6 +491,6 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         return ProviderReport(platform: platform, accountID: nil, balances: [],
                               lastSuccessAt: nil, connection: .unavailable,
                               isLive: false, error: .other,
-                              consoleURL: platform == .glm ? GLMProvider.consoleURL : nil)
+                              consoleURL: nil)
     }
 }

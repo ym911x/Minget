@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
 更新日期：2026-09-13
-适用版本：1.1.0
+适用版本：1.1.1
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -51,22 +51,9 @@
 - 验证：B。2026-09-13 从 DeepSeek 官方状态页确认页面当前公开展示整体状态和系统状态；页面使用 FlashDuty 渲染，旧的 Atlassian `/api/v2` JSON 路径已不再作为本实现的接口依据。HTML 标题解析由本地 fixture 测试覆盖。
 - 边界：仅显示整体状态与官方状态页入口，不抓取事件正文，不把历史事件文本当作当前状态，不调用模型接口。
 
-## 智谱 GLM
+## 已退役的智谱 GLM
 
-### `GET https://bigmodel.cn/api/biz/account/query-customer-account-report`
-
-- 认证来源：应用内独立 `WKWebView` 登录会话。
-- 请求头：应用自建会话中的 `bigmodel_token_production` 对应 `Authorization`，以及该页面 localStorage 中可用的 `Bigmodel-Organization`、`Bigmodel-Project`。
-- 金额字段：响应 `data` 下的 `balance`、`availableBalance`、`rechargeAmount`、`giveAmount`、`totalSpendAmount`、`frozenBalance`。
-- 币种：官方控制台前端以人民币元显示该国内账户数据，应用显示为 CNY。
-- 验证：A。端点、请求头和字段结构依据 2026-09-10 检查的智谱官方部署前端代码；用户随后在应用独立登录会话中确认真实余额及明细显示。
-- 稳定性：该端点是控制台内部接口，未被视为公开稳定 API。官网改版后可能需要适配。
-
-应用不读取已有浏览器 Cookie。会话只保存在应用自己的 WebKit 数据存储和 Keychain，且只用于智谱官方域名的只读余额请求。该请求不调用推理接口，不产生模型 token 消耗。
-
-### API Key 兼容路径
-
-代码保留 `https://open.bigmodel.cn/api/paas/v4/balance` 的兼容实现和严格解析测试，但缺少智谱公开稳定文档，也未在用户账号上证实可用。正式使用路径为应用内控制台登录，界面不应引导用户依赖该兼容路径。
+1.1.1 不再发送智谱请求，也不再创建 WebKit 登录窗口或解析控制台响应。首次启动仅针对本应用先前创建的两个精确 Keychain account 名称及本地缓存、连接模式和显示偏好做清理。Keychain 清理失败不会阻止启动，且不会记录任何凭据值；下一次启动会重试。
 
 ## 通用安全规则
 
@@ -95,12 +82,10 @@ This document records the data sources, evidence level, and security boundaries 
 - The API key is stored only in macOS Keychain and is never used for model inference.
 - The detail panel reads the unauthenticated headline from `GET https://status.deepseek.com/` for a compact “today's service status” line. A parser failure is shown as unavailable, never as operational.
 
-### Zhipu GLM
+### Retired Zhipu GLM integration
 
-- Minget calls `GET https://bigmodel.cn/api/biz/account/query-customer-account-report` from an isolated in-app console session.
-- The request uses session information created inside Minget's own `WKWebView`. Existing browser cookies are never read or imported.
-- This is a console-internal endpoint rather than a documented stable public API, so future console changes may require an adapter update.
-- The user verified the balance and account totals with a real account in the app.
+- Minget 1.1.1 does not call any Zhipu endpoint or access an existing browser session.
+- Legacy app-owned credentials and cached entries are retired locally at launch only.
 
 ### Shared safeguards
 

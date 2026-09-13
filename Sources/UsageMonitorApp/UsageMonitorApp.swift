@@ -13,7 +13,6 @@ final class AppContainer {
     let codexService: UsageService
     let providerCache: ProviderCache
     let providerEngine: ProviderRefreshEngine
-    let glmReading: GLMReading
     let model: UsageViewModel
     let statusItem: StatusItemController
 
@@ -28,10 +27,8 @@ final class AppContainer {
         providerCache = ProviderCache()
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport),
-                             credentials: credentials)
-        glmReading = glm
-        providerEngine = ProviderRefreshEngine(readers: [deepSeek, glm], cache: providerCache)
+        ProviderRetirementMigration(credentials: credentials, cache: providerCache).run()
+        providerEngine = ProviderRefreshEngine(readers: [deepSeek], cache: providerCache)
         model = UsageViewModel(service: codexService,
                                providerEngine: providerEngine,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
@@ -51,7 +48,7 @@ enum AppLifecycle {
 ///
 /// One long-lived `codex app-server` child is created for the app's lifetime and terminated
 /// when the app exits (PROJECT_SPEC.md §8.2). The status item shows the Codex windows only;
-/// DeepSeek and GLM appear in the detail panel (v1.1 requirement 7).
+/// DeepSeek appears in the detail panel when enabled by the user.
 @main
 struct UsageMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate

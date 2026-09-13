@@ -10,16 +10,10 @@ final class DetailPanelLayoutTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let preferences = DetailPreferences(defaults: defaults)
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 475)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 370)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 400)
-
-        preferences.showGLM = false
         XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 300)
-
-        preferences.showDeepSeek = true
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 370)
     }
 
     func testProductNameFollowsSystemLanguage() {

@@ -7,7 +7,7 @@ import UsageMonitorCore
 ///
 /// Two independent refresh loops live here (v1.1 requirement 5):
 /// - Codex, every 60 seconds, on the long-lived `codex app-server` child,
-/// - DeepSeek and GLM, every 5 minutes, over HTTPS, each with its own credential and its own
+/// - DeepSeek, every 5 minutes, over HTTPS with its own credential and in-flight
 ///   in-flight coalescing.
 ///
 /// All fetches run off the main thread; `stop()` hands the Codex join to a background queue
@@ -41,10 +41,6 @@ public final class UsageViewModel: ObservableObject {
     /// Absence means "nothing to say". Text is fixed and safe: no provider text, no system
     /// error text, never credential material.
     @Published public private(set) var credentialFeedback: [ProviderPlatform: CredentialFeedback] = [:]
-    /// Redacted structure observations from the console login window (Round 8): the
-    /// evidence of what the console's own balance resource looks like. Values never
-    /// appear; newest per URL path first, capped.
-    @Published public private(set) var consoleObservations: [GLMConsoleResponseObserver.Observation] = []
     /// Bumped whenever relative timestamps should be re-evaluated (staleness ages).
     @Published public private(set) var tick = 0
     /// Whether the call-level credential diagnostics are being written. Toggled from the
@@ -170,10 +166,9 @@ public final class UsageViewModel: ObservableObject {
         let publish: () -> Void = { [weak self] in
             Task { @MainActor in self?.publishProviderReports() }
         }
-        for platform in [ProviderPlatform.deepseek, .glm] {
+        for platform in [ProviderPlatform.deepseek] {
             switch engineReading(platform) {
             case let reading as DeepSeekReading: reading.onCredentialPhaseChange = publish
-            case let reading as GLMReading: reading.onCredentialPhaseChange = publish
             default: break
             }
         }
@@ -283,7 +278,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private func panelWillOpenProviders() {
-        for platform in [ProviderPlatform.deepseek, .glm] {
+        for platform in [ProviderPlatform.deepseek] {
             guard providerEngine.shouldRefreshOnPanelOpen(platform) else { continue }
             refreshProvider(platform, force: false)
         }
@@ -321,7 +316,7 @@ public final class UsageViewModel: ObservableObject {
         isProviderRefreshing = true
         providerRefreshTask = Task { [weak self] in
             if force {
-                for platform in [ProviderPlatform.deepseek, .glm] {
+                for platform in [ProviderPlatform.deepseek] {
                     await self?.providerEngine.refresh(platform: platform, force: true)
                 }
             } else {
@@ -377,7 +372,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private func engineHasWork() -> Bool {
-        return [ProviderPlatform.deepseek, .glm].contains { providerEngine.isFetching($0) }
+        return [ProviderPlatform.deepseek].contains { providerEngine.isFetching($0) }
     }
 
     private func publishProviderReports() {
@@ -456,67 +451,6 @@ public final class UsageViewModel: ObservableObject {
         return true
     }
 
-    /// Saves a GLM API key and immediately probes the candidate endpoint read-only,
-    /// publishing the redacted observation (v1.1 requirement 4). While the payload
-    /// contract is unconfirmed the key never goes through the normal balance read: that
-    /// path fails closed on the contract gate, so the connect flow runs the probe instead
-    /// and the panel reports what the endpoint actually answered.
-    @discardableResult
-    public func saveGLMAPIKey(_ key: String) -> Bool {
-        guard let glm = engineReading(.glm) as? GLMReading else {
-            setFeedback(.saveFailed(platform: .glm))
-            return false
-        }
-        setFeedback(.saving(platform: .glm))
-        do {
-            try glm.storeAPIKey(key)
-        } catch {
-            Diagnostics.log("credential save failed")
-            setFeedback(.saveFailed(platform: .glm))
-            return false
-        }
-        publishProviderReports()
-        verifyAfterCredentialChange(platform: .glm)
-        return true
-    }
-
-    /// Stores a console session captured by the in-app login window and immediately probes
-    /// it read-only, publishing the redacted observation (v1.1 requirement 4). The user
-    /// never has to press 探测 once more to find out whether the session works.
-    @discardableResult
-    public func saveGLMConsoleSession(_ session: GLMConsoleSessionPolicy.StoredSession) -> Bool {
-        guard let reading = engineReading(.glm) as? GLMReading else {
-            setFeedback(.saveFailed(platform: .glm))
-            return false
-        }
-        setFeedback(.saving(platform: .glm))
-        do {
-            try reading.storeSession(session)
-        } catch {
-            Diagnostics.log("console session save failed")
-            setFeedback(.saveFailed(platform: .glm))
-            return false
-        }
-        publishProviderReports()
-        verifyAfterCredentialChange(platform: .glm)
-        return true
-    }
-
-    /// Removes every GLM credential and any cached numbers for it (退出连接时清除). A failed
-    /// removal keeps the connection and says so.
-    @discardableResult
-    public func disconnectGLM() -> Bool {
-        if let failure = providerEngine.disconnect(platform: .glm) {
-            setFeedback(.disconnectFailed(platform: .glm))
-            publishProviderReports()
-            Diagnostics.log("credential delete failed: \(failure.debugSummary)")
-            return false
-        }
-        publishProviderReports()
-        setFeedback(.deleted(platform: .glm))
-        return true
-    }
-
     @discardableResult
     public func disconnectDeepSeek() -> Bool {
         if let failure = providerEngine.disconnect(platform: .deepseek) {
@@ -530,20 +464,13 @@ public final class UsageViewModel: ObservableObject {
         return true
     }
 
-    /// The connect action after a credential change: DeepSeek reads the documented balance
-    /// endpoint directly; GLM runs its read-only probe while the contract is unconfirmed
-    /// and the normal read once it is confirmed. The finished report is mapped onto the
-    /// fixed feedback vocabulary, so the form always ends in an explicit state.
+    /// The connect action after a credential change reads the documented balance endpoint.
     private func verifyAfterCredentialChange(platform: ProviderPlatform) {
         setFeedback(.verifying(platform: platform))
         isProviderRefreshing = true
         Task { [weak self] in
             guard let self else { return }
-            if platform == .glm {
-                _ = await self.providerEngine.connectAfterCredentialChange(platform: platform)
-            } else {
-                _ = await self.providerEngine.reconnect(platform: platform)
-            }
+            _ = await self.providerEngine.reconnect(platform: platform)
             self.finishProviderRefresh()
             self.setFeedback(CredentialFeedback(report: self.providerEngine.report(for: platform)))
         }
@@ -597,37 +524,10 @@ public final class UsageViewModel: ObservableObject {
         return credentialFeedback[platform]
     }
 
-    /// Records one redacted console observation: newest per URL path, count capped.
-    public func recordConsoleObservation(_ observation: GLMConsoleResponseObserver.Observation) {
-        consoleObservations.removeAll { $0.urlPath == observation.urlPath }
-        consoleObservations.insert(observation, at: 0)
-        if consoleObservations.count > GLMConsoleResponseObserver.maxObservationsKept {
-            consoleObservations = Array(consoleObservations.prefix(GLMConsoleResponseObserver.maxObservationsKept))
-        }
-    }
-
     private func engineReading(_ platform: ProviderPlatform) -> ProviderReading? {
         return providerEngine.reading(for: platform)
     }
 
-    public var glmObservation: GLMAccountReportObservation? {
-        return (engineReading(.glm) as? GLMReading)?.lastObservation
-    }
-
-    /// Runs one read-only GLM probe and refreshes the panel afterwards. The probe outcome
-    /// is also recorded into the engine, so the connection state and the published
-    /// observation stay consistent (a rejected credential suspends automatic retry).
-    public func probeGLM() {
-        guard let reading = engineReading(.glm) as? GLMReading else { return }
-        isProviderRefreshing = true
-        Task { [weak self] in
-            let failure = await reading.probeForConnection()
-            if let failure {
-                _ = self?.providerEngine.recordProbeOutcome(platform: .glm, failure: failure)
-            }
-            self?.finishProviderRefresh()
-        }
-    }
 }
 
 /// Fixed-vocabulary feedback for the credential settings forms (Round 6 requirement 2).
@@ -650,13 +550,6 @@ public enum CredentialFeedback: Equatable, Sendable {
     /// Stored locally, but the verification could not complete right now (offline,
     /// timeout, server error). Not an authentication verdict.
     case savedUnverified(platform: ProviderPlatform)
-    /// GLM only: the probe answered but the payload contract is unconfirmed, so no amount
-    /// is displayed by design.
-    case awaitingContract(platform: ProviderPlatform)
-    /// GLM only: the endpoint answered a business success, but the payload shape matches
-    /// no confirmed schema. The panel shows the redacted structure summary instead of a
-    /// balance (Round 7 requirement 2).
-    case structureUnsupported(platform: ProviderPlatform)
     /// Credential removed, caches cleared, not connected.
     case deleted(platform: ProviderPlatform)
     /// The user asked for a credential read; the system dialog may be on screen.
@@ -673,8 +566,7 @@ public enum CredentialFeedback: Equatable, Sendable {
         switch self {
         case .saving(let platform), .verifying(let platform), .connected(let platform),
              .invalidCredential(let platform), .saveFailed(let platform),
-             .savedUnverified(let platform), .awaitingContract(let platform),
-             .structureUnsupported(let platform), .deleted(let platform),
+             .savedUnverified(let platform), .deleted(let platform),
              .authorizing(let platform), .authorizationRequired(let platform),
              .authorizationDenied(let platform), .disconnectFailed(let platform):
             return platform
@@ -684,7 +576,7 @@ public enum CredentialFeedback: Equatable, Sendable {
     /// True when the state should draw attention (warning colour), false for neutral states.
     public var needsAttention: Bool {
         switch self {
-        case .invalidCredential, .saveFailed, .savedUnverified, .structureUnsupported,
+        case .invalidCredential, .saveFailed, .savedUnverified,
              .authorizationRequired, .authorizationDenied, .disconnectFailed:
             return true
         default:
@@ -706,10 +598,6 @@ public enum CredentialFeedback: Equatable, Sendable {
             return "保存失败：本机钥匙串写入未成功，请重试"
         case .savedUnverified:
             return "Key 已保存在本机，暂时无法验证余额（网络或服务不可用）"
-        case .awaitingContract:
-            return "已保存；接口口径尚未确认，未显示余额"
-        case .structureUnsupported:
-            return "已连接，但当前响应结构暂不支持"
         case .deleted:
             return "已删除，未连接"
         case .authorizing:
@@ -728,17 +616,13 @@ public enum CredentialFeedback: Equatable, Sendable {
     /// never provider text.
     init(report: ProviderReport) {
         let platform = report.platform
-        if report.error == .structureUnsupported {
-            self = .structureUnsupported(platform: platform)
-            return
-        }
         switch report.connection {
         case .connected:
             self = .connected(platform: platform)
         case .authSuspended:
             self = .invalidCredential(platform: platform)
         case .unverified:
-            self = .awaitingContract(platform: platform)
+            self = .savedUnverified(platform: platform)
         case .connecting:
             self = .verifying(platform: platform)
         case .notConfigured:

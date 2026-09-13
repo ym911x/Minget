@@ -1,17 +1,15 @@
 import Foundation
 
-/// Platforms the app can report on. Codex stays in the menu bar; DeepSeek and GLM are
-/// detail-panel-only for this release (v1.1 requirement 7).
+/// Platforms the app can report on. Codex stays in the menu bar and DeepSeek is optional
+/// in the detail panel.
 public enum ProviderPlatform: String, Codable, CaseIterable, Sendable {
     case codex
     case deepseek
-    case glm
 
     public var displayName: String {
         switch self {
         case .codex: return "Codex"
         case .deepseek: return "DeepSeek"
-        case .glm: return "智谱 GLM"
         }
     }
 }
@@ -49,8 +47,8 @@ public struct ProviderBalance: Equatable, Sendable {
     public let granted: Decimal?
     /// `topped_up_balance` (充值). Providers that do not report it keep this nil.
     public let toppedUp: Decimal?
-    /// Provider-specific amounts with their own labels (e.g. GLM report's 累计充值,
-    /// 累计赠送, 累计消费, 冻结金额). Never mapped onto granted/toppedUp semantics.
+    /// Provider-specific amounts with their own labels. Never mapped onto granted/toppedUp
+    /// semantics.
     public let additionalAmounts: [ProviderLabeledAmount]?
 
     public init(currency: String?,
@@ -148,8 +146,6 @@ public struct ProviderReport: Equatable, Sendable {
 /// Stable, non-secret identity of a stored credential. Values never live here.
 public enum ProviderCredentialKey: String, CaseIterable, Sendable {
     case deepseekAPIKey = "deepseek.api-key"
-    case glmAPIKey = "glm.api-key"
-    case glmConsoleSession = "glm.console-session"
 }
 
 /// What a reader knows about its own credential, from memory only.

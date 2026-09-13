@@ -90,9 +90,7 @@ final class ProductionWiringTests: XCTestCase {
                            credentials: ProviderCredentialStoring) -> UsageViewModel {
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
-        let glm = GLMReading(provider: GLMProvider(transport: transport),
-                             credentials: credentials)
-        let engine = ProviderRefreshEngine(readers: [deepSeek, glm],
+        let engine = ProviderRefreshEngine(readers: [deepSeek],
                                            cache: ProviderCache(userDefaults: defaults))
         let service = UsageService(factory: { throw UsageError.appServerStartupFailed(.launchFailed) },
                                    cache: UsageCache(userDefaults: defaults))
@@ -231,26 +229,4 @@ final class ProductionWiringTests: XCTestCase {
                        "the auth suspension must be cleared with the credential")
     }
 
-    func testSavingAGLMKeyEndsInTheConnectedStateThroughTheBalanceEndpoint() async throws {
-        let transport = StubTransport()
-        transport.handler = { _ in
-            ProviderHTTPResponse(status: 200, body: Data(#"{"code":200,"success":true,"data":{"total_balance":"100.00","available_balance":"88.00","currency":"CNY"}}"#.utf8))
-        }
-        let model = makeModel(transport: transport, credentials: InMemoryCredentialStore())
-
-        let saved = model.saveGLMAPIKey("glm-test")
-        XCTAssertTrue(saved)
-
-        let feedback = await waitForFeedback(on: model, .glm, equals: .connected(platform: .glm))
-        XCTAssertEqual(feedback, .connected(platform: .glm),
-                       "a clean parse under the confirmed balance schema is a real connection")
-        let report = model.providerReports.first { $0.platform == .glm }!
-        XCTAssertEqual(report.connection, .connected)
-        XCTAssertEqual(report.balances.first?.available,
-                       Decimal(string: "88.00", locale: Locale(identifier: "en_US_POSIX")))
-        for request in transport.recordedRequests {
-            XCTAssertFalse(ProviderRequestGuard.isModelEndpoint(path: request.url?.path ?? ""),
-                           "no model call may ever be made with the key")
-        }
-    }
 }
