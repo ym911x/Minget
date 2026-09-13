@@ -6,7 +6,7 @@
 | 需求与边界 | `DEVELOPMENT_PLAN.md` |
 | 设计基准 | `assets/detail-reference.png`，公开版已脱敏，SHA-256 `26a1b2fcf2daac3046c5d038b7755fd3f5f8f3793578a8937f3b96985752e512` |
 | 检查基线提交 | `51ef670029a45a75f38cc3daaef20f15f0bbd7f8` |
-| 工作区状态 | 发布提交 `da6071d` 已推送至 GitHub `main`；用户已有 `.workbuddy/` 未跟踪文件未触碰 |
+| 工作区状态 | 1.1.0 源码与标签已推送至 GitHub，CI run `34739103545` 通过；用户已有 `.workbuddy/` 未跟踪文件未触碰 |
 | `VERSION` | `1.0.2` 改为 `1.1.0` |
 | 运行候选包 | `/Users/yuyimeng/Applications/Minget.app` |
 | 归档候选包 | `dist/Minget.app` |
