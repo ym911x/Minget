@@ -48,8 +48,15 @@ DIST="dist"
 # (Rebuilding unchanged source does not change the cdhash; see
 # docs/versions/1.0.2/evidence/logs/08-signing-build-path.txt.)
 #
-# MINGET_SIGN_IDENTITY=- falls back to ad-hoc signing.
-SIGN_IDENTITY="${MINGET_SIGN_IDENTITY:-Minget Local Signing}"
+# MINGET_SIGN_IDENTITY=- falls back to ad-hoc signing. GitHub Actions runners do not carry
+# the machine-local identity, so CI defaults to ad-hoc unless an explicit identity is set.
+if [[ -n "${MINGET_SIGN_IDENTITY+x}" ]]; then
+  SIGN_IDENTITY="$MINGET_SIGN_IDENTITY"
+elif [[ "${CI:-}" == "true" ]]; then
+  SIGN_IDENTITY="-"
+else
+  SIGN_IDENTITY="Minget Local Signing"
+fi
 
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
   echo "== signing: ad-hoc (MINGET_SIGN_IDENTITY=-) =="
