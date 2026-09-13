@@ -109,6 +109,14 @@ mkdir -p "$STAGING_CONTENTS/MacOS" "$STAGING_CONTENTS/Resources"
 cp "$EXEC_APP" "$STAGING_CONTENTS/MacOS/$EXECUTABLE_NAME"
 cp "$EXEC_CLI" "$STAGING_CONTENTS/MacOS/${APP_NAME}CLI"   # QA smoke diagnostic, same production service
 cp "assets/brand/Minget.icns" "$STAGING_CONTENTS/Resources/Minget.icns"
+cp "assets/brand/OAI_OpenAI-Blossom_Black.png" "$STAGING_CONTENTS/Resources/OAI_OpenAI-Blossom_Black.png"
+cp "assets/brand/OAI_OpenAI-Blossom_White.png" "$STAGING_CONTENTS/Resources/OAI_OpenAI-Blossom_White.png"
+cp "assets/brand/OAI_OpenAI-Blossom_Black.svg" "$STAGING_CONTENTS/Resources/OAI_OpenAI-Blossom_Black.svg"
+cp "assets/brand/OAI_OpenAI-Blossom_White.svg" "$STAGING_CONTENTS/Resources/OAI_OpenAI-Blossom_White.svg"
+cp "assets/brand/deepseek-whale-black.png" "$STAGING_CONTENTS/Resources/deepseek-whale-black.png"
+cp "assets/brand/deepseek-wordmark-black.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-black.png"
+cp "assets/brand/deepseek-wordmark-transparent.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-transparent.png"
+cp "assets/brand/deepseek-wordmark-text-transparent.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-text-transparent.png"
 
 cat > "$STAGING_CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

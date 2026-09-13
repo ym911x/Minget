@@ -1,5 +1,16 @@
 # 当前审核状态
 
+## v1.1.0
+
+状态：已完成。371 项自动测试与 1.1.0 构建通过，用户已确认当前详情页体验并授权上传 GitHub。尚未逐项重跑的边界交互、异常视觉矩阵和真实服务回归保留在 [验收台账](docs/versions/1.1.0/ACCEPTANCE.md)，不因发布而改记为通过。
+
+| 资料 | 路径 |
+| --- | --- |
+| 开发方案 | [docs/versions/1.1.0/DEVELOPMENT_PLAN.md](docs/versions/1.1.0/DEVELOPMENT_PLAN.md) |
+| 实施报告 | [docs/versions/1.1.0/IMPLEMENTATION_REPORT.md](docs/versions/1.1.0/IMPLEMENTATION_REPORT.md) |
+| 独立审核状态 | [docs/versions/1.1.0/REVIEW.md](docs/versions/1.1.0/REVIEW.md) |
+| 验收台账 | [docs/versions/1.1.0/ACCEPTANCE.md](docs/versions/1.1.0/ACCEPTANCE.md) |
+
 ## v1.0.2
 
 状态：已完成。Codex 独立代码审核与构建复核通过，用户真实界面验收通过。
@@ -28,4 +39,4 @@
 
 ## 下一版本
 
-尚未建立实施任务和审核结论。确定下一轮范围后，在 `docs/versions/<版本号>/` 创建独立资料。
+尚未确定下一版本范围。确定后在 `docs/versions/<版本号>/` 创建独立资料。

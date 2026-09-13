@@ -41,11 +41,23 @@ public struct CodexAccount: Equatable, Sendable {
         }
     }
 
-    /// Panel text. The email is the only variable value and it is deliberately the only
-    /// thing shown, so no plan or workspace detail can become a leak surface.
+    /// Account identity shown in the detail panel. The plan comes from `account/read`; it is
+    /// not inferred from the email and it is never written to a credential store.
     public var displayEmail: String? {
         guard let email, !email.isEmpty else { return nil }
         return email
+    }
+
+    /// Package label for the detail-panel title row. ChatGPT plan names such as `plus` and
+    /// `5xPro` are preserved exactly as returned by the local Codex app-server. API-key
+    /// sessions have no package field, so their account kind is shown honestly instead of
+    /// inventing a subscription tier.
+    public var displayPlanType: String? {
+        if let planType, !planType.isEmpty { return planType }
+        switch kind {
+        case .apiKey: return "API Key"
+        case .chatgpt, .other: return nil
+        }
     }
 
     /// Fixed-category summary for logs and tests. Contains no email.

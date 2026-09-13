@@ -44,6 +44,30 @@ public enum DecimalFormatting {
         return "\(amountText(main)) \(currency)"
     }
 
+    /// Compact amount for the detail overview. CNY uses the familiar yuan symbol; other
+    /// currencies retain their provider-reported ISO code and are never converted.
+    public static func overviewBalanceText(_ balance: ProviderBalance) -> String {
+        guard let main = balance.available ?? balance.total else { return "余额不可用" }
+        if main != 0, abs(main) < Decimal(string: "0.005", locale: Locale(identifier: "en_US_POSIX"))! {
+            if balance.currency?.uppercased() == "CNY" { return "< ¥0.01" }
+            if let currency = balance.currency { return "< 0.01 \(currency)" }
+            return "< 0.01"
+        }
+        var rounded = Decimal()
+        var source = main
+        NSDecimalRound(&rounded, &source, 2, .plain)
+        let amount = amountText(rounded, minimumFractionDigits: 2)
+        guard let currency = balance.currency else { return amount }
+        if currency.uppercased() == "CNY" { return "¥\(amount)" }
+        return "\(amount) \(currency)"
+    }
+
+    /// The label beside the compact amount follows the actual field semantics. A total-only
+    /// response must not be called “可用余额”.
+    public static func overviewBalanceLabel(_ balance: ProviderBalance) -> String {
+        balance.available != nil ? "可用余额" : "余额"
+    }
+
     /// `总额 110.00 CNY · 可用 42.25 · 充值 100.00 · 赠费 10.00`, or with provider-specific
     /// labels (`累计充值 …`) carried verbatim from the endpoint's own semantics. Only
     /// reported parts appear; `available_balance` is labelled 可用, never 充值, and an

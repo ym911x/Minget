@@ -65,6 +65,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// Closes the popover on an outside click. Installed only while the popover is on screen.
     private let dismissMonitor = PopoverDismissMonitor()
     private var detailWindowController: DetailWindowController?
+    private var settingsWindowController: SettingsWindowController?
 
     private var model: UsageViewModel?
     private var stateMachine = MenuBarSpaceStateMachine()
@@ -161,6 +162,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.delegate = nil
         detailWindowController?.window?.orderOut(nil)
         detailWindowController = nil
+        settingsWindowController?.window?.orderOut(nil)
+        settingsWindowController = nil
         if let item = statusItem {
             item.button?.subviews.forEach { $0.removeFromSuperview() }
             NSStatusBar.system.removeStatusItem(item)
@@ -281,7 +284,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard let controller = makePanelViewController() else { return }
         NSApp.activate(ignoringOtherApps: true)
         popover.contentViewController = controller
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        // Anchor to a two-point-wide rect at the button's exact horizontal midpoint. Using
+        // the whole variable-width button lets AppKit choose an edge midpoint that can drift
+        // when the menu-bar label changes width; the detail page and arrow should share one
+        // stable center line.
+        let centerAnchor = NSRect(x: button.bounds.midX - 1,
+                                  y: button.bounds.minY,
+                                  width: 2,
+                                  height: button.bounds.height)
+        popover.appearance = NSApp.effectiveAppearance
+        popover.show(relativeTo: centerAnchor, of: button, preferredEdge: .minY)
         // Installed after `show`, so the click that opened the panel cannot be seen by the
         // monitor and close it again. `isShown` alone was not reliable enough across macOS
         // versions; this makes the outside-click behaviour explicit and testable
@@ -303,22 +315,39 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     /// Opens the detail in its own regular window. Used at launch when the menu bar item is
-    /// occluded, and from the panel's own button.
+    /// occluded and from the settings window.
     func showDetailWindow() {
         guard let model else { return }
         closePanel()
         if detailWindowController == nil {
-            detailWindowController = DetailWindowController(model: model)
+            detailWindowController = DetailWindowController(
+                model: model,
+                onSettings: { [weak self] in self?.showSettingsWindow() })
         }
         detailWindowController?.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// Opens the one small settings window. It shares the application model and display
+    /// preferences with both detail presentations, so no second refresh engine is created.
+    func showSettingsWindow() {
+        guard let model else { return }
+        closePanel()
+        if settingsWindowController == nil {
+            settingsWindowController = SettingsWindowController(
+                model: model,
+                onDetailWindow: { [weak self] in self?.showDetailWindow() },
+                onQuit: { NSApp.terminate(nil) })
+        }
+        settingsWindowController?.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func makePanelViewController() -> PanelHostingController? {
         guard let model else { return nil }
-        let controller = PanelHostingController(model: model)
-        controller.onDetailWindowRequested = { [weak self] in self?.showDetailWindow() }
-        return controller
+        return PanelHostingController(
+            model: model,
+            onSettings: { [weak self] in self?.showSettingsWindow() })
     }
 
     /// Opens the detail window once, if the item is not visible after launch layout.
@@ -364,10 +393,10 @@ final class MenuBarHostingView: NSHostingView<MenuBarLabelView> {
 
 /// Panel host that keeps a strong reference to the view model for the popover's lifetime.
 final class PanelHostingController: NSHostingController<UsagePanelView> {
-    var onDetailWindowRequested: (() -> Void)?
-
-    init(model: UsageViewModel) {
-        let view = UsagePanelView(model: model, onDetailWindow: nil, onQuit: { NSApp.terminate(nil) })
+    init(model: UsageViewModel,
+         onSettings: (() -> Void)?) {
+        let view = UsagePanelView(model: model,
+                                  onSettings: onSettings)
         super.init(rootView: view)
     }
 
@@ -379,9 +408,14 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
 /// normal window level and behaves like any other document window.
 final class DetailWindowController: NSWindowController {
 
-    init(model: UsageViewModel) {
-        let panel = UsagePanelView(model: model, onDetailWindow: nil, onQuit: { NSApp.terminate(nil) })
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460),
+    init(model: UsageViewModel,
+         onSettings: (() -> Void)?) {
+        let preferences = DetailPreferences.shared
+        let panel = UsagePanelView(model: model,
+                                   preferences: preferences,
+                                   onSettings: onSettings)
+        let height = UsagePanelView.preferredHeight(for: preferences)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: height),
                               styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered,
                               defer: false)
@@ -389,6 +423,30 @@ final class DetailWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         window.contentView = NSHostingView(rootView: panel)
+        super.init(window: window)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+}
+
+/// Regular settings window. Its content is intentionally small and single-page in 1.1.0.
+final class SettingsWindowController: NSWindowController {
+
+    init(model: UsageViewModel,
+         onDetailWindow: (() -> Void)?,
+         onQuit: @escaping () -> Void) {
+        let view = MingetSettingsView(model: model,
+                                      onDetailWindow: onDetailWindow,
+                                      onQuit: onQuit)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 420),
+                              styleMask: [.titled, .closable, .miniaturizable],
+                              backing: .buffered,
+                              defer: false)
+        window.title = "明明有数设置"
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.contentView = NSHostingView(rootView: view)
         super.init(window: window)
     }
 

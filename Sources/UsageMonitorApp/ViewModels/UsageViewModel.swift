@@ -28,11 +28,15 @@ public final class UsageViewModel: ObservableObject {
 
     /// One report per detail-panel platform, in display order.
     @Published public private(set) var providerReports: [ProviderReport] = []
+    /// The latest unauthenticated observation from DeepSeek's public status page. A failed
+    /// page read remains visibly unavailable; it is never converted into a healthy state.
+    @Published public private(set) var deepSeekStatus = DeepSeekStatusSnapshot.unavailable()
 
     // MARK: Shared
 
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var isProviderRefreshing = false
+    @Published public private(set) var isDeepSeekStatusRefreshing = false
     /// Per-platform, fixed-vocabulary feedback for the credential settings forms (Round 6).
     /// Absence means "nothing to say". Text is fixed and safe: no provider text, no system
     /// error text, never credential material.
@@ -58,6 +62,8 @@ public final class UsageViewModel: ObservableObject {
     private let panelOpenRefreshAge: TimeInterval
     private let providerRefreshInterval: TimeInterval
     private let providerPanelOpenRefreshAge: TimeInterval
+    private let deepSeekStatusReader: DeepSeekStatusReading?
+    private let deepSeekStatusRefreshInterval: TimeInterval = 5 * 60
     private var timer: AnyCancellable?
     private var providerTimer: AnyCancellable?
     private var clockTimer: AnyCancellable?
@@ -66,6 +72,8 @@ public final class UsageViewModel: ObservableObject {
     private var clockObservers: [(NotificationCenter, NSObjectProtocol)] = []
     private var refreshTask: Task<Void, Never>?
     private var providerRefreshTask: Task<Void, Never>?
+    private var deepSeekStatusTask: Task<Void, Never>?
+    private var deepSeekStatusCheckedAt: Date?
     private(set) var isStopped = false
 
     public init(service: UsageService,
@@ -73,13 +81,15 @@ public final class UsageViewModel: ObservableObject {
                 refreshInterval: TimeInterval = 60,
                 panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                 providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
-                providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge) {
+                providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
+                deepSeekStatusReader: DeepSeekStatusReading? = nil) {
         self.service = service
         self.providerEngine = providerEngine
         self.refreshInterval = refreshInterval
         self.panelOpenRefreshAge = panelOpenRefreshAge
         self.providerRefreshInterval = providerRefreshInterval
         self.providerPanelOpenRefreshAge = providerPanelOpenRefreshAge
+        self.deepSeekStatusReader = deepSeekStatusReader
         publishProviderReports()
     }
 
@@ -135,6 +145,7 @@ public final class UsageViewModel: ObservableObject {
             .sink { [weak self] _ in self?.tick += 1 }
         refresh()
         refreshProviders(force: false)
+        refreshDeepSeekStatus(force: false)
         // The credential pass runs after the first paint, off the main actor, and never shows
         // UI. Until it finishes, status questions answer "still finding out" rather than
         // asking the keychain (KEYCHAIN_REVISION_PLAN.md P0 and P1.3).
@@ -209,6 +220,7 @@ public final class UsageViewModel: ObservableObject {
         isStopped = true
         isRefreshing = false   // teardown: no further state is published (apply() early-returns)
         isProviderRefreshing = false
+        isDeepSeekStatusRefreshing = false
         timer?.cancel()
         providerTimer?.cancel()
         clockTimer?.cancel()
@@ -218,6 +230,8 @@ public final class UsageViewModel: ObservableObject {
         stopObservingClockChanges()
         providerRefreshTask?.cancel()
         providerRefreshTask = nil
+        deepSeekStatusTask?.cancel()
+        deepSeekStatusTask = nil
 
         let task = refreshTask
         refreshTask = nil
@@ -241,7 +255,10 @@ public final class UsageViewModel: ObservableObject {
             .sink { [weak self] _ in self?.refresh() }
         providerTimer = Timer.publish(every: providerRefreshInterval, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in self?.refreshProviders(force: false) }
+            .sink { [weak self] _ in
+                self?.refreshProviders(force: false)
+                self?.refreshDeepSeekStatus(force: false)
+            }
     }
 
     // MARK: - Panel
@@ -252,6 +269,7 @@ public final class UsageViewModel: ObservableObject {
         guard !isStopped else { return }
         panelWillOpenCodex()
         panelWillOpenProviders()
+        refreshDeepSeekStatus(force: false)
     }
 
     private func panelWillOpenCodex() {
@@ -280,6 +298,7 @@ public final class UsageViewModel: ObservableObject {
         for report in providerReports {
             refreshProvider(report.platform, force: true)
         }
+        refreshDeepSeekStatus(force: true)
     }
 
     private func refresh(resetFailureBudget: Bool = false) {
@@ -318,6 +337,35 @@ public final class UsageViewModel: ObservableObject {
         Task { [weak self] in
             await self?.providerEngine.refresh(platform: platform, force: force)
             self?.finishProviderRefresh()
+        }
+    }
+
+    /// Refreshes the public DeepSeek status page independently from the credential-backed
+    /// balance loop. This keeps status visibility useful even when no API key is configured,
+    /// while the five-minute freshness window avoids turning a compact panel into a poller.
+    private func refreshDeepSeekStatus(force: Bool) {
+        guard let reader = deepSeekStatusReader, !isStopped else { return }
+        guard deepSeekStatusTask == nil else { return }
+        if !force,
+           let checkedAt = deepSeekStatusCheckedAt,
+           Date().timeIntervalSince(checkedAt) < deepSeekStatusRefreshInterval {
+            return
+        }
+
+        isDeepSeekStatusRefreshing = true
+        deepSeekStatusTask = Task { [weak self] in
+            let result: DeepSeekStatusSnapshot
+            do {
+                result = try await reader.fetchStatus()
+            } catch {
+                result = .unavailable()
+            }
+            guard let self, !self.isStopped else { return }
+            self.deepSeekStatus = result
+            self.deepSeekStatusCheckedAt = result.checkedAt
+            self.isDeepSeekStatusRefreshing = false
+            self.deepSeekStatusTask = nil
+            self.tick += 1
         }
     }
 

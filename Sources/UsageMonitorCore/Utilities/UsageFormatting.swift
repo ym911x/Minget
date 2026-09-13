@@ -77,6 +77,15 @@ public enum UsageFormatting {
         return "重置 \(formatDate(resetsAt)) \(time)"
     }
 
+    /// Absolute reset point used by the compact detail card. The segmented bar carries the
+    /// approximate remaining-time shape; this label gives the user the exact local time.
+    /// A missing reset is kept explicit and a passed reset is still shown as a date because
+    /// the service has not necessarily supplied a new window yet.
+    public static func resetPointText(_ window: RateLimitWindow) -> String {
+        guard let resetsAt = window.resetsAt else { return "时间未知" }
+        return "\(formatDate(resetsAt)) \(formatClock(resetsAt))"
+    }
+
     /// Error text for the panel (PROJECT_SPEC.md §13 A-F). Fixed labels only: upstream
     /// message text never reaches the UI (Round 2 blocker 5).
     public static func errorText(_ error: UsageError) -> String {

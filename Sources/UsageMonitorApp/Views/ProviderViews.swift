@@ -189,6 +189,28 @@ struct CredentialFeedbackView: View {
     }
 }
 
+/// Compact provider freshness/error line retained for the settings and diagnostics views.
+struct ProviderUpdatedFooter: View {
+    let report: ProviderReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let lastSuccessAt = report.lastSuccessAt {
+                Text(UsageFormatting.updatedText(fetchedAt: lastSuccessAt))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            if let error = report.error {
+                Text(error.displayText)
+                    .font(.system(size: 10))
+                    .foregroundStyle(report.connection == .stale ? Color.orange : Color.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// DeepSeek API key management: entry, replacement and deletion (v1.1 requirement 3).
 ///
 /// All save/collapse rules live in `ConnectionFormState`; the verification feedback is

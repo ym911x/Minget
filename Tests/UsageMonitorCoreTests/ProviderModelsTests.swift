@@ -128,6 +128,22 @@ final class ProviderModelsTests: XCTestCase {
                        "总额 100.00 CNY · 可用 42.25")
     }
 
+    func testOverviewBalanceUsesFieldSemanticsAndCNYSymbol() {
+        let totalOnly = ProviderBalance(currency: "CNY", total: dec("122.1"))
+        XCTAssertEqual(DecimalFormatting.overviewBalanceText(totalOnly), "¥122.10")
+        XCTAssertEqual(DecimalFormatting.overviewBalanceLabel(totalOnly), "余额")
+
+        let available = ProviderBalance(currency: "CNY", total: dec("100"), available: dec("22.29921165"))
+        XCTAssertEqual(DecimalFormatting.overviewBalanceText(available), "¥22.30")
+        XCTAssertEqual(DecimalFormatting.overviewBalanceLabel(available), "可用余额")
+
+        let dollars = ProviderBalance(currency: "USD", total: dec("5"))
+        XCTAssertEqual(DecimalFormatting.overviewBalanceText(dollars), "5.00 USD")
+
+        let tiny = ProviderBalance(currency: "CNY", total: dec("0.001"))
+        XCTAssertEqual(DecimalFormatting.overviewBalanceText(tiny), "< ¥0.01")
+    }
+
     func testBalanceWithoutACurrencyShowsNoInventedCode() {
         let balance = ProviderBalance(currency: nil, total: dec("88"))
         XCTAssertEqual(DecimalFormatting.balanceText(balance), "88.00")

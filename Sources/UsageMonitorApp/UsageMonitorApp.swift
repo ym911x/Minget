@@ -32,7 +32,9 @@ final class AppContainer {
                              credentials: credentials)
         glmReading = glm
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, glm], cache: providerCache)
-        model = UsageViewModel(service: codexService, providerEngine: providerEngine)
+        model = UsageViewModel(service: codexService,
+                               providerEngine: providerEngine,
+                               deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
         statusItem = StatusItemController()
     }
 }

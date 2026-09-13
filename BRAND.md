@@ -59,6 +59,16 @@
 - `assets/brand/Minget.icns`：macOS 应用包使用的多尺寸图标。
 - `assets/usagemonitor-menubar-v1.0.png`：v1.0 菜单栏实测截图，保留原始文件名以记录历史。
 
+### Provider 标识
+
+- `assets/brand/OAI_OpenAI-Blossom_Black.png`、`OAI_OpenAI-Blossom_White.png`：来自用户指定的 `/Users/yuyimeng/Downloads/OpenAI-logos/PNGs/`，仅用于 Codex 套餐卡片的提供方标识。
+- `assets/brand/OAI_OpenAI-Blossom_Black.svg`、`OAI_OpenAI-Blossom_White.svg`：来自用户指定的 `/Users/yuyimeng/Downloads/OpenAI-logos/SVGs/`，作为 Codex 套餐卡片的首选原始矢量资源；PNG 作为兼容回退。
+- `assets/brand/deepseek-whale-black.png`：来自用户上传的 DeepSeek 黑色鲸鱼图标，仅用于 DeepSeek 卡片的提供方标识。
+- `assets/brand/deepseek-wordmark-black.png`：来自用户上传的 DeepSeek“deepseek 开放平台”文字标识，与黑色鲸鱼图标成组使用；浅色外观保留原图，深色外观做显示反相以维持可读性。
+- `assets/brand/deepseek-wordmark-transparent.png`：由上述用户素材生成的透明背景 RGBA 展示派生资源，保留文字标识和黑色底牌内部的白字，供详情页显示；原始素材不覆盖。
+- `assets/brand/deepseek-wordmark-text-transparent.png`：由上述用户素材裁去“开放平台”字样后的透明 RGBA 展示资源，详情页只显示 `deepseek`，原始素材不覆盖。
+- OpenAI、Codex、DeepSeek 及其图形标识归各自权利人所有；界面使用不表示 Minget 与这些权利人存在背书或隶属关系。
+
 ---
 
 ## English
@@ -76,3 +86,5 @@ The standard bilingual display is **明明有数 · Minget**. `M²` is the visua
 Minget is positioned as a macOS menu bar tool for viewing and managing personal AI service status, available resources, and cost information. Its current scope covers Codex, DeepSeek, and Zhipu GLM. Future versions may add providers, tokens, credits, trends, budgets, costs, and forecasts.
 
 Public-facing UI and documentation use Minget. Internal Swift package names, targets, directories, bundle identifier, persistence keys, executable names, diagnostics, and the frozen `docs/archive/v1.0` history retain the `UsageMonitor` engineering identifier for compatibility and historical accuracy.
+
+Provider marks used in the detail panel are sourced from the user-provided OpenAI Blossom package, DeepSeek whale attachment, and DeepSeek wordmark attachment. OpenAI, Codex, DeepSeek, and their marks remain the property of their respective owners; their display identifies the provider only and does not imply endorsement.

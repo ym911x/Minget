@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-10  
-适用版本：1.0.0
+更新日期：2026-09-13
+适用版本：1.1.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -41,6 +41,15 @@
 - 凭据：API Key 只保存在 macOS Keychain。
 
 该请求是余额查询，不调用生成模型，不产生模型 token 消耗。
+
+### `GET https://status.deepseek.com/`
+
+- 认证：无。只读取公开状态页，不发送 DeepSeek API Key。
+- 用途：详情页 DeepSeek 卡片顶部的小型“服务状态”标识。
+- 解析：读取官方页面当前状态标题，例如 `Everything is running smoothly` 和
+  `All systems are operating as expected` 映射为“服务正常”；无法识别或页面不可达时显示“状态暂不可用”。
+- 验证：B。2026-09-13 从 DeepSeek 官方状态页确认页面当前公开展示整体状态和系统状态；页面使用 FlashDuty 渲染，旧的 Atlassian `/api/v2` JSON 路径已不再作为本实现的接口依据。HTML 标题解析由本地 fixture 测试覆盖。
+- 边界：仅显示整体状态与官方状态页入口，不抓取事件正文，不把历史事件文本当作当前状态，不调用模型接口。
 
 ## 智谱 GLM
 
@@ -84,6 +93,7 @@ This document records the data sources, evidence level, and security boundaries 
 - Minget calls the documented `GET https://api.deepseek.com/user/balance` endpoint.
 - Amounts use decimal arithmetic and currencies remain separate.
 - The API key is stored only in macOS Keychain and is never used for model inference.
+- The detail panel reads the unauthenticated headline from `GET https://status.deepseek.com/` for a compact “today's service status” line. A parser failure is shown as unavailable, never as operational.
 
 ### Zhipu GLM
 

@@ -98,4 +98,17 @@ final class UsageFormattingTests: XCTestCase {
                                       remainingPercent: 95, resetsAt: nil)
         XCTAssertEqual(UsageFormatting.resetText(unknown, now: now), "重置时间未知")
     }
+
+    func testResetPointTextUsesTheAbsoluteLocalDateAndTime() {
+        let date = Date(timeIntervalSince1970: 1_788_935_373)
+        let window = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                     usedPercent: 10, remainingPercent: 90, resetsAt: date)
+        let text = UsageFormatting.resetPointText(window)
+        XCTAssertTrue(text.contains(" "))
+        XCTAssertTrue(text.contains(UsageFormatting.formatClock(date)))
+
+        let unknown = RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                      usedPercent: 0, remainingPercent: 100, resetsAt: nil)
+        XCTAssertEqual(UsageFormatting.resetPointText(unknown), "时间未知")
+    }
 }

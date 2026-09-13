@@ -15,6 +15,7 @@ final class CodexAccountTests: XCTestCase {
         XCTAssertEqual(account?.kind, .chatgpt)
         XCTAssertEqual(account?.displayEmail, "someone@example.com")
         XCTAssertEqual(account?.planType, "plus")
+        XCTAssertEqual(account?.displayPlanType, "plus")
         XCTAssertEqual(account?.debugSummary, "chatgpt(plus)", "the summary must not contain the address")
     }
 
@@ -30,6 +31,7 @@ final class CodexAccountTests: XCTestCase {
         let account = CodexAccountParser.parse(result: ["account": ["type": "apiKey"]])
         XCTAssertEqual(account?.kind, .apiKey)
         XCTAssertNil(account?.displayEmail)
+        XCTAssertEqual(account?.displayPlanType, "API Key")
         XCTAssertEqual(account?.cacheAccountID, "api-key")
     }
 
