@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 import UsageMonitorCore
 
-/// Widths the three menu bar modes need, measured from the real SwiftUI content.
+/// Widths the two production menu bar modes need, measured from the real SwiftUI content.
 ///
 /// Measuring the actual hosting view is what makes the truncation check in
 /// `MenuBarSpaceFacts` meaningful: the state machine compares the width the app asked for
@@ -32,7 +32,7 @@ enum MenuBarLabelMetrics {
 /// - the item is registered with `NSStatusBar.system.statusItem(withLength:)`, so it is a
 ///   real system menu bar item rather than an unregistered `NSStatusItem` instance,
 /// - a stable `autosaveName` keeps the item where the user put it across relaunches,
-/// - the label steps down full → compact → icon as the available menu bar space shrinks,
+/// - the label steps down full → compact as the available menu bar space shrinks,
 ///   with hysteresis in `MenuBarSpaceStateMachine` so the mode cannot flap,
 /// - the popover reuses the same SwiftUI detail view as before; no extra floating window is
 ///   created for it,
@@ -69,7 +69,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     private var model: UsageViewModel?
     private var stateMachine = MenuBarSpaceStateMachine()
-    /// Widths the three modes were last measured at. `private(set)` so the wiring tests can
+    /// Widths the two modes were last measured at. `private(set)` so the wiring tests can
     /// prove the item is sized from a measurement rather than from the per-mode fallback.
     private(set) var widths: [MenuBarSpaceMode: CGFloat] = [:]
     /// Signature of the content the current widths were measured from. `private(set)` so the
@@ -173,6 +173,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         widths = [:]
         labelSignature = nil
         appliedWidth = 0
+        hasAutoOpenedDetailWindow = false
+        stateMachine = MenuBarSpaceStateMachine()
+        selfResizeSettlesAt = .distantPast
     }
 
     /// Requests a geometry check without assuming the width changed. Used by the geometry
@@ -221,7 +224,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // for. Until the applied mode has a real measurement there is no honest baseline, so
         // `requestedWidth` is 0 for that one observation and `isTruncated` stays false. Using
         // the fallback as the baseline made a roomy menu bar look truncated and stepped the
-        // item down to the minimal fallback, which v1.0.2 §3.3 forbids.
+        // item down to a partial `5H` label, which 1.1.2 forbids.
         let baseline = widths[stateMachine.mode] == nil ? 0 : appliedWidth
         let facts = Self.facts(for: item, requestedWidth: baseline)
         // `requested` is what the app measured and asked for; the frame width in `facts` is what
@@ -233,6 +236,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             apply(mode: mode)
         } else if widths != previousWidths {
             apply(mode: stateMachine.mode)
+        }
+
+        // Compact is the last honest menu-bar representation. If macOS still cannot render
+        // that complete two-quota label, reuse the existing hidden-item detail-window path
+        // after our resize has settled instead of leaving a clipped `5H` fragment behind.
+        if stateMachine.mode == .compact, !facts.isRendered {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.selfResizeSettleInterval) { [weak self] in
+                MainActor.assumeIsolated { self?.openDetailWindowIfItemIsHidden() }
+            }
         }
     }
 
@@ -556,10 +568,8 @@ extension MenuBarLabelMetrics {
     static func fallbackWidth(for mode: MenuBarSpaceMode) -> CGFloat {
         switch mode {
         case .full: return 132
-        case .compact: return 78
-        // v1.0.2 §3.3: the minimal fallback no longer draws an `M²` icon; it draws the plain
-        // text `5H`, which is narrower than the old 15 pt icon slot plus padding.
-        case .icon: return 26
+        // Keep enough room for the compact two-quota title before the first real measurement.
+        case .compact: return 92
         }
     }
 }

@@ -12,6 +12,8 @@
 
 `v1.1.1` 已完成并发布：GLM 运行时、WebKit 登录和界面入口已移除；旧版 GLM 本应用数据在启动时迁移清理；设置页合并为 OpenAI Codex 与 DeepSeek 的单一服务模块。真实界面检查已完成，真实服务账号未在本轮重新请求，资料见 `docs/versions/1.1.1/`。
 
+`v1.1.2` 已完成并发布：菜单栏只保留完整和紧凑双额度模式；OpenAI 详情卡增加只读可用重置摘要；DeepSeek 详情卡把余额移到品牌同列并保留 Logo 下状态；详情页改为固定整页无滚动布局。301 项自动测试通过，Release 构建、真实界面验收和发布记录见 `docs/versions/1.1.2/`，发布页为 [GitHub Release v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)。
+
 ## 候选方向
 
 以下内容作为迭代候选，尚未确定版本号和优先级：

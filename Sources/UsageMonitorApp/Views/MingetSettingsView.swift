@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// Compact 1.1.1 settings surface. Supported services share one module so their status,
+/// Compact 1.1.2 settings surface. Supported services share one module so their status,
 /// visibility and connection controls cannot drift into duplicate lists.
 struct MingetSettingsView: View {
     @ObservedObject var model: UsageViewModel
@@ -69,7 +69,7 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.2"
     }
     private var codexStatus: String {
         model.codexAccountAvailable ? "已连接" : "等待更新"

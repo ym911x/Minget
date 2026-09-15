@@ -33,7 +33,7 @@ public struct MenuBarContent: Equatable, Sendable {
     /// The quota text only. Never contains a marker, in any mode.
     public let text: String
     public let attention: MenuBarAttention
-    /// Full and compact show both rows; the minimal space fallback shows none.
+    /// Both production modes show both rows.
     public let showsTimeBars: Bool
     public let fiveHour: ResetTimeProgress
     public let weekly: ResetTimeProgress
@@ -84,7 +84,7 @@ public enum MenuBarContentBuilder {
     ///   - display: the Codex display state the panel already uses.
     ///   - connectionState: used to tell "no data yet" apart from "the read failed".
     ///   - now: the single clock reading shared by both rows.
-    ///   - mode: which of the three width modes is being drawn.
+    ///   - mode: which of the two production width modes is being drawn.
     public static func make(display: UsageDisplay,
                             connectionState: UsageService.ConnectionState,
                             now: Date,
@@ -94,17 +94,13 @@ public enum MenuBarContentBuilder {
         return MenuBarContent(mode: mode,
                               text: text(for: mode, snapshot: snapshot),
                               attention: attention(for: display, connectionState: connectionState),
-                              showsTimeBars: mode != .icon,
+                              showsTimeBars: true,
                               fiveHour: rows.fiveHour,
                               weekly: rows.weekly,
                               isCached: display.isStale)
     }
 
-    /// `5H 78% | W 42%` (full), `5H 78% W 42%` (compact), `5H` (minimal fallback).
-    ///
-    /// The minimal fallback shows the 5H label with no numbers and no rows: at that point the
-    /// menu bar has no room for two legible rows, and the detail panel is a click away
-    /// (v1.0.2 §3.3).
+    /// `5H 78% | W 42%` (full) or `5H 78% W 42%` (compact).
     public static func text(for mode: MenuBarSpaceMode, snapshot: UsageSnapshot?) -> String {
         let fiveHour = snapshot?.fiveHour
         let weekly = snapshot?.weekly
@@ -113,8 +109,6 @@ public enum MenuBarContentBuilder {
             return UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly)
         case .compact:
             return UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly)
-        case .icon:
-            return UsageFormatting.minimalMenuBarTitle()
         }
     }
 

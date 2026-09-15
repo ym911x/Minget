@@ -14,20 +14,17 @@ final class UsageFormattingTests: XCTestCase {
         // v1.0.2 requirement 4: the quota text never carries a warning, in any combination.
         for title in [UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly),
                       UsageFormatting.menuBarTitle(fiveHour: nil, weekly: nil),
-                      UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly),
-                      UsageFormatting.minimalMenuBarTitle()] {
+                      UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly)] {
             XCTAssertFalse(title.contains("⚠"), "no trailing warning may be built here: \(title)")
             XCTAssertFalse(title.contains("!"), "no trailing exclamation mark either: \(title)")
             XCTAssertTrue(title.hasPrefix("5H"), "the text starts with 5H: \(title)")
         }
     }
 
-    func testCompactAndMinimalTitles() {
+    func testCompactTitleKeepsBothWindows() {
         // Compact keeps both numbers and still starts with 5H; only the separator is dropped.
         XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly), "5H 78% W 42%")
         XCTAssertEqual(UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: nil), "5H 78% W –")
-        // Minimal-space fallback: plain 5H, no numbers, no rows.
-        XCTAssertEqual(UsageFormatting.minimalMenuBarTitle(), "5H")
     }
 
     func testMenuBarTitleRoundsToWholePercent() {
@@ -110,5 +107,35 @@ final class UsageFormattingTests: XCTestCase {
         let unknown = RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
                                       usedPercent: 0, remainingPercent: 100, resetsAt: nil)
         XCTAssertEqual(UsageFormatting.resetPointText(unknown), "时间未知")
+    }
+
+    func testRateLimitResetTextShowsCountAndNearestExpiryForLiveData() {
+        let expiry = Date(timeIntervalSince1970: 1_789_000_000)
+        let text = UsageFormatting.rateLimitResetText(
+            RateLimitResetCredits(availableCount: 2, nearestExpiresAt: expiry),
+            source: .codexAppServer,
+            now: Date(timeIntervalSince1970: 1_788_935_000)
+        )
+        XCTAssertEqual(text, "可用重置 2 次 · 最近到期 \(UsageFormatting.formatDate(expiry)) \(UsageFormatting.formatClock(expiry))")
+    }
+
+    func testRateLimitResetTextHandlesZeroAndUnavailableSources() {
+        let now = Date(timeIntervalSince1970: 1_788_935_000)
+        XCTAssertEqual(UsageFormatting.rateLimitResetText(RateLimitResetCredits(availableCount: 0), source: .codexAppServer, now: now),
+                       "可用重置 0 次")
+        XCTAssertEqual(UsageFormatting.rateLimitResetText(RateLimitResetCredits(availableCount: 2), source: .cached, now: now),
+                       "重置信息暂不可用")
+        XCTAssertEqual(UsageFormatting.rateLimitResetText(nil, source: .codexAppServer, now: now),
+                       "重置信息暂不可用")
+    }
+
+    func testRateLimitResetTextDoesNotKeepAnExpiredNearestDate() {
+        let now = Date(timeIntervalSince1970: 1_789_000_001)
+        let text = UsageFormatting.rateLimitResetText(
+            RateLimitResetCredits(availableCount: 1, nearestExpiresAt: now.addingTimeInterval(-1)),
+            source: .codexAppServer,
+            now: now
+        )
+        XCTAssertEqual(text, "可用重置 1 次")
     }
 }

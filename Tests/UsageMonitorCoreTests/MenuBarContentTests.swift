@@ -113,10 +113,9 @@ final class MenuBarContentTests: XCTestCase {
         XCTAssertTrue(result.showsTimeBars, "compact must still show both rows")
     }
 
-    func testMinimalFallbackIsPlainTextWithNoRows() {
-        let result = content(.live(liveSnapshot()), mode: .icon)
-        XCTAssertEqual(result.text, "5H")
-        XCTAssertFalse(result.showsTimeBars, "the minimal fallback hides both rows rather than cramping them")
+    func testBothProductionModesKeepBothRows() {
+        let result = content(.live(liveSnapshot()), mode: .compact)
+        XCTAssertTrue(result.showsTimeBars, "compact mode must keep both rows")
         XCTAssertFalse(result.text.contains("M²"), "no brand mark in any mode")
     }
 
@@ -208,9 +207,11 @@ final class MenuBarContentTests: XCTestCase {
         XCTAssertTrue(warned.accessibilityText.contains("异常提示"), warned.accessibilityText)
     }
 
-    func testAccessibilityTextOmitsRowsInTheMinimalFallback() {
-        let minimal = content(.live(liveSnapshot()), mode: .icon)
-        XCTAssertEqual(minimal.accessibilityText, "明明有数 · Minget 菜单栏，5H")
+    func testAccessibilityTextIncludesRowsInCompactMode() {
+        let compact = content(.live(liveSnapshot()), mode: .compact)
+        XCTAssertTrue(compact.accessibilityText.contains("5H 78% W 42%"))
+        XCTAssertTrue(compact.accessibilityText.contains("5 小时"))
+        XCTAssertTrue(compact.accessibilityText.contains("周额度"))
     }
 
     // MARK: No snapshot at all

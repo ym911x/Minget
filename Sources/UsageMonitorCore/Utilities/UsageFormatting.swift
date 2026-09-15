@@ -23,12 +23,6 @@ public enum UsageFormatting {
         "5H \(percent(fiveHour)) W \(percent(weekly))"
     }
 
-    /// Minimal-space fallback: plain `5H`. The two time rows are hidden in this mode, so the
-    /// text is the only content and stays legible (v1.0.2 §3.3).
-    public static func minimalMenuBarTitle() -> String {
-        windowShortName(.fiveHour)
-    }
-
     /// Rounded remaining percent, or `–` when the window is missing. Never a fabricated 0.
     private static func percent(_ window: RateLimitWindow?) -> String {
         guard let window else { return "–" }
@@ -84,6 +78,18 @@ public enum UsageFormatting {
     public static func resetPointText(_ window: RateLimitWindow) -> String {
         guard let resetsAt = window.resetsAt else { return "时间未知" }
         return "\(formatDate(resetsAt)) \(formatClock(resetsAt))"
+    }
+
+    /// Displays the optional earned-reset summary. Cached snapshots intentionally do not
+    /// claim that a reset is currently available because the credit may have been consumed
+    /// elsewhere after the snapshot was written.
+    public static func rateLimitResetText(_ credits: RateLimitResetCredits?,
+                                          source: UsageSource,
+                                          now: Date = Date()) -> String {
+        guard source == .codexAppServer, let credits else { return "重置信息暂不可用" }
+        let countText = "可用重置 \(credits.availableCount) 次"
+        guard let expiry = credits.nearestExpiresAt, expiry > now else { return countText }
+        return "\(countText) · 最近到期 \(formatDate(expiry)) \(formatClock(expiry))"
     }
 
     /// Error text for the panel (PROJECT_SPEC.md §13 A-F). Fixed labels only: upstream

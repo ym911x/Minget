@@ -93,10 +93,8 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
                                                         fiveHourPercent: 100, weeklyPercent: 100))),
             ("UI-08 9% / 9%（最窄文字）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400,
                                                      fiveHourPercent: 9, weeklyPercent: 9))),
-            ("UI-09 compact 模式", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400),
-                                           mode: .compact)),
-            ("UI-09 最小兜底（5H，无条）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400),
-                                                 mode: .icon)),
+            ("UI-09 紧凑模式（双额度、双时间条）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400),
+                                                 mode: .compact)),
         ]
 
         try write(try renderImage(rows, background: .light), named: "01-menubar-states-light.png")

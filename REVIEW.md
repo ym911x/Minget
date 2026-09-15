@@ -1,5 +1,19 @@
 # 当前审核状态
 
+## v1.1.2
+
+状态：已完成。代码差异、301 项自动测试、Release 构建、Info.plist 版本和严格签名均已核查；真实 Codex app-server 样本和真实详情窗口检查已完成，并已发布 [GitHub Release v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)。
+
+| 资料 | 路径 |
+| --- | --- |
+| 需求 | [docs/versions/1.1.2/REQUIREMENTS.md](docs/versions/1.1.2/REQUIREMENTS.md) |
+| 实施任务 | [docs/versions/1.1.2/IMPLEMENTATION_TASKS.md](docs/versions/1.1.2/IMPLEMENTATION_TASKS.md) |
+| 实施报告 | [docs/versions/1.1.2/IMPLEMENTATION_REPORT.md](docs/versions/1.1.2/IMPLEMENTATION_REPORT.md) |
+| 独立审核状态 | [docs/versions/1.1.2/REVIEW.md](docs/versions/1.1.2/REVIEW.md) |
+| 验收台账 | [docs/versions/1.1.2/ACCEPTANCE.md](docs/versions/1.1.2/ACCEPTANCE.md) |
+
+要点：菜单栏状态机已移除仅 `5H` 的生产模式；OpenAI 详情卡只读显示可用重置数量和可验证的最近到期时间；DeepSeek 详情卡将余额移到品牌同列并垂直居中、状态保留在 Logo 下方；详情页不含滚动容器且已收紧底部留白，未新增账号接口或浏览器会话读取。
+
 ## v1.1.0
 
 状态：已完成。371 项自动测试与 1.1.0 构建通过，用户已确认当前详情页体验并授权上传 GitHub。尚未逐项重跑的边界交互、异常视觉矩阵和真实服务回归保留在 [验收台账](docs/versions/1.1.0/ACCEPTANCE.md)，不因发布而改记为通过。

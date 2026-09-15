@@ -55,10 +55,9 @@ final class MenuBarLabelWiringTests: XCTestCase {
             XCTAssertNotNil(widths[mode], "\(mode.description) must be measured")
             XCTAssertGreaterThan(widths[mode] ?? 0, 0, "\(mode.description) must never be zero-width")
         }
-        // Full carries a separator and both rows; compact drops the separator; the minimal
-        // fallback is the plain text `5H`.
+        // Full carries a separator and both rows; compact drops the separator while retaining
+        // both quota values and both rows.
         XCTAssertGreaterThan(widths[.full] ?? 0, widths[.compact] ?? 0)
-        XCTAssertGreaterThan(widths[.compact] ?? 0, widths[.icon] ?? 0)
     }
 
     func testTheWidestPercentageProducesTheWidestText() {
@@ -152,17 +151,16 @@ final class MenuBarLabelWiringTests: XCTestCase {
         XCTAssertLessThan(warnedWidth - normalWidth, 20, "exactly one small marker, not a word")
     }
 
-    func testMinimalFallbackLabelIsJustTheText() {
+    func testCompactLabelKeepsBothQuotaValuesAndRows() {
         let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
                                      weekly: window(.weekly, remainingPercent: 42),
                                      fetchedAt: Date(), source: .codexAppServer)
         let content = MenuBarContentBuilder.make(display: .live(snapshot), connectionState: .connected,
-                                                 now: Date(), mode: .icon)
-        XCTAssertEqual(content.text, "5H")
+                                                 now: Date(), mode: .compact)
+        XCTAssertEqual(content.text, "5H 78% W 42%")
+        XCTAssertTrue(content.showsTimeBars)
         let measured = fittingWidth(MenuBarLabelContent(content: content))
-        XCTAssertEqual(measured, MenuBarLabelContent.estimatedTextWidth("5H"), accuracy: 0.5)
-        // Short enough that the item still leaves room for the status item's padding.
-        XCTAssertLessThan(MenuBarLabelMetrics.fallbackWidth(for: .icon), measured + 24)
+        XCTAssertEqual(measured, MenuBarLabelContent.estimatedTextWidth(content.text), accuracy: 0.5)
     }
 
     /// Fitting width of the real label view, measured the same way the status item measures it.
@@ -172,11 +170,9 @@ final class MenuBarLabelWiringTests: XCTestCase {
         return ceil(hosting.fittingSize.width)
     }
 
-    func testMinimumFallbackWidthFitsThePlainFiveHourText() {
-        let minimal = MenuBarLabelMetrics.fallbackWidth(for: .icon)
-        XCTAssertGreaterThanOrEqual(minimal, MenuBarLabelContent.estimatedTextWidth("5H"))
-        XCTAssertLessThan(minimal, MenuBarLabelMetrics.fallbackWidth(for: .compact),
-                          "the minimal fallback is narrower than compact")
+    func testCompactFallbackWidthFitsTheCompactText() {
+        let compact = MenuBarLabelMetrics.fallbackWidth(for: .compact)
+        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("5H 78% W 42%"))
     }
 
     // MARK: §8.1.9 The item is sized from a measurement, not from the fallback
@@ -184,7 +180,7 @@ final class MenuBarLabelWiringTests: XCTestCase {
     /// v1.0.2 §3.2/§3.3 regression: the per-mode fallback is only a starting point. `install`
     /// must replace it with the real measurement before the first geometry check, otherwise a
     /// roomy menu bar is reported as truncated (fallback 132 pt against a granted ~116 pt) and
-    /// the item steps down to the minimal fallback, which §3.3 forbids.
+    /// the item steps down to an invalid partial label.
     func testInstallSizesTheItemFromAMeasurementNotTheFallback() {
         let controller = StatusItemController()
         controller.install(model: makeModel())
@@ -200,13 +196,12 @@ final class MenuBarLabelWiringTests: XCTestCase {
         controller.uninstall()
     }
 
-    /// The measured widths stay ordered after a real measurement, so the fallback's ordering
-    /// assumption (full > compact > minimal) still holds for the content that is drawn.
+    /// The measured widths stay ordered after a real measurement, so full remains wider than
+    /// the compact two-quota representation.
     func testInstalledWidthsKeepTheModeOrdering() {
         let controller = StatusItemController()
         controller.install(model: makeModel())
         XCTAssertGreaterThan(controller.widths[.full] ?? 0, controller.widths[.compact] ?? 0)
-        XCTAssertGreaterThan(controller.widths[.compact] ?? 0, controller.widths[.icon] ?? 0)
         controller.uninstall()
     }
 
@@ -232,7 +227,6 @@ final class MenuBarLabelWiringTests: XCTestCase {
         for _ in 0..<20 {
             _ = model.menuBarContent(for: .full, now: Date())
             _ = model.menuBarContent(for: .compact, now: Date())
-            _ = model.menuBarContent(for: .icon, now: Date())
             _ = model.menuBarSizeSignature
             controller.noteContentMayHaveChanged()
         }

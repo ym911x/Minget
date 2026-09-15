@@ -48,7 +48,12 @@ public struct UsageParser: Sendable {
             // Valid transport, but nothing the UI can present.
             throw UsageError.rpcFailed(.invalidPayload(.noUsableWindow))
         }
-        return UsageSnapshot(fiveHour: fiveHour, weekly: weekly, unknownWindows: unknown, fetchedAt: fetchedAt, source: .codexAppServer)
+        return UsageSnapshot(fiveHour: fiveHour,
+                             weekly: weekly,
+                             rateLimitResetCredits: parseRateLimitResetCredits(result["rateLimitResetCredits"], fetchedAt: fetchedAt),
+                             unknownWindows: unknown,
+                             fetchedAt: fetchedAt,
+                             source: .codexAppServer)
     }
 
     /// Parse a full JSON-RPC response envelope and return either its result or its error.
@@ -202,6 +207,38 @@ public struct UsageParser: Sendable {
             return formatter.date(from: trimmed)
         }
         return nil
+    }
+
+    /// Parses the optional earned-reset summary without allowing malformed optional data to
+    /// invalidate otherwise usable quota windows. `availableCount` is authoritative; the
+    /// detail array may be absent, empty, or shorter than the count.
+    public func parseRateLimitResetCredits(_ value: Any?, fetchedAt: Date) -> RateLimitResetCredits? {
+        guard let summary = value as? [String: Any],
+              let count = SafeConversion.integer(summary["availableCount"]),
+              count >= 0 else {
+            return nil
+        }
+
+        guard count > 0 else {
+            return RateLimitResetCredits(availableCount: 0)
+        }
+
+        var nearestExpiry: Date?
+        if let rawCredits = summary["credits"] as? [Any] {
+            for rawCredit in rawCredits {
+                guard let credit = rawCredit as? [String: Any] else { continue }
+                if let status = credit["status"] as? String, status != "available" {
+                    continue
+                }
+                guard let expiry = parseResetDate(credit["expiresAt"]), expiry > fetchedAt else {
+                    continue
+                }
+                if nearestExpiry == nil || expiry < nearestExpiry! {
+                    nearestExpiry = expiry
+                }
+            }
+        }
+        return RateLimitResetCredits(availableCount: count, nearestExpiresAt: nearestExpiry)
     }
 
     // MARK: - Envelope

@@ -21,21 +21,23 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 12) {
-                header
-                codexCard
-                providerCards
-            }
-            .padding(16)
+        VStack(alignment: .leading, spacing: 12) {
+            header
+            codexCard
+            providerCards
         }
-        .frame(width: 420, height: preferredHeight)
+        .padding(16)
+        // The detail page is deliberately a single, non-scrolling surface. Keep the
+        // provider-enabled height leaves room for the full Codex card, reset summary and
+        // DeepSeek card, including the two-currency balance state, without a trailing blank
+        // region that would make the detail page look unfinished.
+        .frame(width: 420, height: preferredHeight, alignment: .top)
         .background(.regularMaterial)
         .onAppear { model.panelWillOpen() }
     }
 
     static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
-        preferences.showDeepSeek ? 370 : 300
+        preferences.showDeepSeek ? 420 : 320
     }
 
     private var preferredHeight: CGFloat {
@@ -91,7 +93,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.2"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -154,6 +156,14 @@ struct UsagePanelView: View {
             CodexQuotaGrid(fiveHour: snapshot?.fiveHour,
                            weekly: snapshot?.weekly,
                            now: Date())
+
+            Text(UsageFormatting.rateLimitResetText(snapshot?.rateLimitResetCredits,
+                                                    source: snapshot?.source ?? .cached))
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityLabel("OpenAI 可用重置")
 
             if case .unavailable(let error) = model.displayState {
                 Text(UsageFormatting.errorText(error).replacingOccurrences(of: "\n", with: " "))
@@ -451,7 +461,12 @@ private struct DeepSeekOverviewCard: View {
     let openSettings: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
+            // There is no verified DeepSeek account field. Put the real balance directly in
+            // this brand row so the card does not reserve an empty account slot or a second
+            // blank row before the status information.
+            // Centering the frames compensates for the whale PNG's internal whitespace and
+            // keeps the visible whale, wordmark and amount on one visual axis.
             HStack(alignment: .center, spacing: 10) {
                 BrandImage(asset: .deepSeekWhale, fallbackSystemName: "drop.fill")
                     .frame(width: 38, height: 36)
@@ -463,6 +478,8 @@ private struct DeepSeekOverviewCard: View {
 
                 balanceSummary
             }
+
+            serviceStatusRow
         }
         .padding(14)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
@@ -491,7 +508,6 @@ private struct DeepSeekOverviewCard: View {
                             .minimumScaleFactor(0.72)
                     }
                 }
-                serviceStatusRow
             }
         } else {
             VStack(alignment: .trailing, spacing: 4) {
@@ -500,7 +516,6 @@ private struct DeepSeekOverviewCard: View {
                 }
                 .buttonStyle(.link)
                 .font(.system(size: 11))
-                serviceStatusRow
             }
         }
     }

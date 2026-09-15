@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-13
-适用版本：1.1.1
+更新日期：2026-09-14
+适用版本：1.1.2
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -20,6 +20,12 @@
 - 传输：本机 `codex app-server` 的 stdio JSON-RPC。
 - 用途：读取额度窗口、已用百分比和重置时间。
 - 验证：A。真实本机服务已验证，解析和进程生命周期由自动化测试覆盖。
+- 可选字段：[`rateLimitResetCredits`](https://learn.chatgpt.com/docs/app-server) 的 `availableCount` 是账号当前可用的 earned rate-limit reset 数量；`credits` 明细可能提供 `expiresAt`。应用只保留数量和最近一个未来到期时间，明细缺失时仍以 `availableCount` 为准。
+- 展示边界：1.1.2 只在 OpenAI 详情页显示该只读摘要，不消费重置权益；缓存快照不被标记为当前可用，字段缺失或非法时显示不可用。
+
+### `account/rateLimitResetCredit/consume`
+
+- 1.1.2 不调用此写入方法。重置消费、幂等键和二次确认留待后续版本单独评估。
 
 ### `account/read`
 
@@ -35,7 +41,7 @@
 ### `GET https://api.deepseek.com/user/balance`
 
 - 认证：`Authorization: Bearer <API Key>`。
-- 字段：`is_available`、`balance_infos[].currency`、`total_balance`、`granted_balance`、`topped_up_balance`。
+- 字段：[`is_available`、`balance_infos[].currency`、`total_balance`、`granted_balance`、`topped_up_balance`](https://api-docs.deepseek.com/zh-cn/api/get-user-balance/)。
 - 验证：A。接口结构来自 DeepSeek 官方文档，用户已用真实账号确认余额显示。
 - 金额规则：使用 `Decimal`；不同币种分别显示；不换算、不合计、不把缺失字段显示为零。
 - 凭据：API Key 只保存在 macOS Keychain。
@@ -67,11 +73,12 @@
 
 ## English summary
 
-This document records the data sources, evidence level, and security boundaries used by Minget 1.0.0.
+This document records the data sources, evidence level, and security boundaries used by Minget 1.1.2.
 
 ### Codex
 
 - `account/rateLimits/read` and `account/read` are called through the local `codex app-server` stdio JSON-RPC connection.
+- `account/rateLimits/read` may return `rateLimitResetCredits.availableCount` and optional credit expiry details; Minget displays only the normalized count and nearest future expiry and never calls the consume method in 1.1.2.
 - `account/read` uses `{"refreshToken": false}` and does not read `~/.codex/auth.json`.
 - Menu bar geometry checks are local and do not use network requests or model tokens.
 

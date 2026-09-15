@@ -81,6 +81,12 @@ struct UsageMonitorCLI {
         }
         print("source: \(snapshot.source == .codexAppServer ? "codex app-server (live)" : "cache")")
         print("fetchedAt: \(formatFullDate(snapshot.fetchedAt))")
+        if let resetCredits = snapshot.rateLimitResetCredits {
+            let expiry = resetCredits.nearestExpiresAt.map(formatFullDate) ?? "unknown"
+            print("available resets: \(resetCredits.availableCount) (nearest expiry \(expiry))")
+        } else {
+            print("available resets: unavailable")
+        }
 
         // 5. Cache round trip through the same storage the app uses (fail-closed).
         let suite = "UsageMonitorCLI.Smoke.\(UUID().uuidString)"
@@ -93,6 +99,7 @@ struct UsageMonitorCLI {
             && restored?.source == .cached
             && restored?.fiveHour?.usedPercent == snapshot.fiveHour?.usedPercent
             && restored?.weekly?.windowDurationMinutes == snapshot.weekly?.windowDurationMinutes
+            && restored?.rateLimitResetCredits == snapshot.rateLimitResetCredits
         print("cache: \(cacheOK ? "round trip ok (stored as normalized numbers only, tagged cached)" : "FAILED (values did not survive)")")
         defaults.removePersistentDomain(forName: suite)
 

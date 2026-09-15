@@ -224,6 +224,94 @@ final class UsageParserTests: XCTestCase {
         XCTAssertNil(parser.parseResetDate(0))
     }
 
+    // MARK: Earned reset credits
+
+    private func resultWithResetCredits(_ value: Any) -> [String: Any] {
+        [
+            "rateLimits": ["primary": windowDict(9, 300, 1_788_935_373)],
+            "rateLimitResetCredits": value,
+        ]
+    }
+
+    func testResetCreditCountAndNearestFutureExpiryAreNormalized() throws {
+        let snapshot = try parser.parseSnapshot(
+            result: resultWithResetCredits([
+                "availableCount": 3,
+                "credits": [
+                    ["id": "opaque-a", "status": "available", "expiresAt": 1_788_937_000],
+                    ["id": "opaque-b", "status": "available", "expiresAt": 1_788_936_000],
+                    ["id": "opaque-c", "status": "available", "expiresAt": 1_788_939_000],
+                ],
+            ]),
+            fetchedAt: fetchedAt
+        )
+        XCTAssertEqual(snapshot.rateLimitResetCredits?.availableCount, 3)
+        XCTAssertEqual(snapshot.rateLimitResetCredits?.nearestExpiresAt,
+                       Date(timeIntervalSince1970: 1_788_936_000))
+    }
+
+    func testResetCreditCountRemainsAuthoritativeWhenDetailsAreMissingOrShorter() throws {
+        let withNullDetails = try parser.parseSnapshot(
+            result: resultWithResetCredits(["availableCount": 2, "credits": NSNull()]),
+            fetchedAt: fetchedAt
+        )
+        XCTAssertEqual(withNullDetails.rateLimitResetCredits,
+                       RateLimitResetCredits(availableCount: 2))
+
+        let withShortDetails = try parser.parseSnapshot(
+            result: resultWithResetCredits([
+                "availableCount": 4,
+                "credits": [["status": "available", "expiresAt": 1_788_936_000]],
+            ]),
+            fetchedAt: fetchedAt
+        )
+        XCTAssertEqual(withShortDetails.rateLimitResetCredits?.availableCount, 4)
+        XCTAssertEqual(withShortDetails.rateLimitResetCredits?.nearestExpiresAt,
+                       Date(timeIntervalSince1970: 1_788_936_000))
+    }
+
+    func testZeroResetCreditsIsExplicitAndDoesNotBorrowAnExpiry() throws {
+        let snapshot = try parser.parseSnapshot(
+            result: resultWithResetCredits([
+                "availableCount": 0,
+                "credits": [["status": "available", "expiresAt": 1_788_936_000]],
+            ]),
+            fetchedAt: fetchedAt
+        )
+        XCTAssertEqual(snapshot.rateLimitResetCredits,
+                       RateLimitResetCredits(availableCount: 0))
+    }
+
+    func testExpiredAndRedeemedDetailsAreNotPresentedAsAvailableExpiry() throws {
+        let snapshot = try parser.parseSnapshot(
+            result: resultWithResetCredits([
+                "availableCount": 2,
+                "credits": [
+                    ["status": "redeemed", "expiresAt": 1_788_936_000],
+                    ["status": "available", "expiresAt": fetchedAt.timeIntervalSince1970 - 1],
+                ],
+            ]),
+            fetchedAt: fetchedAt
+        )
+        XCTAssertEqual(snapshot.rateLimitResetCredits,
+                       RateLimitResetCredits(availableCount: 2))
+    }
+
+    func testMalformedResetCreditSummaryIsUnavailableWithoutInvalidatingWindows() throws {
+        let invalidValues: [Any] = [
+            ["availableCount": -1],
+            ["availableCount": 1.5],
+            ["availableCount": true],
+            ["credits": []],
+            NSNull(),
+        ]
+        for value in invalidValues {
+            let snapshot = try parser.parseSnapshot(result: resultWithResetCredits(value), fetchedAt: fetchedAt)
+            XCTAssertNil(snapshot.rateLimitResetCredits)
+            XCTAssertNotNil(snapshot.fiveHour)
+        }
+    }
+
     // MARK: Multi-bucket precedence
 
     func testPrefersCodexBucketFromRateLimitsByLimitId() throws {

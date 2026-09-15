@@ -110,21 +110,15 @@ final class MenuBarSpaceStateTests: XCTestCase {
 
     // MARK: Mode changes
 
-    func testShrinksImmediatelyWhenTheItemIsNotRendered() {
+    func testShrinksToCompactAndNeverDropsTheSecondQuota() {
         let machine = MenuBarSpaceStateMachine(initialMode: .full)
         let decision = machine.apply(notchedFacts(itemMinX: 350))
         XCTAssertEqual(decision, .change(to: .compact, reason: .hiddenOrOccluded))
         XCTAssertEqual(machine.mode, .compact)
 
         let second = machine.apply(notchedFacts(itemMinX: 350))
-        XCTAssertEqual(second, .change(to: .icon, reason: .hiddenOrOccluded))
-        XCTAssertEqual(machine.mode, .icon)
-    }
-
-    func testIconModeNeverShrinksFurther() {
-        let machine = MenuBarSpaceStateMachine(initialMode: .icon)
-        let decision = machine.apply(notchedFacts(itemMinX: 350))
-        XCTAssertEqual(decision, .keep(.icon))
+        XCTAssertEqual(second, .keep(.compact))
+        XCTAssertEqual(machine.mode, .compact)
     }
 
     func testStaysAtFullWhileThereIsRoom() {
@@ -146,25 +140,23 @@ final class MenuBarSpaceStateTests: XCTestCase {
     func testShrinkingBlocksGrowthUntilASpaceEvent() {
         let machine = MenuBarSpaceStateMachine(initialMode: .full)
 
-        // Tight menu bar: drop to icon. One level per observation, the same as
-        // testShrinksImmediatelyWhenTheItemIsNotRendered and
-        // testFailedGrowthAttemptShrinksBackAndBlocksAgain.
+        // Tight menu bar: drop to compact and stop. Both quota values remain visible.
         _ = machine.apply(notchedFacts(itemMinX: 350))
         _ = machine.apply(notchedFacts(itemMinX: 350))
-        XCTAssertEqual(machine.mode, .icon)
+        XCTAssertEqual(machine.mode, .compact)
 
         // Space frees up again, but the block from the shrink is still in force.
         _ = machine.apply(roomyFacts())
         _ = machine.apply(roomyFacts())
         _ = machine.apply(roomyFacts())
-        XCTAssertEqual(machine.mode, .icon, "no growth until a space event")
+        XCTAssertEqual(machine.mode, .compact, "no growth until a space event")
 
         // A space event (screen change, wake, item moved) re-opens growth.
         machine.noteSpaceEvent()
-        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.icon))
-        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.icon))
-        XCTAssertEqual(machine.apply(roomyFacts()), .change(to: .compact, reason: .confirmedRoomToGrow))
-        XCTAssertEqual(machine.mode, .compact)
+        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.compact))
+        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.compact))
+        XCTAssertEqual(machine.apply(roomyFacts()), .change(to: .full, reason: .confirmedRoomToGrow))
+        XCTAssertEqual(machine.mode, .full)
     }
 
     func testFailedGrowthAttemptShrinksBackAndBlocksAgain() {
@@ -200,28 +192,26 @@ final class MenuBarSpaceStateTests: XCTestCase {
 
     func testModeOrderingIsLinear() {
         XCTAssertEqual(MenuBarSpaceMode.full.nextSmaller, .compact)
-        XCTAssertEqual(MenuBarSpaceMode.compact.nextSmaller, .icon)
-        XCTAssertNil(MenuBarSpaceMode.icon.nextSmaller)
+        XCTAssertNil(MenuBarSpaceMode.compact.nextSmaller)
         XCTAssertNil(MenuBarSpaceMode.full.nextLarger)
-        XCTAssertEqual(MenuBarSpaceMode.icon.nextLarger, .compact)
         XCTAssertEqual(MenuBarSpaceMode.compact.nextLarger, .full)
     }
 
     // MARK: Screen / wake events
 
     func testScreenChangeReEnablesGrowth() {
-        let machine = MenuBarSpaceStateMachine(initialMode: .icon)
+        let machine = MenuBarSpaceStateMachine(initialMode: .compact)
         machine.noteSpaceEvent()   // NSApplication.didChangeScreenParametersNotification
-        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.icon))
+        XCTAssertEqual(machine.apply(roomyFacts()), .keep(.compact))
     }
 
     func testWakeReEnablesGrowth() {
-        let machine = MenuBarSpaceStateMachine(initialMode: .icon)
+        let machine = MenuBarSpaceStateMachine(initialMode: .compact)
         machine.noteSpaceEvent()   // NSWorkspace.didWakeNotification
         _ = machine.apply(roomyFacts())
         _ = machine.apply(roomyFacts())
         _ = machine.apply(roomyFacts())
-        XCTAssertEqual(machine.mode, .compact)
+        XCTAssertEqual(machine.mode, .full)
     }
 
     func testRepeatedSpaceEventsDoNotSkipTheConfirmationWindow() {

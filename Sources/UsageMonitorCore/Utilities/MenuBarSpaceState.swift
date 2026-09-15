@@ -2,40 +2,32 @@ import Foundation
 import CoreGraphics
 
 /// How much of the two-quota title the menu bar can currently show.
-/// The progression required by v1.1 is full → compact → icon.
+/// The production progression is full → compact. Both modes retain both quota values and
+/// both reset-time rows; the old plain-`5H` fallback is intentionally unavailable.
 public enum MenuBarSpaceMode: String, CaseIterable, Codable, Sendable {
     /// `5H 78% | W 42%`, with both time rows.
     case full
     /// `5H 78% W 42%`, with both time rows.
     case compact
-    /// Minimal-space fallback. The case name is kept for compatibility, but v1.0.2 changed the
-    /// visual to the plain text `5H` with no time rows: the brand icon is gone from the menu
-    /// bar, and at this width the two rows would be illegible.
-    case icon
-
     public var nextSmaller: MenuBarSpaceMode? {
         switch self {
         case .full: return .compact
-        case .compact: return .icon
-        case .icon: return nil
+        case .compact: return nil
         }
     }
 
     public var nextLarger: MenuBarSpaceMode? {
         switch self {
-        case .icon: return .compact
         case .compact: return .full
         case .full: return nil
         }
     }
 
-    /// Fixed display hint, used by tests and by diagnostics. `rawValue` stays `icon` so
-    /// persisted values keep working; this label reflects what is actually drawn.
+    /// Fixed display hint used by tests and diagnostics.
     public var description: String {
         switch self {
         case .full: return "full"
         case .compact: return "compact"
-        case .icon: return "minimalText"
         }
     }
 }
@@ -145,7 +137,7 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
 /// Two rules keep the display from flapping between modes:
 /// - **Shrink immediately.** The moment the item is not rendered (hidden by macOS, over the
 ///   notch, off the visible area, or truncated), the state steps down one level per
-///   observation, so a squeezed menu bar reaches the icon mode in consecutive steps.
+///   observation, stopping at compact so both quota values remain visible.
 /// - **Grow cautiously.** Growth is one step, only after `growConfirmations` consecutive
 ///   observations where the item rendered cleanly. One failed growth attempt blocks further
 ///   growth until a space event happens (screen change, wake, or the item's own frame
