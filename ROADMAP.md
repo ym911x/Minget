@@ -14,7 +14,7 @@
 
 `v1.1.2` 已完成并发布：菜单栏只保留完整和紧凑双额度模式；OpenAI 详情卡增加只读可用重置摘要；DeepSeek 详情卡把余额移到品牌同列并保留 Logo 下状态；详情页改为固定整页无滚动布局。301 项自动测试通过，Release 构建、真实界面验收和发布记录见 `docs/versions/1.1.2/`，发布页为 [GitHub Release v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)。
 
-`v1.2.0` 发布候选已完成：详情页加入可隐藏的 Command Code 用量卡片，菜单栏仍只显示 Codex。API Key 由用户在应用内提供并仅存于 Keychain；请求边界限定为三个只读 `/alpha` 路径，模型端点和跨域重定向在本地拒绝。309 项自动测试、Release 构建和严格签名通过，真实 API Key 已返回用量；修复后的持续显示和完整重启仍待用户复验，资料位于 `docs/versions/1.2.0/`。
+`v1.2.0` 已发布：详情页加入可隐藏的 Command Code 用量卡片，菜单栏仍只显示 Codex。API Key 由用户在应用内提供并仅存于 Keychain；请求边界限定为三个只读 `/alpha` 路径，模型端点和跨域重定向在本地拒绝。309 项自动测试、Release 构建和严格签名通过，真实 API Key 已返回用量；修复后的持续显示和完整重启仍待用户复验。资料位于 `docs/versions/1.2.0/`，发布页为 [GitHub Release v1.2.0](https://github.com/ym911x/Minget/releases/tag/v1.2.0)。
 
 ## 候选方向
 

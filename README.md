@@ -45,7 +45,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepS
 ## 当前版本
 
 - 当前版本：`1.2.0`
-- 状态：Command Code 接入、309 项自动化测试、Release 构建和严格签名检查已完成；真实 API Key 已返回用量。修复后的持续显示和完整重启仍待用户复验，详见 [1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)。
+- 状态：Command Code 接入、309 项自动化测试、Release 构建和严格签名检查已完成；真实 API Key 已返回用量。修复后的持续显示和完整重启仍待用户复验。发布页：[Minget v1.2.0](https://github.com/ym911x/Minget/releases/tag/v1.2.0)
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
