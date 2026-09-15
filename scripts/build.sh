@@ -124,6 +124,8 @@ cp "assets/brand/deepseek-whale-black.png" "$STAGING_CONTENTS/Resources/deepseek
 cp "assets/brand/deepseek-wordmark-black.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-black.png"
 cp "assets/brand/deepseek-wordmark-transparent.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-transparent.png"
 cp "assets/brand/deepseek-wordmark-text-transparent.png" "$STAGING_CONTENTS/Resources/deepseek-wordmark-text-transparent.png"
+cp "assets/brand/commandcode-symbol.svg" "$STAGING_CONTENTS/Resources/commandcode-symbol.svg"
+cp "assets/brand/commandcode-symbol-black.svg" "$STAGING_CONTENTS/Resources/commandcode-symbol-black.svg"
 
 cat > "$STAGING_CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

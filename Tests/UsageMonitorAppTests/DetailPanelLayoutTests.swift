@@ -13,10 +13,16 @@ final class DetailPanelLayoutTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let preferences = DetailPreferences(defaults: defaults)
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 420)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 630)
 
         preferences.showDeepSeek = false
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 530)
+
+        preferences.showCommandCode = false
         XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 320)
+
+        preferences.showDeepSeek = true
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 420)
     }
 
     func testDetailPageDoesNotEmbedAScrollView() {

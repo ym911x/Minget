@@ -45,6 +45,7 @@ final class ConnectionFormState: ObservableObject {
         let saved: Bool
         switch platform {
         case .deepseek: saved = model.saveDeepSeekKey(draft)
+        case .commandcode: saved = model.saveCommandCodeKey(draft)
         case .codex: return false
         }
         if saved {
@@ -59,6 +60,7 @@ final class ConnectionFormState: ObservableObject {
     func deleteCredential() {
         switch platform {
         case .deepseek: model.deleteDeepSeekKey()
+        case .commandcode: model.deleteCommandCodeKey()
         case .codex: return
         }
         draft = ""

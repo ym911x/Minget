@@ -81,11 +81,14 @@ public struct PersistedBalance: Codable, Equatable, Sendable {
 public struct ProviderCacheEntry: Codable, Equatable, Sendable {
     public var accountID: String
     public var balances: [PersistedBalance]
+    /// Optional so existing DeepSeek cache entries remain decodable.
+    public var usage: ProviderUsage?
     public var lastSuccessAt: Date
 
-    public init(accountID: String, balances: [PersistedBalance], lastSuccessAt: Date) {
+    public init(accountID: String, balances: [PersistedBalance], usage: ProviderUsage? = nil, lastSuccessAt: Date) {
         self.accountID = accountID
         self.balances = balances
+        self.usage = usage
         self.lastSuccessAt = lastSuccessAt
     }
 
@@ -113,13 +116,14 @@ public final class ProviderCache: @unchecked Sendable {
         self.userDefaults = userDefaults
     }
 
-    public func save(platform: ProviderPlatform, accountID: String, balances: [ProviderBalance], lastSuccessAt: Date) {
+    public func save(platform: ProviderPlatform, accountID: String, balances: [ProviderBalance], usage: ProviderUsage? = nil, lastSuccessAt: Date) {
         guard !accountID.isEmpty else { return }
         queue.sync {
             var entries = loadEntries()
             entries[Self.key(platform: platform, accountID: accountID)] =
                 ProviderCacheEntry(accountID: accountID,
                                    balances: balances.map { PersistedBalance($0) },
+                                   usage: usage,
                                    lastSuccessAt: lastSuccessAt)
             saveEntries(entries)
         }

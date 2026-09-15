@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UsageMonitorCore
 
@@ -45,6 +46,23 @@ struct DeepSeekSettingsView: View {
             HStack { SecureField("sk-…", text: $form.draft).textFieldStyle(.roundedBorder).font(.system(size: 11)); Button("保存") { form.save() }.disabled(!form.canSave) }
             HStack { Button("删除 Key") { form.deleteCredential() }; Spacer(); Button("关闭") { form.collapse() } }.controlSize(.small)
             Text("Key 保存在 macOS 钥匙串，仅用于读取余额，不用于任何模型调用。").font(.system(size: 9)).foregroundStyle(.secondary)
+        }.padding(8).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct CommandCodeSettingsView: View {
+    @ObservedObject var form: ConnectionFormState
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack { SecureField("Command Code API Key", text: $form.draft).textFieldStyle(.roundedBorder).font(.system(size: 11)); Button("保存") { form.save() }.disabled(!form.canSave) }
+            HStack {
+                Button("删除 Key") { form.deleteCredential() }
+                Spacer()
+                Button("打开 Studio") { NSWorkspace.shared.open(URL(string: "https://commandcode.ai/studio/")!) }
+                Button("关闭") { form.collapse() }
+            }.controlSize(.small)
+            Text("Key 保存在 macOS 钥匙串，仅用于读取额度和用量，不用于模型调用，也不读取浏览器 Cookie。")
+                .font(.system(size: 9)).foregroundStyle(.secondary)
         }.padding(8).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }

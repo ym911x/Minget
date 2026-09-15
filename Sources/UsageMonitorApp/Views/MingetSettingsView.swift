@@ -11,6 +11,7 @@ struct MingetSettingsView: View {
     var onQuit: () -> Void
 
     @StateObject private var deepSeekForm: ConnectionFormState
+    @StateObject private var commandCodeForm: ConnectionFormState
     @State private var showsAbout = false
 
     init(model: UsageViewModel, preferences: DetailPreferences = .shared,
@@ -20,6 +21,7 @@ struct MingetSettingsView: View {
         self.onDetailWindow = onDetailWindow
         self.onQuit = onQuit
         _deepSeekForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .deepseek))
+        _commandCodeForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .commandcode))
     }
 
     var body: some View {
@@ -37,6 +39,15 @@ struct MingetSettingsView: View {
                 }
                 if deepSeekForm.isExpanded {
                     DeepSeekSettingsView(form: deepSeekForm).padding(.top, 8)
+                }
+                Divider().padding(.vertical, 9)
+                ServiceStatusRow(title: "Command Code", subtitle: providerStatus(.commandcode),
+                                 detail: nil, toggle: $preferences.showCommandCode,
+                                 buttonTitle: commandCodeForm.isExpanded ? "收起" : "管理") {
+                    commandCodeForm.toggle()
+                }
+                if commandCodeForm.isExpanded {
+                    CommandCodeSettingsView(form: commandCodeForm).padding(.top, 8)
                 }
             }
             .settingsGroupBackground()
@@ -65,7 +76,7 @@ struct MingetSettingsView: View {
                 Button("退出明明有数") { onQuit() }
             }.controlSize(.small)
         }
-        .padding(18).frame(width: 440, height: 390)
+        .padding(18).frame(width: 440, height: 470)
     }
 
     private var appVersion: String {

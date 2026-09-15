@@ -7,7 +7,15 @@
 **你的 AI 使用，心里有数。**<br>
 *Your AI usage, at a glance.*
 
-Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex 与 DeepSeek 的额度、余额和使用状态。
+Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepSeek 与 Command Code 的额度、余额和使用状态。
+
+## v1.2.0 修订
+
+- 详情页新增可隐藏的 Command Code 用量卡片。用户在应用内填写的 API Key 仅保存于 macOS Keychain，菜单栏仍只显示 Codex 的双额度。
+- 卡片可展示 5 小时、周和月度信用额，以及 token、请求、成功率与成本摘要。字段缺失、接口变更或统计周期未知时明确显示不可用或未确认，不推算数字。
+- 请求只允许 `https://api.commandcode.ai` 的三条只读 `/alpha` 用量路径，使用 `Authorization: Bearer` 与 `Accept: application/json`；模型端点、未列路径和跨域重定向均会在本地拒绝。
+
+用户截图已确认真实 Command Code API Key 能返回额度与统计数据。字段与 Studio 的同刻对账仍记为待确认，真实账号、余额、成本和原始响应均未写入仓库。
 
 ## v1.1.2 修订
 
@@ -36,8 +44,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex 与 Dee
 
 ## 当前版本
 
-- 当前版本：`1.1.2`
-- 状态：已完成菜单栏双额度兜底、OpenAI 可用重置只读展示和 DeepSeek 详情卡重排。301 项自动测试通过；Release 构建、严格签名和真实界面验收记录见 [1.1.2 验收台账](docs/versions/1.1.2/ACCEPTANCE.md)。GitHub 发布页：[Minget v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)
+- 当前版本：`1.2.0`
+- 状态：Command Code 接入、309 项自动化测试、Release 构建和严格签名检查已完成；真实 API Key 已返回用量。修复后的持续显示和完整重启仍待用户复验，详见 [1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -55,6 +63,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex 与 Dee
 - 详情页直接显示整页内容，不使用滚动容器或滚动条。
 - 设置页以单一“服务”模块集中展示 OpenAI Codex 固定详情显示与 DeepSeek 的显示、连接管理和诊断入口。
 - 通过 DeepSeek 官方余额接口读取余额，API Key 保存在 macOS Keychain。
+- Command Code API Key 仅由用户在应用设置页输入并存入 macOS Keychain；详情卡可隐藏但隐藏不会删除 Key 或停止既有刷新机制。
 - 启动时清理旧版智谱 GLM 的应用内凭据、缓存与显示偏好；失败会在下次启动重试。
 - 连接状态和数据缓存保存在本机，不上传到第三方服务。
 - 支持手动刷新和既有自动刷新机制。
@@ -99,6 +108,10 @@ swift test
 - [v1.1.2 实施报告](docs/versions/1.1.2/IMPLEMENTATION_REPORT.md)
 - [v1.1.2 审核状态](docs/versions/1.1.2/REVIEW.md)
 - [v1.1.2 验收台账](docs/versions/1.1.2/ACCEPTANCE.md)
+- [v1.2.0 需求](docs/versions/1.2.0/REQUIREMENTS.md)
+- [v1.2.0 实施任务](docs/versions/1.2.0/IMPLEMENTATION_TASKS.md)
+- [v1.2.0 审核状态](docs/versions/1.2.0/REVIEW.md)
+- [v1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -113,7 +126,7 @@ swift test
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing OpenAI Codex usage and DeepSeek balances. Version 1.1.2 keeps both quota windows visible in every menu-bar mode, adds read-only earned reset information to the OpenAI detail card, and rebalances the DeepSeek card.
+**Minget** is a macOS menu bar app for viewing OpenAI Codex usage, DeepSeek balances, and optional Command Code usage. Version 1.2.0 adds a Keychain-backed Command Code detail card. A real account returned usage successfully; exact field semantics still await a same-time comparison with Studio.
 
 ### Features
 
@@ -140,6 +153,6 @@ Requirements: macOS 13 or later, Apple Silicon, and Swift 5.9 or later.
 open dist/Minget.app
 ```
 
-Run the test suite with `swift test`. Version 1.1.2 passes 301 tests. Real-interface and live-service evidence is recorded separately in its acceptance ledger; a live account that omits reset fields is recorded as an unavailable sample rather than replaced by a fixture.
+Run the test suite with `swift test`. Real-interface and live-service evidence is recorded separately in the current acceptance ledger; a missing or unconfirmed provider field remains unavailable rather than replaced by a fixture.
 
 The source code is available under the [MIT License](LICENSE). The Minget name, Chinese name, M² mark, and logo remain project brand identifiers; see [Trademark and Brand Notice](TRADEMARKS.md). The current local build uses a project-created stable signing identity and has not been notarized by Apple.

@@ -166,9 +166,10 @@ public final class UsageViewModel: ObservableObject {
         let publish: () -> Void = { [weak self] in
             Task { @MainActor in self?.publishProviderReports() }
         }
-        for platform in [ProviderPlatform.deepseek] {
+        for platform in [ProviderPlatform.deepseek, .commandcode] {
             switch engineReading(platform) {
             case let reading as DeepSeekReading: reading.onCredentialPhaseChange = publish
+            case let reading as CommandCodeReading: reading.onCredentialPhaseChange = publish
             default: break
             }
         }
@@ -278,7 +279,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private func panelWillOpenProviders() {
-        for platform in [ProviderPlatform.deepseek] {
+        for platform in [ProviderPlatform.deepseek, .commandcode] {
             guard providerEngine.shouldRefreshOnPanelOpen(platform) else { continue }
             refreshProvider(platform, force: false)
         }
@@ -316,7 +317,7 @@ public final class UsageViewModel: ObservableObject {
         isProviderRefreshing = true
         providerRefreshTask = Task { [weak self] in
             if force {
-                for platform in [ProviderPlatform.deepseek] {
+                for platform in [ProviderPlatform.deepseek, .commandcode] {
                     await self?.providerEngine.refresh(platform: platform, force: true)
                 }
             } else {
@@ -372,7 +373,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private func engineHasWork() -> Bool {
-        return [ProviderPlatform.deepseek].contains { providerEngine.isFetching($0) }
+        return [ProviderPlatform.deepseek, .commandcode].contains { providerEngine.isFetching($0) }
     }
 
     private func publishProviderReports() {
@@ -435,6 +436,21 @@ public final class UsageViewModel: ObservableObject {
         return true
     }
 
+    @discardableResult
+    public func saveCommandCodeKey(_ key: String) -> Bool {
+        guard let reading = engineReading(.commandcode) as? CommandCodeReading else {
+            setFeedback(.saveFailed(platform: .commandcode)); return false
+        }
+        setFeedback(.saving(platform: .commandcode))
+        do { try reading.storeAPIKey(key) } catch {
+            Diagnostics.log("commandcode credential save failed")
+            setFeedback(.saveFailed(platform: .commandcode)); return false
+        }
+        publishProviderReports()
+        verifyAfterCredentialChange(platform: .commandcode)
+        return true
+    }
+
     /// Deletes the stored DeepSeek key, its cached numbers and any auth suspension
     /// (Round 6: the form says so instead of failing silently). A failed removal is reported
     /// as a failure, never as a completed disconnect (KEYCHAIN_REVISION_PLAN.md P1.8).
@@ -461,6 +477,19 @@ public final class UsageViewModel: ObservableObject {
         }
         publishProviderReports()
         setFeedback(.deleted(platform: .deepseek))
+        return true
+    }
+
+    @discardableResult
+    public func deleteCommandCodeKey() -> Bool {
+        if let failure = providerEngine.disconnect(platform: .commandcode) {
+            setFeedback(.disconnectFailed(platform: .commandcode))
+            publishProviderReports()
+            Diagnostics.log("commandcode credential delete failed: \(failure.debugSummary)")
+            return false
+        }
+        publishProviderReports()
+        setFeedback(.deleted(platform: .commandcode))
         return true
     }
 

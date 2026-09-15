@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-14
-适用版本：1.1.2
+更新日期：2026-09-15
+适用版本：1.2.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -48,6 +48,26 @@
 
 该请求是余额查询，不调用生成模型，不产生模型 token 消耗。
 
+## Command Code
+
+### `GET https://api.commandcode.ai/alpha/billing/credits`
+
+- 认证：用户在 Minget 设置页主动输入的 `Authorization: Bearer <API Key>`；另附 `Accept: application/json`。
+- 用途：读取服务端报告的 5 小时、周窗口和月度剩余信用额。
+- 验证：请求有效性为 A，字段语义为 C。2026-09-15 用户在正式构建中使用真实 API Key 成功显示窗口额度；字段与 Studio 尚未同刻对账。
+
+### `GET https://api.commandcode.ai/alpha/usage/summary`
+
+- 用途：读取当前服务端统计周期的 token、请求结果、成功率、成本，以及可能存在的月度已用信用额。
+- 验证：请求有效性为 A，字段语义为 C。用户截图确认真实 token、请求和成本摘要能够返回；统计周期和字段口径尚未与 Studio 同刻确认。
+
+### `GET https://api.commandcode.ai/alpha/billing/subscriptions`
+
+- 用途：可选读取套餐名称和计费周期。该请求失败不会让额度与统计失效。
+- 验证：C。仅无凭证 401 与合成 fixture 测试。
+
+Command Code Studio 公开说明确认其展示成本、token 和运行分析，Provider API 说明确认 API Key 为正式认证方式；官方资料未公开上述账户用量读取接口。本版本不会读取 Command Code CLI、本地认证文件、既有浏览器 Cookie 或会话。没有真实响应时不显示数字；未知统计周期会保留服务端数值并标记“统计周期未确认”。
+
 ### `GET https://status.deepseek.com/`
 
 - 认证：无。只读取公开状态页，不发送 DeepSeek API Key。
@@ -68,6 +88,7 @@
 - 日志和诊断仅记录固定错误类别及脱敏结构，不记录凭据、Cookie 值、账号原始响应或上游错误正文。
 - 余额缺失、字段不合法或接口口径不明时显示不可用，不伪造为零。
 - 测试使用合成凭据，不包含真实 API Key。
+- Command Code 只允许上述三个精确 GET 路径；`/alpha/generate`、`/provider/v1/chat/completions`、`/provider/v1/messages` 和其他模型路径均拒绝。
 
 ---
 

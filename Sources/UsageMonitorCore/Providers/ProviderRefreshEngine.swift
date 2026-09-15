@@ -6,11 +6,13 @@ public struct ProviderReadResult: Sendable {
     /// in which case nothing is cached: an unattributed cache entry is never written.
     public let accountID: String?
     public let balances: [ProviderBalance]
+    public let usage: ProviderUsage?
     public let consoleURL: URL?
 
-    public init(accountID: String?, balances: [ProviderBalance], consoleURL: URL?) {
+    public init(accountID: String?, balances: [ProviderBalance], usage: ProviderUsage? = nil, consoleURL: URL?) {
         self.accountID = accountID
         self.balances = balances
+        self.usage = usage
         self.consoleURL = consoleURL
     }
 }
@@ -86,6 +88,10 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     private struct State {
         var lastSuccessAt: Date?
         var accountID: String?
+        /// The current-process source of truth for non-balance provider data. The cache is
+        /// used for restoration after relaunch, never as the only route back to a just
+        /// completed response.
+        var usage: ProviderUsage?
         var lastError: ProviderFailure?
         var authSuspended = false
         var hasAttempted = false
@@ -185,6 +191,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
             return ProviderReport(platform: platform,
                                   accountID: state.accountID,
                                   balances: cachedBalances(platform: platform, accountID: state.accountID),
+                                  usage: state.usage ?? cachedUsage(platform: platform, accountID: state.accountID),
                                   lastSuccessAt: lastSuccessAt,
                                   connection: .connected,
                                   isLive: false,
@@ -195,7 +202,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     }
 
     public func allReports() -> [ProviderReport] {
-        return [ProviderPlatform.deepseek].map { report(for: $0) }
+        return [ProviderPlatform.deepseek, .commandcode].map { report(for: $0) }
     }
 
     public func isAuthSuspended(_ platform: ProviderPlatform) -> Bool {
@@ -224,7 +231,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     /// One background credential pass for every reader, so every later status question can be
     /// answered from memory. Performs no network work and never shows UI.
     public func primeCredentials() async {
-        for platform in [ProviderPlatform.deepseek] {
+        for platform in [ProviderPlatform.deepseek, .commandcode] {
             guard let reader = readers[platform] else { continue }
             await reader.primeCredentialState()
         }
@@ -276,7 +283,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     /// contract is unconfirmed are skipped: they are probed on connect and on manual
     /// refresh, not on a timer.
     public func refreshScheduled() async {
-        for platform in [ProviderPlatform.deepseek] {
+        for platform in [ProviderPlatform.deepseek, .commandcode] {
             guard let reader = readers[platform] else { continue }
             guard reader.credentialState.isConfigured, reader.isAutomaticRefreshEnabled else { continue }
             await refresh(platform: platform, force: false)
@@ -394,7 +401,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         guard generation == (generations[platform] ?? 0) else {
             return report(for: platform)
         }
-        guard !result.balances.isEmpty else {
+        guard !result.balances.isEmpty || result.usage != nil else {
             return recordFailure(platform: platform, failure: .unexpectedResponse, consoleURL: consoleURL)
         }
         let now = clock()
@@ -402,6 +409,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
             var state = states[platform] ?? State()
             state.lastSuccessAt = now
             state.accountID = result.accountID
+            state.usage = result.usage
             state.lastError = nil
             state.authSuspended = false
             state.hasAttempted = true
@@ -410,11 +418,12 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         // Cache only when the account is known, so an entry can never be attributed to
         // a different account later.
         if let accountID = result.accountID, !accountID.isEmpty {
-            cache.save(platform: platform, accountID: accountID, balances: result.balances, lastSuccessAt: now)
+            cache.save(platform: platform, accountID: accountID, balances: result.balances, usage: result.usage, lastSuccessAt: now)
         }
         return ProviderReport(platform: platform,
                               accountID: result.accountID,
                               balances: result.balances,
+                              usage: result.usage,
                               lastSuccessAt: now,
                               connection: .connected,
                               isLive: true,
@@ -464,6 +473,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         return ProviderReport(platform: platform,
                               accountID: state.accountID,
                               balances: cachedBalances(platform: platform, accountID: state.accountID),
+                              usage: state.usage ?? cachedUsage(platform: platform, accountID: state.accountID),
                               lastSuccessAt: state.lastSuccessAt,
                               connection: connection,
                               isLive: false,
@@ -480,6 +490,11 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
     private func cachedBalances(platform: ProviderPlatform, accountID: String?) -> [ProviderBalance] {
         guard let accountID, !accountID.isEmpty else { return [] }
         return cache.load(platform: platform, accountID: accountID)?.providerBalances ?? []
+    }
+
+    private func cachedUsage(platform: ProviderPlatform, accountID: String?) -> ProviderUsage? {
+        guard let accountID, !accountID.isEmpty else { return nil }
+        return cache.load(platform: platform, accountID: accountID)?.usage
     }
 
     private func locked<T>(_ body: () -> T) -> T {

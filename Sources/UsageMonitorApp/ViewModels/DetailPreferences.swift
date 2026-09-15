@@ -12,6 +12,7 @@ final class DetailPreferences: ObservableObject {
 
     private enum Key {
         static let showDeepSeek = "detail.showDeepSeek"
+        static let showCommandCode = "detail.showCommandCode"
     }
 
     private let defaults: UserDefaults
@@ -19,9 +20,13 @@ final class DetailPreferences: ObservableObject {
     @Published var showDeepSeek: Bool {
         didSet { defaults.set(showDeepSeek, forKey: Key.showDeepSeek) }
     }
+    @Published var showCommandCode: Bool {
+        didSet { defaults.set(showCommandCode, forKey: Key.showCommandCode) }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.showDeepSeek = defaults.object(forKey: Key.showDeepSeek) as? Bool ?? true
+        self.showCommandCode = defaults.object(forKey: Key.showCommandCode) as? Bool ?? true
     }
 }

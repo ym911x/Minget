@@ -52,6 +52,7 @@ public enum ProviderRequestGuard {
         "moderations",
         "messages",
         "generations",
+        "generate",
         "async-task",
         "/chat/",
     ]

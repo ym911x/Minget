@@ -173,6 +173,43 @@ final class ProviderRefreshEngineTests: XCTestCase {
         XCTAssertTrue(cache.allKeys().isEmpty, "an unattributed entry must not be written")
     }
 
+    func testUsageSurvivesThePostRefreshReportPublication() async {
+        let reader = FakeReader(platform: .commandcode)
+        let usage = ProviderUsage(
+            windows: [ProviderUsageWindow(kind: .fiveHour, used: dec("1"), limit: dec("5"), remaining: dec("4"), resetsAt: nil)],
+            summary: ProviderUsageSummary(totalTokens: 42, inputTokens: 30, outputTokens: 12,
+                                          totalRuns: 3, completedRuns: 3, failedRuns: 0,
+                                          successRate: dec("100"), totalCostUSD: dec("0.01"), periodBasis: .billingPeriod))
+        reader.result = .success(ProviderReadResult(accountID: "command-account", balances: [], usage: usage, consoleURL: nil))
+        let engine = ProviderRefreshEngine(readers: [reader], cache: ProviderCache(userDefaults: makeDefaults()))
+
+        let immediate = await engine.refresh(platform: .commandcode, force: true)
+        XCTAssertEqual(immediate.usage, usage)
+
+        // UsageViewModel publishes `allReports()` after the request task finishes. This must
+        // preserve the same cached usage instead of reverting the card to its empty state.
+        let published = engine.report(for: .commandcode)
+        XCTAssertEqual(published.connection, .connected)
+        XCTAssertEqual(published.usage, usage)
+    }
+
+    func testUsageSurvivesAPostSuccessCacheReadFailure() async {
+        let suite = makeDefaults()
+        let reader = FakeReader(platform: .commandcode)
+        let usage = ProviderUsage(windows: [],
+                                  summary: ProviderUsageSummary(totalTokens: 7, inputTokens: nil, outputTokens: nil,
+                                                               totalRuns: 1, completedRuns: 1, failedRuns: 0,
+                                                               successRate: dec("100"), totalCostUSD: nil, periodBasis: .unknown))
+        reader.result = .success(ProviderReadResult(accountID: "command-account", balances: [], usage: usage, consoleURL: nil))
+        let engine = ProviderRefreshEngine(readers: [reader], cache: ProviderCache(userDefaults: suite))
+        _ = await engine.refresh(platform: .commandcode, force: true)
+
+        // A corrupt persisted store must not make a fresh, already committed response vanish
+        // when the view model immediately republishes reports.
+        suite.set(Data("not provider cache json".utf8), forKey: "UsageMonitor.providerBalances.v2")
+        XCTAssertEqual(engine.report(for: .commandcode).usage, usage)
+    }
+
     // MARK: Auth suspension
 
     func testAuthenticationFailureSuspendsAutomaticRefresh() async {

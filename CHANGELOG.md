@@ -1,5 +1,15 @@
 # 变更记录
 
+## 1.2.0（2026-09-15）
+
+状态：实现、309 项自动化测试、Release 构建和严格签名检查已完成；用户截图确认真实 Command Code API Key 能返回额度与用量数据。修复后的持续显示仍需真实界面复验，发布记录见 [1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)。
+
+- 新增 Command Code Keychain 凭证、账号隔离缓存、认证暂停、并发刷新合并和五分钟刷新链路；详情页默认显示可隐藏卡片，菜单栏不新增 Command Code 指标。
+- 只读使用 `credits`、`usage/summary` 和可选 `subscriptions` 三条 `/alpha` 路径；Bearer 凭证、GET、超时、路径白名单、模型端点阻断和跨域重定向拒绝均有测试约束。
+- 规范化展示 5 小时、周、月度信用额及 token、请求、成功率、成本；缺失字段、未知周期、字段漂移和接口未确认状态均不伪造数字。
+- 详情页固定高度扩展为：仅 Codex 320 点，含 DeepSeek 420 点，含 Command Code 530 点，双卡 630 点。
+- 修复 Command Code 数据只在刷新中短暂显示的问题：刷新后的报告重建会保留刚成功取得的用量，并以缓存支持完整重启恢复。
+
 ## 1.1.2（2026-09-15）
 
 状态：实现、自动验证、真实界面检查和 GitHub Release 均已完成；发布页为 [Minget v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)，证据与边界见 [1.1.2 验收台账](docs/versions/1.1.2/ACCEPTANCE.md)。

@@ -27,8 +27,10 @@ final class AppContainer {
         providerCache = ProviderCache()
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
+        let commandCode = CommandCodeReading(provider: CommandCodeProvider(transport: transport),
+                                              credentials: credentials)
         ProviderRetirementMigration(credentials: credentials, cache: providerCache).run()
-        providerEngine = ProviderRefreshEngine(readers: [deepSeek], cache: providerCache)
+        providerEngine = ProviderRefreshEngine(readers: [deepSeek, commandCode], cache: providerCache)
         model = UsageViewModel(service: codexService,
                                providerEngine: providerEngine,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))

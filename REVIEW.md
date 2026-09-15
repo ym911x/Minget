@@ -1,5 +1,16 @@
 # 当前审核状态
 
+## v1.2.0
+
+状态：本地代码、309 项自动化测试、Release 构建与严格签名均已复核。用户截图确认真实 Command Code API Key 能返回额度和用量；刷新结束后的持续显示修复已有回归测试，真实界面复验仍保留在验收台账。用户已授权发布 1.2.0。
+
+| 资料 | 路径 |
+| --- | --- |
+| 需求 | [docs/versions/1.2.0/REQUIREMENTS.md](docs/versions/1.2.0/REQUIREMENTS.md) |
+| 实施任务 | [docs/versions/1.2.0/IMPLEMENTATION_TASKS.md](docs/versions/1.2.0/IMPLEMENTATION_TASKS.md) |
+| 独立审核状态 | [docs/versions/1.2.0/REVIEW.md](docs/versions/1.2.0/REVIEW.md) |
+| 验收台账 | [docs/versions/1.2.0/ACCEPTANCE.md](docs/versions/1.2.0/ACCEPTANCE.md) |
+
 ## v1.1.2
 
 状态：已完成。代码差异、301 项自动测试、Release 构建、Info.plist 版本和严格签名均已核查；真实 Codex app-server 样本和真实详情窗口检查已完成，并已发布 [GitHub Release v1.1.2](https://github.com/ym911x/Minget/releases/tag/v1.1.2)。

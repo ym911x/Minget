@@ -37,7 +37,12 @@ struct UsagePanelView: View {
     }
 
     static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
-        preferences.showDeepSeek ? 420 : 320
+        switch (preferences.showDeepSeek, preferences.showCommandCode) {
+        case (false, false): return 320
+        case (true, false): return 420
+        case (false, true): return 530
+        case (true, true): return 630
+        }
     }
 
     private var preferredHeight: CGFloat {
@@ -108,6 +113,7 @@ struct UsagePanelView: View {
         let visibleReports = model.providerReports.filter { report in
             switch report.platform {
             case .deepseek: return preferences.showDeepSeek
+            case .commandcode: return preferences.showCommandCode
             case .codex: return false
             }
         }
@@ -187,13 +193,18 @@ struct UsagePanelView: View {
     @ViewBuilder
     private var providerCards: some View {
         let deepSeek = report(for: .deepseek)
+        let commandCode = report(for: .commandcode)
         let showDeepSeek = preferences.showDeepSeek
+        let showCommandCode = preferences.showCommandCode
 
         VStack(spacing: 12) {
             if showDeepSeek {
                 DeepSeekOverviewCard(report: deepSeek,
                                      status: model.deepSeekStatus,
                                      openSettings: { onSettings?() })
+            }
+            if showCommandCode {
+                CommandCodeOverviewCard(report: commandCode, openSettings: { onSettings?() })
             }
         }
     }
@@ -649,5 +660,92 @@ private struct ProviderOverviewCard: View {
         case .stale: return .orange
         default: return .secondary
         }
+    }
+}
+
+private struct CommandCodeOverviewCard: View {
+    let report: ProviderReport
+    let openSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                CommandCodeLogomark()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Command Code").font(.system(size: 15, weight: .bold))
+                    Text(report.usage?.planName ?? connectionText).font(.system(size: 10)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if report.usage == nil {
+                    Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }.buttonStyle(.link).font(.system(size: 11))
+                }
+            }
+            if let usage = report.usage {
+                ForEach(usage.windows.filter { $0.kind != .billingPeriod }, id: \.kind) { window in
+                    usageRow(window)
+                }
+                if let monthly = usage.windows.first(where: { $0.kind == .billingPeriod }) { usageRow(monthly) }
+                if let summary = usage.summary { summaryRows(summary) }
+                ProviderUpdatedFooter(report: report)
+            }
+        }
+        .padding(14)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.82), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.primary.opacity(0.05), lineWidth: 1) }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func usageRow(_ window: ProviderUsageWindow) -> some View {
+        HStack(spacing: 8) {
+            Text(label(window.kind)).font(.system(size: 11, weight: .semibold)).frame(width: 42, alignment: .leading)
+            ProgressView(value: fraction(window)).tint(Color.purple).frame(maxWidth: .infinity)
+            Text(valueText(window)).font(.system(size: 10, design: .rounded)).foregroundStyle(.secondary).frame(width: 140, alignment: .trailing)
+        }
+    }
+
+    private func summaryRows(_ summary: ProviderUsageSummary) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("\(periodText(summary.periodBasis)) · Token \(count(summary.totalTokens)) · 请求 \(count(summary.totalRuns))")
+                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+            Text("输入 \(count(summary.inputTokens)) · 输出 \(count(summary.outputTokens)) · 成功 \(count(summary.completedRuns)) · 失败 \(count(summary.failedRuns))")
+                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            Text("成功率 \(percent(summary.successRate)) · 成本 \(money(summary.totalCostUSD))")
+                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+        }
+    }
+
+    private var connectionText: String {
+        switch report.connection {
+        case .connected: return "已连接"
+        case .stale: return "缓存数据"
+        case .connecting: return "正在获取"
+        case .notConfigured: return "未连接"
+        case .authSuspended, .needsAuthorization: return "需要重新连接"
+        case .unavailable, .unverified: return "暂不可用"
+        }
+    }
+    private func label(_ kind: ProviderUsageWindow.Kind) -> String { switch kind { case .fiveHour: return "5 小时"; case .weekly: return "周额度"; case .billingPeriod: return "本月" } }
+    private func fraction(_ window: ProviderUsageWindow) -> Double { guard let used = window.used, let limit = window.limit, limit > 0 else { return 0 }; return min(1, max(0, NSDecimalNumber(decimal: used / limit).doubleValue)) }
+    private func money(_ value: Decimal?) -> String { guard let value else { return "—" }; return "$" + NSDecimalNumber(decimal: value).stringValue }
+    private func count(_ value: Int64?) -> String { value.map { NumberFormatter.localizedString(from: NSNumber(value: $0), number: .decimal) } ?? "—" }
+    private func percent(_ value: Decimal?) -> String { guard let value else { return "—" }; return NSDecimalNumber(decimal: value).stringValue + "%" }
+    private func valueText(_ window: ProviderUsageWindow) -> String { "已用 \(money(window.used)) · 剩余 \(money(window.remaining))" }
+    private func periodText(_ period: ProviderUsageSummary.PeriodBasis) -> String { switch period { case .billingPeriod: return "当前计费周期"; case .last30Days: return "近 30 天"; case .unknown: return "统计周期未确认" } }
+}
+
+private struct CommandCodeLogomark: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let resource = colorScheme == .dark ? "commandcode-symbol" : "commandcode-symbol-black"
+        Group {
+            if let url = Bundle.main.url(forResource: resource, withExtension: "svg"), let image = NSImage(contentsOf: url) {
+                Image(nsImage: image).resizable().interpolation(.high)
+            } else {
+                Image(systemName: "chevron.left.forwardslash.chevron.right").foregroundStyle(Color.purple)
+            }
+        }
+        .frame(width: 30, height: 30)
+        .accessibilityLabel("Command Code")
     }
 }

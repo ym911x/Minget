@@ -5,12 +5,59 @@ import Foundation
 public enum ProviderPlatform: String, Codable, CaseIterable, Sendable {
     case codex
     case deepseek
+    case commandcode
 
     public var displayName: String {
         switch self {
         case .codex: return "Codex"
         case .deepseek: return "DeepSeek"
+        case .commandcode: return "Command Code"
         }
+    }
+}
+
+/// A normalised credit window reported by a provider. Monetary fields retain decimal
+/// precision; `remaining` is only populated when the provider supplied both operands.
+public struct ProviderUsageWindow: Equatable, Sendable, Codable {
+    public enum Kind: String, Codable, Sendable { case fiveHour, weekly, billingPeriod }
+    public let kind: Kind
+    public let used: Decimal?
+    public let limit: Decimal?
+    public let remaining: Decimal?
+    public let resetsAt: Date?
+
+    public init(kind: Kind, used: Decimal?, limit: Decimal?, remaining: Decimal?, resetsAt: Date?) {
+        self.kind = kind; self.used = used; self.limit = limit; self.remaining = remaining; self.resetsAt = resetsAt
+    }
+}
+
+/// Compact provider usage summary. These values are never converted into balances.
+public struct ProviderUsageSummary: Equatable, Sendable, Codable {
+    public enum PeriodBasis: String, Codable, Sendable { case billingPeriod, last30Days, unknown }
+    public let totalTokens: Int64?
+    public let inputTokens: Int64?
+    public let outputTokens: Int64?
+    public let totalRuns: Int64?
+    public let completedRuns: Int64?
+    public let failedRuns: Int64?
+    public let successRate: Decimal?
+    public let totalCostUSD: Decimal?
+    public let periodBasis: PeriodBasis
+
+    public init(totalTokens: Int64?, inputTokens: Int64?, outputTokens: Int64?, totalRuns: Int64?, completedRuns: Int64?, failedRuns: Int64?, successRate: Decimal?, totalCostUSD: Decimal?, periodBasis: PeriodBasis) {
+        self.totalTokens = totalTokens; self.inputTokens = inputTokens; self.outputTokens = outputTokens
+        self.totalRuns = totalRuns; self.completedRuns = completedRuns; self.failedRuns = failedRuns
+        self.successRate = successRate; self.totalCostUSD = totalCostUSD; self.periodBasis = periodBasis
+    }
+}
+
+public struct ProviderUsage: Equatable, Sendable, Codable {
+    public let windows: [ProviderUsageWindow]
+    public let summary: ProviderUsageSummary?
+    public let planName: String?
+    public let billingPeriodEnd: Date?
+    public init(windows: [ProviderUsageWindow], summary: ProviderUsageSummary?, planName: String? = nil, billingPeriodEnd: Date? = nil) {
+        self.windows = windows; self.summary = summary; self.planName = planName; self.billingPeriodEnd = billingPeriodEnd
     }
 }
 
@@ -102,6 +149,8 @@ public struct ProviderReport: Equatable, Sendable {
     /// Nil when the account could not be established; nil never means "account unknown".
     public let accountID: String?
     public let balances: [ProviderBalance]
+    /// Optional quota and statistics data. DeepSeek currently leaves this absent.
+    public let usage: ProviderUsage?
     /// Time of the last *successful* fetch. A stale value stays visible and is labelled.
     public let lastSuccessAt: Date?
     public let connection: ProviderConnectionState
@@ -115,6 +164,7 @@ public struct ProviderReport: Equatable, Sendable {
     public init(platform: ProviderPlatform,
                 accountID: String?,
                 balances: [ProviderBalance],
+                usage: ProviderUsage? = nil,
                 lastSuccessAt: Date?,
                 connection: ProviderConnectionState,
                 isLive: Bool,
@@ -123,6 +173,7 @@ public struct ProviderReport: Equatable, Sendable {
         self.platform = platform
         self.accountID = accountID
         self.balances = balances
+        self.usage = usage
         self.lastSuccessAt = lastSuccessAt
         self.connection = connection
         self.isLive = isLive
@@ -135,6 +186,7 @@ public struct ProviderReport: Equatable, Sendable {
         return ProviderReport(platform: platform,
                               accountID: accountID,
                               balances: balances,
+                              usage: usage,
                               lastSuccessAt: lastSuccessAt,
                               connection: connection == .connected ? .stale : connection,
                               isLive: false,
@@ -146,6 +198,7 @@ public struct ProviderReport: Equatable, Sendable {
 /// Stable, non-secret identity of a stored credential. Values never live here.
 public enum ProviderCredentialKey: String, CaseIterable, Sendable {
     case deepseekAPIKey = "deepseek.api-key"
+    case commandCodeAPIKey = "commandcode.api-key"
 }
 
 /// What a reader knows about its own credential, from memory only.
