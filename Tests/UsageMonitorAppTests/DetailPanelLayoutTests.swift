@@ -13,10 +13,10 @@ final class DetailPanelLayoutTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let preferences = DetailPreferences(defaults: defaults)
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 630)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 610)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 530)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 510)
 
         preferences.showCommandCode = false
         XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 320)

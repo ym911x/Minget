@@ -80,7 +80,7 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.2.1"
     }
     private var codexStatus: String {
         model.codexAccountAvailable ? "已连接" : "等待更新"

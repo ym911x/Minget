@@ -40,8 +40,8 @@ struct UsagePanelView: View {
         switch (preferences.showDeepSeek, preferences.showCommandCode) {
         case (false, false): return 320
         case (true, false): return 420
-        case (false, true): return 530
-        case (true, true): return 630
+        case (false, true): return 510
+        case (true, true): return 610
         }
     }
 
@@ -98,7 +98,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.2.1"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -686,7 +686,6 @@ private struct CommandCodeOverviewCard: View {
                 }
                 if let monthly = usage.windows.first(where: { $0.kind == .billingPeriod }) { usageRow(monthly) }
                 if let summary = usage.summary { summaryRows(summary) }
-                ProviderUpdatedFooter(report: report)
             }
         }
         .padding(14)
@@ -726,7 +725,7 @@ private struct CommandCodeOverviewCard: View {
     }
     private func label(_ kind: ProviderUsageWindow.Kind) -> String { switch kind { case .fiveHour: return "5 小时"; case .weekly: return "周额度"; case .billingPeriod: return "本月" } }
     private func fraction(_ window: ProviderUsageWindow) -> Double { guard let used = window.used, let limit = window.limit, limit > 0 else { return 0 }; return min(1, max(0, NSDecimalNumber(decimal: used / limit).doubleValue)) }
-    private func money(_ value: Decimal?) -> String { guard let value else { return "—" }; return "$" + NSDecimalNumber(decimal: value).stringValue }
+    private func money(_ value: Decimal?) -> String { UsageFormatting.usdAmount(value) }
     private func count(_ value: Int64?) -> String { value.map { NumberFormatter.localizedString(from: NSNumber(value: $0), number: .decimal) } ?? "—" }
     private func percent(_ value: Decimal?) -> String { guard let value else { return "—" }; return NSDecimalNumber(decimal: value).stringValue + "%" }
     private func valueText(_ window: ProviderUsageWindow) -> String { "已用 \(money(window.used)) · 剩余 \(money(window.remaining))" }

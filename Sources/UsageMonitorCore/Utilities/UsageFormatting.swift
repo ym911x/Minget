@@ -92,6 +92,20 @@ public enum UsageFormatting {
         return "\(countText) · 最近到期 \(formatDate(expiry)) \(formatClock(expiry))"
     }
 
+    /// USD values in the Command Code card use a fixed two-decimal presentation.
+    /// The underlying Decimal remains unchanged; rounding is display-only.
+    public static func usdAmount(_ value: Decimal?) -> String {
+        guard let value else { return "—" }
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        formatter.usesGroupingSeparator = false
+        return formatter.string(from: NSDecimalNumber(decimal: value)).map { "$" + $0 } ?? "—"
+    }
+
     /// Error text for the panel (PROJECT_SPEC.md §13 A-F). Fixed labels only: upstream
     /// message text never reaches the UI (Round 2 blocker 5).
     public static func errorText(_ error: UsageError) -> String {

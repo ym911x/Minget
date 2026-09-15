@@ -16,6 +16,8 @@
 
 `v1.2.0` 已发布：详情页加入可隐藏的 Command Code 用量卡片，菜单栏仍只显示 Codex。API Key 由用户在应用内提供并仅存于 Keychain；请求边界限定为三个只读 `/alpha` 路径，模型端点和跨域重定向在本地拒绝。309 项自动测试、Release 构建和严格签名通过，真实 API Key 已返回用量；修复后的持续显示和完整重启仍待用户复验。资料位于 `docs/versions/1.2.0/`，发布页为 [GitHub Release v1.2.0](https://github.com/ym911x/Minget/releases/tag/v1.2.0)。
 
+`v1.2.1` 已完成：Command Code 卡片金额统一为两位小数，并移除卡片内重复的相对更新时间，保留详情页顶部的全局刷新状态。310 项自动化测试、Release 构建和严格签名检查通过，真实界面已由用户确认。资料位于 `docs/versions/1.2.1/`，发布页为 [GitHub Release v1.2.1](https://github.com/ym911x/Minget/releases/tag/v1.2.1)。
+
 ## 候选方向
 
 以下内容作为迭代候选，尚未确定版本号和优先级：

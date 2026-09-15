@@ -9,6 +9,15 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.2.1 修订
+
+- Command Code 卡片内的已用、剩余和成本金额统一显示到小数点后 2 位，底层 `Decimal` 数据不变。
+- 移除 Command Code 卡片底部的单独更新时间；详情页顶部继续提供全局刷新状态。
+
+<img src="assets/screenshots/v1.2.1/detail-redacted.png" alt="Minget 1.2.1 详情页脱敏示例" width="680">
+
+*1.2.1 详情页脱敏展示副本。邮箱、余额和用量均已替换为示例数据，菜单栏已移除其他第三方程序图标。*
+
 ## v1.2.0 修订
 
 - 详情页新增可隐藏的 Command Code 用量卡片。用户在应用内填写的 API Key 仅保存于 macOS Keychain，菜单栏仍只显示 Codex 的双额度。
@@ -44,8 +53,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepS
 
 ## 当前版本
 
-- 当前版本：`1.2.0`
-- 状态：Command Code 接入、309 项自动化测试、Release 构建和严格签名检查已完成；真实 API Key 已返回用量。修复后的持续显示和完整重启仍待用户复验。发布页：[Minget v1.2.0](https://github.com/ym911x/Minget/releases/tag/v1.2.0)
+- 当前版本：`1.2.1`
+- 状态：Command Code 金额精度和卡片更新时间已完成修订；310 项自动化测试、Release 构建和严格签名检查通过，真实界面已由用户确认。发布页：[Minget v1.2.1](https://github.com/ym911x/Minget/releases/tag/v1.2.1)
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -112,6 +121,7 @@ swift test
 - [v1.2.0 实施任务](docs/versions/1.2.0/IMPLEMENTATION_TASKS.md)
 - [v1.2.0 审核状态](docs/versions/1.2.0/REVIEW.md)
 - [v1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)
+- [v1.2.1 需求与验收](docs/versions/1.2.1/REQUIREMENTS.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。

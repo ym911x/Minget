@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
 更新日期：2026-09-15
-适用版本：1.2.0
+适用版本：1.2.1
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -67,6 +67,8 @@
 - 验证：C。仅无凭证 401 与合成 fixture 测试。
 
 Command Code Studio 公开说明确认其展示成本、token 和运行分析，Provider API 说明确认 API Key 为正式认证方式；官方资料未公开上述账户用量读取接口。本版本不会读取 Command Code CLI、本地认证文件、既有浏览器 Cookie 或会话。没有真实响应时不显示数字；未知统计周期会保留服务端数值并标记“统计周期未确认”。
+
+1.2.1 只调整显示：Command Code 美元金额固定显示两位小数，底层 `Decimal` 和接口原值不变；卡片内不再重复显示相对更新时间，全局刷新状态仍保留。
 
 ### `GET https://status.deepseek.com/`
 

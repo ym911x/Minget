@@ -129,6 +129,14 @@ final class UsageFormattingTests: XCTestCase {
                        "重置信息暂不可用")
     }
 
+    func testUSDAmountUsesExactlyTwoDecimalPlaces() {
+        XCTAssertEqual(UsageFormatting.usdAmount(Decimal(string: "0.008198166")), "$0.01")
+        XCTAssertEqual(UsageFormatting.usdAmount(Decimal(string: "2.991801834")), "$2.99")
+        XCTAssertEqual(UsageFormatting.usdAmount(Decimal(string: "5.991801834")), "$5.99")
+        XCTAssertEqual(UsageFormatting.usdAmount(Decimal(string: "121.4")), "$121.40")
+        XCTAssertEqual(UsageFormatting.usdAmount(nil), "—")
+    }
+
     func testRateLimitResetTextDoesNotKeepAnExpiredNearestDate() {
         let now = Date(timeIntervalSince1970: 1_789_000_001)
         let text = UsageFormatting.rateLimitResetText(
