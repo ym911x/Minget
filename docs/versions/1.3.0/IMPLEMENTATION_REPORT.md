@@ -298,4 +298,11 @@ swift test --scratch-path "$MINGET_TEST_SCRATCH"
 ## 未完成事项
 
 - 菜单栏三来源真实切换、DeepSeek 真实菜单栏余额、A/B 两次真实点火和机器重启复验。
-- 发布、标签与远端推送：用户已明确授权，等待执行后回填结果。
+
+## 发布结果
+
+- 发布提交：`827ca8b`（`Release Minget 1.3.0`），已推送到 GitHub `main`。
+- 注释标签：`v1.3.0`，远端 peeled ref 指向 `827ca8b`。
+- GitHub Release：[Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0)，正式发布，非草稿、非预发布。
+- GitHub Actions：发布提交对应 CI #17 完成且结论为 `success`。
+- 公开截图链接返回 HTTP 200；下载副本与仓库中脱敏 PNG 的 SHA-256 均为 `4bdf65c4b1f94f4ccb9c8bad350a6a71b83f8a1cc72540c18ab53c199af4f945`。

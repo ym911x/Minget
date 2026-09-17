@@ -31,7 +31,7 @@
 | 子进程清理 | 通过（自动 + 真实包实测） | 三次退出确认 app-server 无遗留；`stopAll()` 终止并回收运行中的 A/B 点火子进程且不误杀无关 PID；`stop()` 路径的终止由 `FireLifecycleTests` 覆盖；签名包退出后全机无进程引用 `~/.codex-minget-*` |
 | 详情页真实界面确认 | 通过 | 用户于 2026-09-17 提供最终运行截图并确认“好了”；440 pt 单列、两张 ChatGPT 卡、DeepSeek 单行卡与 Command Code 三周期卡均完整，无滚动和裁切 |
 | 菜单栏真实切换与两个点火按钮 | 待验收 | DeepSeek 菜单栏真实余额和 A/B 两次真实点火尚未执行，不纳入本次发布完成结论 |
-| 发布、标签、远端推送 | 待执行 | 用户已于 2026-09-17 明确授权发布 v1.3.0；完成后回填提交、标签和 Release 链接 |
+| 发布、标签、远端推送 | 已完成 | 发布提交 `827ca8b` 已推送到 `main`；注释标签 `v1.3.0` 指向该提交；[GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.3.0) 已发布且非草稿、非预发布；发布提交的 GitHub Actions CI #17 通过 |
 
 ## 开工基线
 
