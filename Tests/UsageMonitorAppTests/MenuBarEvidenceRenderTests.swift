@@ -4,17 +4,12 @@ import XCTest
 @testable import UsageMonitorCore
 @testable import UsageMonitorApp
 
-/// Renders the production menu bar label from fixed fixtures into `docs/versions/1.0.2/evidence/`.
+/// Renders the production menu bar label from fixed fixtures.
 ///
-/// v1.0.2 §8.2 allows synthetic-clock visual checking as long as it is labelled as a fixture.
-/// This environment has no Screen Recording permission, so a real menu bar screenshot is
-/// impossible here; these images are **fixture renders of the real view code**, not screenshots,
-/// and they are labelled as such in the evidence README. They are used to check the layout
-/// itself: segment counts, alignment of both rows, the right-to-left recession, the single
-/// leading marker, the `?` state label, and the absence of the brand mark.
-///
-/// The render is deterministic and runs offscreen, so it is also a regression check that the
-/// view composes and lays out at all.
+/// 1.3.0 evidence goes to `$TMPDIR/Minget-1.3.0-Evidence/` (IMPLEMENTATION_TASKS.md §6.2):
+/// automated tests must never write into `docs/archive/`, `docs/versions/1.0.2/` or any other
+/// historical evidence directory. The images are fixture renders of the real view code, not
+/// screenshots, and use example numbers only.
 @MainActor
 final class MenuBarEvidenceRenderTests: XCTestCase {
 
@@ -59,13 +54,24 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
     }
 
     private func content(_ display: UsageDisplay,
+                         label: String = "A",
                          connection: UsageService.ConnectionState = .connected,
                          mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(display: display, connectionState: connection,
+        MenuBarContentBuilder.make(source: .chatGPT(shortLabel: label, display: display,
+                                                    connectionState: connection),
                                    now: Self.anchor, mode: mode)
     }
 
-    // MARK: §8.2 UI-02 / UI-03 / UI-06 evidence
+    private func deepSeek(currency: String?, amount: Decimal?,
+                          cached: Bool = false,
+                          mode: MenuBarSpaceMode = .full) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(currency: currency,
+                                                                            amount: amount,
+                                                                            isCached: cached)),
+                                   now: Self.anchor, mode: mode)
+    }
+
+    // MARK: Evidence
 
     func testRenderStateMatrix() throws {
         let cached = UsageDisplay.stale(
@@ -81,9 +87,7 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
             ("UI-01/02 正常完整 4h / 3d", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400))),
             ("UI-02 满格 5h / 7d", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 7 * 86400))),
             ("UI-03 2h30m / 3d12h", content(live(fiveHourRemaining: 2.5 * 3600, weeklyRemaining: 3.5 * 86400))),
-            ("UI-03 2h / 1d", content(live(fiveHourRemaining: 2 * 3600, weeklyRemaining: 86400))),
             ("UI-03 30m / 6h", content(live(fiveHourRemaining: 0.5 * 3600, weeklyRemaining: 6 * 3600))),
-            ("UI-04 1 秒 / 1 分", content(live(fiveHourRemaining: 1, weeklyRemaining: 60))),
             ("UI-05 到重置时间（空）", content(live(fiveHourRemaining: -10, weeklyRemaining: -10))),
             ("UI-06 未知窗口（? 状态）", content(empty)),
             ("UI-06 缓存（单一前置警告 + 变暗）", content(cached)),
@@ -91,63 +95,57 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
             ("§5.2.3 首次加载中（无警告）", content(.unavailable(.rpcFailed(.other)), connection: .connecting)),
             ("UI-08 100% / 100%（最宽文字）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400,
                                                         fiveHourPercent: 100, weeklyPercent: 100))),
-            ("UI-08 9% / 9%（最窄文字）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400,
-                                                     fiveHourPercent: 9, weeklyPercent: 9))),
             ("UI-09 紧凑模式（双额度、双时间条）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400),
                                                  mode: .compact)),
         ]
 
         try write(try renderImage(rows, background: .light), named: "01-menubar-states-light.png")
         try write(try renderImage(rows, background: .dark), named: "02-menubar-states-dark.png")
+    }
 
-        // A focused strip for the direction requirement: the same 5-hour row draining, so the
-        // right-to-left recession can be read off one image.
+    /// 1.3.0 UI_SPEC.md §10 item 6: the three menu bar sources in both modes.
+    func testRenderThreeSources() throws {
+        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600, remainingPercent: 78),
+                                     weekly: window(.weekly, remaining: 3 * 86400, remainingPercent: 42),
+                                     fetchedAt: Self.anchor, source: .codexAppServer)
+        let cachedSnapshot = UsageSnapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600, remainingPercent: 78),
+                                           weekly: window(.weekly, remaining: 3 * 86400, remainingPercent: 42),
+                                           fetchedAt: Self.anchor, source: .cached)
+
+        let rows: [(String, MenuBarContent)] = [
+            ("ChatGPT A 完整 A 5H 78% | W 42%", content(.live(snapshot), label: "A", mode: .full)),
+            ("ChatGPT A 紧凑 A 78% 42%", content(.live(snapshot), label: "A", mode: .compact)),
+            ("ChatGPT B 完整 B 5H 78% | W 42%", content(.live(snapshot), label: "B", mode: .full)),
+            ("ChatGPT B 紧凑 B 78% 42%", content(.live(snapshot), label: "B", mode: .compact)),
+            ("ChatGPT A 无数据 完整", content(.unavailable(.rpcFailed(.other)), label: "A", connection: .disconnected, mode: .full)),
+            ("ChatGPT A 无数据 紧凑", content(.unavailable(.rpcFailed(.other)), label: "A", connection: .disconnected, mode: .compact)),
+            ("ChatGPT A 缓存（前置警告）", content(.stale(cachedSnapshot, .rpcFailed(.other)), label: "A", mode: .full)),
+            ("DeepSeek 完整 DS CNY 123.45", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)),
+            ("DeepSeek 紧凑 DS CNY 123.45", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)),
+            ("DeepSeek 币种缺失 DS — 123.45", deepSeek(currency: nil, amount: Decimal(string: "123.45"), mode: .full)),
+            ("DeepSeek 缓存（同一金额 + 警告）", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), cached: true, mode: .full)),
+            ("DeepSeek 无余额 DS —（警告）", deepSeek(currency: nil, amount: nil, mode: .full)),
+        ]
+        try write(try renderImage(rows, background: .light), named: "09-three-sources-light.png")
+        try write(try renderImage(rows, background: .dark), named: "10-three-sources-dark.png")
+    }
+
+    func testRenderDirectionAndBars() throws {
         let directionRows: [(String, MenuBarContent)] = [
             ("剩余 5h00m", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 7 * 86400))),
-            ("剩余 4h30m", content(live(fiveHourRemaining: 4.5 * 3600, weeklyRemaining: 7 * 86400))),
             ("剩余 3h00m", content(live(fiveHourRemaining: 3 * 3600, weeklyRemaining: 7 * 86400))),
-            ("剩余 2h30m", content(live(fiveHourRemaining: 2.5 * 3600, weeklyRemaining: 7 * 86400))),
-            ("剩余 2h00m", content(live(fiveHourRemaining: 2 * 3600, weeklyRemaining: 7 * 86400))),
-            ("剩余 30m", content(live(fiveHourRemaining: 0.5 * 3600, weeklyRemaining: 7 * 86400))),
+            ("剩余 1h00m", content(live(fiveHourRemaining: 1 * 3600, weeklyRemaining: 7 * 86400))),
             ("剩余 0（已到）", content(live(fiveHourRemaining: 0, weeklyRemaining: 7 * 86400))),
         ]
-        try write(try renderImage(directionRows, background: .light), named: "03-direction-light.png")
+        try write(try renderBarsDetail(directionRows, background: .light), named: "03-direction-light.png")
 
         let weeklyRows: [(String, MenuBarContent)] = [
             ("周剩余 7d", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 7 * 86400))),
             ("周剩余 3d12h", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 3.5 * 86400))),
             ("周剩余 1d", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 86400))),
-            ("周剩余 2h", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 2 * 3600))),
             ("周剩余 0（已到）", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 0))),
         ]
-        try write(try renderImage(weeklyRows, background: .light), named: "04-weekly-direction-light.png")
-
-        // Bars only, at a large scale, so the segment counts, the gaps and the `?` state badge
-        // can be inspected without a magnifier.
-        let barsRows: [(String, MenuBarContent)] = [
-            ("满格 5h / 7d", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 7 * 86400))),
-            ("4h / 3d", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400))),
-            ("2h30m / 3d12h", content(live(fiveHourRemaining: 2.5 * 3600, weeklyRemaining: 3.5 * 86400))),
-            ("2h / 1d", content(live(fiveHourRemaining: 2 * 3600, weeklyRemaining: 86400))),
-            ("30m / 6h", content(live(fiveHourRemaining: 0.5 * 3600, weeklyRemaining: 6 * 3600))),
-            ("0 / 0（已到重置时间，无 ?）", content(live(fiveHourRemaining: 0, weeklyRemaining: 0))),
-            ("两排均未知（单个 ? 居中）", content(empty)),
-            ("仅上排未知（? 覆盖该块）", content(.live(UsageSnapshot(fiveHour: nil,
-                                                            weekly: window(.weekly, remaining: 3 * 86400, remainingPercent: 42),
-                                                            fetchedAt: Self.anchor, source: .codexAppServer)))),
-            ("仅下排未知（? 覆盖该块）", content(.live(UsageSnapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600, remainingPercent: 78),
-                                                            weekly: nil,
-                                                            fetchedAt: Self.anchor, source: .codexAppServer)))),
-            ("缓存状态（变暗 + 前置警告）", content(cached)),
-        ]
-        try write(try renderBarsDetail(barsRows, background: .light), named: "05-bars-detail-light.png")
-        try write(try renderBarsDetail(barsRows, background: .dark), named: "06-bars-detail-dark.png")
-
-        // The status item gives the label exactly `NSStatusBar.system.thickness` points and
-        // clips it. This reproduces that band so any clipping of the text, the rows or the
-        // state badge is visible instead of being discovered on a real menu bar.
-        try write(try renderClippedBand(barsRows, background: .light), named: "07-menubar-band-light.png")
-        try write(try renderClippedBand(barsRows, background: .dark), named: "08-menubar-band-dark.png")
+        try write(try renderBarsDetail(weeklyRows, background: .light), named: "04-weekly-direction-light.png")
     }
 
     // MARK: Rendering
@@ -196,7 +194,7 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
                     Text(row.0)
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
-                        .frame(width: 200, alignment: .leading)
+                        .frame(width: 240, alignment: .leading)
                     MenuBarLabelContent(content: row.1)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
@@ -208,37 +206,6 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
         .background(background.color)
         .environment(\.colorScheme, background == .dark ? .dark : .light)
         return try rasterise(panel, appearance: background.appearance, scale: 4)
-    }
-
-    /// Reproduces the real status item band: the label is given exactly
-    /// `NSStatusBar.system.thickness` points and clipped, so any overflow is visible.
-    private func renderClippedBand(_ rows: [(String, MenuBarContent)], background: Background) throws -> Data {
-        let thickness = NSStatusBar.system.thickness
-        let panel = VStack(alignment: .leading, spacing: 10) {
-            Text("状态项带宽 \(Int(thickness)) pt（NSStatusBar.system.thickness），超出即被裁切")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(row.0).font(.system(size: 9)).foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        // Left: the label exactly as the status item hosts it, clipped.
-                        MenuBarLabelContent(content: row.1)
-                            .frame(height: thickness)
-                            .clipped()
-                            .background(background.color)
-                        // Right: the same content unclipped, for comparison.
-                        MenuBarLabelContent(content: row.1)
-                            .frame(height: thickness)
-                            .background(background.color)
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(background.color)
-        .environment(\.colorScheme, background == .dark ? .dark : .light)
-        return try rasterise(panel, appearance: background.appearance, scale: 6)
     }
 
     /// Renders any SwiftUI view offscreen at `scale`. Used only for evidence images.
@@ -265,13 +232,19 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
         return try XCTUnwrap(rep.representation(using: .png, properties: [:]))
     }
 
+    /// Evidence output is confined to the 1.3.0 temporary directory.
     private func write(_ data: Data, named name: String) throws {
-        let directory = URL(fileURLWithPath: #filePath)      // Tests/UsageMonitorAppTests/…
-            .deletingLastPathComponent()                     // Tests/UsageMonitorAppTests
-            .deletingLastPathComponent()                     // Tests
-            .deletingLastPathComponent()                     // repository root
-            .appendingPathComponent("docs/versions/1.0.2/evidence", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = try Self.evidenceDirectory()
         try data.write(to: directory.appendingPathComponent(name))
+    }
+
+    /// `$TMPDIR/Minget-1.3.0-Evidence/`, overridable with `MINGET_EVIDENCE_DIR` for a manual
+    /// review pass. Never a repository path.
+    static func evidenceDirectory() throws -> URL {
+        let base = ProcessInfo.processInfo.environment["MINGET_EVIDENCE_DIR"]
+            ?? (NSTemporaryDirectory() as NSString).appendingPathComponent("Minget-1.3.0-Evidence")
+        let url = URL(fileURLWithPath: base, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
     }
 }

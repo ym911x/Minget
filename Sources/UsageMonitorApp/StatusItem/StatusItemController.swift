@@ -289,21 +289,36 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             popover.performClose(nil)
             return
         }
-        guard let button = statusItem?.button, button.window != nil else {
+        guard let button = statusItem?.button, let buttonWindow = button.window else {
             showDetailWindow()
             return
         }
+        let preferences = DetailPreferences.shared
+        let size = Self.panelSize(for: preferences)
+
+        // A panel wider or taller than the screen comes up with its far edge off-screen and
+        // cannot be dragged back, so a page that does not fit is shown in the regular detail
+        // window instead (REVISION_SPEC.md §8.2).
+        let screen = buttonWindow.screen ?? NSScreen.main
+        guard Self.panelFits(size: size, visibleFrame: screen?.visibleFrame) else {
+            Diagnostics.log("panel does not fit the screen, opening the detail window instead")
+            showDetailWindow()
+            return
+        }
+
         guard let controller = makePanelViewController() else { return }
         NSApp.activate(ignoringOtherApps: true)
+        // Both the hosting controller and the popover are given the final size *before*
+        // `show`, so AppKit positions a panel of the right size rather than resizing one it
+        // has already placed.
+        controller.preferredContentSize = size
+        popover.contentSize = size
         popover.contentViewController = controller
         // Anchor to a two-point-wide rect at the button's exact horizontal midpoint. Using
         // the whole variable-width button lets AppKit choose an edge midpoint that can drift
         // when the menu-bar label changes width; the detail page and arrow should share one
         // stable center line.
-        let centerAnchor = NSRect(x: button.bounds.midX - 1,
-                                  y: button.bounds.minY,
-                                  width: 2,
-                                  height: button.bounds.height)
+        let centerAnchor = Self.centerAnchor(in: button.bounds)
         popover.appearance = NSApp.effectiveAppearance
         popover.show(relativeTo: centerAnchor, of: button, preferredEdge: .minY)
         // Installed after `show`, so the click that opened the panel cannot be seen by the
@@ -327,7 +342,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     /// Opens the detail in its own regular window. Used at launch when the menu bar item is
-    /// occluded and from the settings window.
+    /// occluded, when the panel cannot fit the screen, and from the settings window.
     func showDetailWindow() {
         guard let model else { return }
         closePanel()
@@ -336,7 +351,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 model: model,
                 onSettings: { [weak self] in self?.showSettingsWindow() })
         }
-        detailWindowController?.showWindow(nil)
+        detailWindowController?.present(centeredOn: statusItem)
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -359,7 +374,37 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard let model else { return nil }
         return PanelHostingController(
             model: model,
+            preferences: DetailPreferences.shared,
             onSettings: { [weak self] in self?.showSettingsWindow() })
+    }
+
+    // MARK: - Panel geometry
+
+    /// The panel's content size for the current display preferences.
+    static func panelSize(for preferences: DetailPreferences) -> NSSize {
+        NSSize(width: DetailPageLayout.pageWidth,
+               height: DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
+                                                   showCommandCode: preferences.showCommandCode))
+    }
+
+    /// The popover anchor: a two-point-wide rect at the button's horizontal midpoint, so the
+    /// panel and its arrow share one stable centre line no matter how wide the label is.
+    static func centerAnchor(in buttonBounds: NSRect) -> NSRect {
+        NSRect(x: buttonBounds.midX - 1,
+               y: buttonBounds.minY,
+               width: 2,
+               height: buttonBounds.height)
+    }
+
+    /// Whether the panel fits entirely inside the screen's visible area, allowing a small
+    /// margin for the popover chrome and the arrow.
+    ///
+    /// Pure on purpose: the caller passes a real `NSScreen.visibleFrame`, and the tests pass
+    /// synthetic ones, so the fit rule is pinned without a window server.
+    static func panelFits(size: NSSize, visibleFrame: CGRect?, inset: CGFloat = 8) -> Bool {
+        guard let visibleFrame, visibleFrame.width > 0, visibleFrame.height > 0 else { return false }
+        let usable = visibleFrame.insetBy(dx: inset, dy: inset)
+        return size.width <= usable.width && size.height <= usable.height
     }
 
     /// Opens the detail window once, if the item is not visible after launch layout.
@@ -404,10 +449,15 @@ final class MenuBarHostingView: NSHostingView<MenuBarLabelView> {
 }
 
 /// Panel host that keeps a strong reference to the view model for the popover's lifetime.
+///
+/// It receives the same `DetailPreferences` instance the view renders from, so the size the
+/// popover is given before `show` is the size the page actually draws.
 final class PanelHostingController: NSHostingController<UsagePanelView> {
     init(model: UsageViewModel,
+         preferences: DetailPreferences,
          onSettings: (() -> Void)?) {
         let view = UsagePanelView(model: model,
+                                  preferences: preferences,
                                   onSettings: onSettings)
         super.init(rootView: view)
     }
@@ -418,7 +468,15 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
 
 /// Regular, closable window holding the same detail view. Not a floating panel: it uses the
 /// normal window level and behaves like any other document window.
+///
+/// The window is 440 pt wide and its height follows the four fixed
+/// page sizes. A change to the display preferences resizes the *already open* window
+/// immediately, so the user never sees a half-empty or clipped page after toggling a service
+/// card. The first presentation centres on the menu-bar icon and is clamped into the screen's
+/// visible area, so it can never open partly off-screen.
 final class DetailWindowController: NSWindowController {
+
+    private var preferenceObserver: AnyCancellable?
 
     init(model: UsageViewModel,
          onSettings: (() -> Void)?) {
@@ -427,22 +485,67 @@ final class DetailWindowController: NSWindowController {
                                    preferences: preferences,
                                    onSettings: onSettings)
         let height = UsagePanelView.preferredHeight(for: preferences)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: height),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0,
+                                                  width: DetailPageLayout.pageWidth,
+                                                  height: height),
                               styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered,
                               defer: false)
         window.title = "额度详情"
         window.isReleasedWhenClosed = false
-        window.center()
         window.contentView = NSHostingView(rootView: panel)
         super.init(window: window)
+
+        // `objectWillChange` fires before the new value lands, so the resize is deferred one
+        // runloop turn; reading the preference inside the sink would use the old value.
+        preferenceObserver = preferences.objectWillChange
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.applyPreferredContentSize() }
+                }
+            }
+    }
+
+    private func applyPreferredContentSize() {
+        guard let window else { return }
+        let height = UsagePanelView.preferredHeight(for: DetailPreferences.shared)
+        window.setContentSize(NSSize(width: DetailPageLayout.pageWidth, height: height))
+    }
+
+    /// Shows the window, positioned by the status item rather than by AppKit's default.
+    ///
+    /// The window is centred on the menu-bar icon and then clamped into the hosting screen's
+    /// visible frame, so no part of the page lands off-screen. With no usable icon window —
+    /// which is exactly the hidden-icon case this window exists for — it falls back to
+    /// `center()`.
+    func present(centeredOn statusItem: NSStatusItem?) {
+        guard let window else { return }
+        applyPreferredContentSize()
+
+        if let button = statusItem?.button, let buttonWindow = button.window,
+           let screen = buttonWindow.screen ?? NSScreen.main {
+            let buttonFrame = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+            let size = window.frame.size
+            let bounds = screen.visibleFrame
+            let inset: CGFloat = 8
+            let targetX = buttonFrame.midX - size.width / 2
+            let lowerX = bounds.minX + inset
+            let upperX = max(lowerX, bounds.maxX - size.width - inset)
+            let lowerY = bounds.minY + inset
+            let upperY = max(lowerY, bounds.maxY - size.height - inset)
+            window.setFrameOrigin(NSPoint(x: min(max(targetX, lowerX), upperX),
+                                          y: min(max(window.frame.origin.y, lowerY), upperY)))
+        } else {
+            window.center()
+        }
+        showWindow(nil)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }
 
-/// Regular settings window. Its content is intentionally small and single-page in 1.1.0.
+/// Regular settings window. Fixed 520 × 600 pt with no scroll container (UI_SPEC.md §7).
 final class SettingsWindowController: NSWindowController {
 
     init(model: UsageViewModel,
@@ -451,7 +554,9 @@ final class SettingsWindowController: NSWindowController {
         let view = MingetSettingsView(model: model,
                                       onDetailWindow: onDetailWindow,
                                       onQuit: onQuit)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 420),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0,
+                                                  width: MingetSettingsView.pageSize.width,
+                                                  height: MingetSettingsView.pageSize.height),
                               styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered,
                               defer: false)

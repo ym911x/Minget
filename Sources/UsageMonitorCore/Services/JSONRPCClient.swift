@@ -65,6 +65,14 @@ public final class JSONRPCClient: @unchecked Sendable {
         self.environment = environment
     }
 
+    /// The environment the child is launched with, exactly as given to `Process`.
+    ///
+    /// Exposed so a lifecycle test can prove two profile children receive different
+    /// `CODEX_HOME` values without inspecting the child itself. It is deliberately never
+    /// logged: `Diagnostics` records lifecycle only, and environment values may name a
+    /// user's home directory.
+    public var childEnvironment: [String: String]? { environment }
+
     // MARK: - Lifecycle
 
     /// Launches the child and starts the stdout reader. Throws on spawn failure.

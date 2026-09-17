@@ -7,7 +7,22 @@
 **你的 AI 使用，心里有数。**<br>
 *Your AI usage, at a glance.*
 
-Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepSeek 与 Command Code 的额度、余额和使用状态。
+Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
+
+## v1.3.0 修订
+
+- 详情页同时显示两个 ChatGPT 账号卡片，各自绑定一个独立的 `CODEX_HOME` 与独立的 `codex app-server` 子进程，额度、套餐、账号和缓存互不串号。
+- 设置页新增“菜单栏显示”单选项，可在账号 A、账号 B 与 DeepSeek 之间切换；菜单栏一次只显示一个来源，ChatGPT 文案带账号短标签（`A 5H 78% | W 42%`），DeepSeek 显示官方余额接口返回的余额（`DS CNY 123.45`）且不显示重置时间条。
+- 每张 ChatGPT 卡片提供独立的“5 小时点火”按钮：确认后应用直接执行官方 Codex CLI 的固定参数，用该账号的隔离目录作为 `CODEX_HOME`，只保留请求结果，不写 raw log、不调用 `minget-fire`。
+- 详情页为 `440 pt` 宽的单列固定布局，一排一张卡片，顺序为 ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张卡片全部显示时固定 `440 × 552 pt`，一页看完。设置页固定 `520 × 600 pt`。两者都不使用任何滚动容器。
+- 应用改为显式 AppKit 启动，不再声明任何 SwiftUI `Scene`，冷启动只出现菜单栏图标，不再出现空的「设置」窗口。
+- Minget 自身仍不打开、解析、复制或上传任何 Codex 配置或认证文件；它只把用户配置的隔离目录作为环境变量传给官方 CLI 子进程。
+
+<img src="assets/screenshots/v1.3.0/detail-redacted.png" alt="Minget 1.3.0 双 ChatGPT 账号、DeepSeek 与 Command Code 详情页脱敏示例" width="520">
+
+*1.3.0 详情页脱敏展示副本。邮箱、余额、额度、重置时间和用量均已替换为示例数据；界面布局来自用户确认的真实运行截图。*
+
+自动测试 425 项通过（Core 325、App 100），Release 构建、严格签名与真实详情页验收通过。源码随 [Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0) 发布；真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍未执行，结果记录在 [1.3.0 验收台账](docs/versions/1.3.0/ACCEPTANCE.md)。
 
 ## v1.2.1 修订
 
@@ -53,24 +68,31 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看 OpenAI Codex、DeepS
 
 ## 当前版本
 
-- 当前版本：`1.2.1`
-- 状态：Command Code 金额精度和卡片更新时间已完成修订；310 项自动化测试、Release 构建和严格签名检查通过，真实界面已由用户确认。发布页：[Minget v1.2.1](https://github.com/ym911x/Minget/releases/tag/v1.2.1)
+- 当前版本：`1.3.0`
+- 状态：双 ChatGPT 账号额度、菜单栏三来源与手动点火已实现；425 项自动化测试、Release 构建、严格签名和真实详情页验收通过。源码发布页：[Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0)。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
 
 ## 已实现功能
 
-- 菜单栏持续显示 Codex 的 5 小时额度和周额度，不再放置品牌图标。
-- 额度文字下方显示两排重置时间进度：上排 5 段代表 5 小时，下排 7 段代表 7 天；亮区随重置时间临近从右向左缩退。
-- 检测状态项是否进入刘海遮挡区域，并在空间不足时从完整模式压缩为保留双额度的紧凑模式；紧凑内容仍无法显示时打开详情窗口，不显示残缺的 `5H`。
+- 同时监控两个隔离的 ChatGPT (Codex) 账号：各自独立的 `CODEX_HOME`、独立的长生命周期 `codex app-server` 子进程、独立的失败预算与独立的额度缓存。
+- 菜单栏一次显示一个来源：ChatGPT 账号 A、ChatGPT 账号 B 或 DeepSeek，可在设置页切换并持久化；升级默认保持账号 A。
+- ChatGPT 菜单栏文案带账号短标签与两排重置时间进度：完整 `A 5H 78% | W 42%`，紧凑 `A 78% 42%`，下方上排 5 段代表 5 小时、下排 7 段代表 7 天。
+- DeepSeek 菜单栏条目显示官方余额接口返回的余额，不换算、不合计、不显示重置时间条：完整和紧凑模式均为 `DS CNY 123.45`，通过字号与词间距区分宽度；无可用余额时显示 `DS —` 并加一个前置警告标记，不显示 `0`。
+- 检测状态项是否进入刘海遮挡区域，并在空间不足时从完整模式压缩为保留双额度与双时间条的紧凑模式；紧凑内容仍无法显示时打开详情窗口，不显示残缺文字。
 - 点击菜单栏打开详情后，点击桌面或其他应用可立即收起弹层，同时保留原点击效果。
-- 详情面板显示当前 Codex 账号、5 小时额度、周额度和 5/7 段重置时间进度。
+- 应用以显式 AppKit 入口启动，不声明任何 SwiftUI Scene；冷启动只出现菜单栏图标，不会出现空的设置窗口。弹层在显示前先确定内容尺寸，屏幕容纳不下整页时改用普通详情窗口，不会留下越界且无法移回的弹层。
+- 详情页为 440 pt 宽的固定单列无滚动布局，一排一张卡片：ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张全开时 `440 × 552 pt`，两张服务卡都隐藏时收缩为 `440 × 330 pt`，普通详情窗口立即同步调整尺寸。
+- 每张 ChatGPT 卡片显示 Profile 名称、连接/缓存状态、套餐、实际账号邮箱、5 小时与周额度的**剩余额度轨道和各自的重置时间分段轨道**（5 小时 5 段、周 7 段）、可用重置次数、点火结果和“5 小时点火”按钮。
+- 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”与“请求成功，窗口未变化”。
+- DeepSeek 卡片把 Logo、wordmark、连接状态、服务状态和余额放在同一行，横向最多显示 3 个币种金额，超过 3 个时第三项显示“另有 N 个币种”；不换算、不合计、不伪造 0。
+- Command Code 卡片的三条额度轨道显示**剩余**（越用越短），右侧只显示“余额 / 总计”；每条下方各有一条重置时间轨道，5 小时与周只显示绝对重置时间，本月保留剩余天数。
+- 设置页固定 `520 × 600 pt`：菜单栏显示使用纵向 radio group，服务组列出两个只读 ChatGPT 行的 `CODEX_HOME` 尾段，DeepSeek 与 Command Code 管理表单单开 accordion。
 - OpenAI 详情卡显示账号可用重置次数，并在服务提供有效到期明细时显示最近到期时间；缓存或字段不可用时明确显示不可用。
-- 详情面板使用放大的 OpenAI Blossom 图标和 API 返回的 Codex 套餐类型；DeepSeek 可在设置中选择显示或隐藏，隐藏不会断开连接。
-- DeepSeek 卡片同时显示用户提供的鲸鱼图标和只保留 `deepseek` 的透明文字标识；多币种余额与品牌同列靠右并垂直居中，连接与官方服务状态位于 Logo 下方；状态页不可达时明确显示不可用。官方余额接口不提供账号名称或邮箱，因此不显示虚构账号信息。
-- 详情页直接显示整页内容，不使用滚动容器或滚动条。
-- 设置页以单一“服务”模块集中展示 OpenAI Codex 固定详情显示与 DeepSeek 的显示、连接管理和诊断入口。
+- 详情面板使用放大的 OpenAI Blossom 图标和 API 返回的 Codex 套餐类型；DeepSeek 可在设置中选择显示或隐藏，隐藏不会断开连接，也不会改变菜单栏来源。
+- DeepSeek 卡片在同一水平线显示用户提供的鲸鱼图标、只保留 `deepseek` 的透明文字标识、状态和余额；状态页不可达时明确显示不可用。官方余额接口不提供账号名称或邮箱，因此不显示虚构账号信息。
+- 详情页与设置页直接显示整页内容，不使用滚动容器或滚动条。
 - 通过 DeepSeek 官方余额接口读取余额，API Key 保存在 macOS Keychain。
 - Command Code API Key 仅由用户在应用设置页输入并存入 macOS Keychain；详情卡可隐藏但隐藏不会删除 Key 或停止既有刷新机制。
 - 启动时清理旧版智谱 GLM 的应用内凭据、缓存与显示偏好；失败会在下次启动重试。
@@ -122,6 +144,12 @@ swift test
 - [v1.2.0 审核状态](docs/versions/1.2.0/REVIEW.md)
 - [v1.2.0 验收台账](docs/versions/1.2.0/ACCEPTANCE.md)
 - [v1.2.1 需求与验收](docs/versions/1.2.1/REQUIREMENTS.md)
+- [v1.3.0 需求](docs/versions/1.3.0/REQUIREMENTS.md)
+- [v1.3.0 实施任务](docs/versions/1.3.0/IMPLEMENTATION_TASKS.md)
+- [v1.3.0 界面规格](docs/versions/1.3.0/UI_SPEC.md)
+- [v1.3.0 实施报告](docs/versions/1.3.0/IMPLEMENTATION_REPORT.md)
+- [v1.3.0 审核状态](docs/versions/1.3.0/REVIEW.md)
+- [v1.3.0 验收台账](docs/versions/1.3.0/ACCEPTANCE.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -136,22 +164,29 @@ swift test
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing OpenAI Codex usage, DeepSeek balances, and optional Command Code usage. Version 1.2.0 adds a Keychain-backed Command Code detail card. A real account returned usage successfully; exact field semantics still await a same-time comparison with Studio.
+**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.0 adds a second Codex account, a selectable menu bar source, and a per-account manual fire button.
 
 ### Features
 
-- Shows Codex five-hour and weekly limits in the menu bar without a leading brand mark. The compact fallback still includes both values and both reset-time rows; if even that content cannot be rendered, the detail window opens.
-- Shows two segmented reset-time rows below the quota text: five hourly segments and seven daily segments. These rows represent time until reset, not quota remaining.
+- Monitors two isolated ChatGPT (Codex) accounts, each with its own `CODEX_HOME`, its own long-lived `codex app-server` child, its own failure budget, and its own usage cache.
+- Shows exactly one menu bar source at a time — account A, account B, or DeepSeek — selectable in settings and persisted by stable identifier. Upgrading keeps account A.
+- Labels the ChatGPT quota text with the account short label and keeps both reset-time rows: `A 5H 78% | W 42%` full, `A 78% 42%` compact. The compact fallback still includes both values; if even that cannot be rendered, the detail window opens.
+- Shows the DeepSeek menu bar entry as an amount from the official balance endpoint, with no conversion, no summing, and no reset-time rows: `DS CNY 123.45` in both semantic modes, using larger typography and spacing in full mode. With nothing attributable it shows `DS —` and one warning marker, never a zero.
 - Closes the detail popover when the user clicks the desktop or another app while preserving the original click.
-- Displays the OpenAI Blossom mark, the plan returned by `account/read`, the active Codex account, quota tracks, and five-hour/seven-day reset-time segments in the detail panel.
+- Uses a fixed, non-scrolling 440 pt single-column detail layout — one card per row: ChatGPT A, ChatGPT B, DeepSeek, Command Code. All four cards fit a 440 × 552 pt page; with both service cards hidden the page shrinks to 440 × 330 pt.
+- Each ChatGPT card pairs every window's remaining-credit track with its own segmented reset-time rail (five segments for the five-hour window, seven for the weekly one).
+- Command Code's credit tracks show *remaining* (shrinking from the right as credit is used) and only `balance / total` at the right. Five-hour and weekly rows use absolute reset times; the monthly row retains relative days.
+- Starts as an explicit AppKit app with no SwiftUI scene, so a cold start shows only the menu-bar icon and never an empty settings window; the panel fixes its content size before it is shown and falls back to the detail window when the page cannot fit the screen.
+- Each ChatGPT card shows the profile name, connection or cache state, the plan returned by `account/read`, the real account email, both quota windows, reset times, available reset credits, the last fire result, and its own fire button.
+- Manual fire runs the official Codex CLI with a fixed argument list under that account's isolated `CODEX_HOME`, discards the child's output, and reports "request succeeded" separately from "new window confirmed".
+- Places the DeepSeek logo, wordmark, connection state, service state, and balances on one line. It shows up to three currency amounts (currency code ascending, unnamed bucket last); beyond three the third slot becomes a fixed overflow line.
+- Uses a fixed 520 × 600 pt settings page with a vertical radio group for the menu bar source, two read-only ChatGPT rows showing only the `CODEX_HOME` suffix, and single-open accordions for the DeepSeek and Command Code forms.
 - Displays the read-only `rateLimitResetCredits.availableCount` value and, when supplied by the service, the nearest future expiry in the OpenAI detail card. Cached or missing fields remain explicitly unavailable.
-- Lets users show or hide the DeepSeek balance card without disconnecting it.
-- Gives DeepSeek a full-width balance card with the wordmark beside its whale logo, vertically centered multi-currency balances on that same brand row, and connection plus official status below the logo. The official balance response has no account-name field, so no account identity is invented.
-- Shows the complete detail page in a fixed-height surface without a vertical scroll container or scrollbar.
-- Keeps connection management and diagnostics in a compact settings window.
+- Lets users show or hide the DeepSeek and Command Code cards without disconnecting either, and independently of the menu bar source.
+- Shows the complete detail page and the settings page in fixed-size surfaces without any scroll container or scrollbar.
 - Reads DeepSeek balances through its official balance endpoint.
 - Retires legacy GLM credentials, cache entries, and display preferences during startup.
-- Keeps provider credentials in macOS Keychain.
+- Keeps provider credentials in macOS Keychain. Minget never opens, parses, copies or uploads a Codex configuration or auth file; it only passes a user-configured isolated directory to the official CLI as `CODEX_HOME`.
 - Checks menu bar visibility locally without model calls or token usage.
 
 ### Build and run

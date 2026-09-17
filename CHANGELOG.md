@@ -1,5 +1,50 @@
 # 变更记录
 
+## 1.3.0（2026-09-17）
+
+状态：双 ChatGPT 账号、菜单栏三来源与手动点火已实现；首轮 720 pt 双列布局和启动空窗口在真实界面验收中被否决，第三轮界面微调已完成。425 项自动化测试（Core 325、App 100）、Release 构建、严格签名和真实详情页验收通过，随 [Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0) 发布。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。
+
+### 界面微调（2026-09-17）
+
+- 详情页从 520 pt 进一步收窄为 440 pt，卡片内容宽度为 416 pt；四种页面尺寸为 `440 × 552 / 498 / 384 / 330 pt`。设置页继续保持 `520 × 600 pt`。
+- 两张 ChatGPT 卡片的 5 小时与周额度窗口之间增加到 4 pt 间距；Command Code 的 5 小时、周额度、本月三个窗口之间同样使用 4 pt 间距。
+- Command Code 额度文字精简为 `$余额 / $总计`，移除“剩余”和重复百分比；5 小时与周只显示绝对重置日期时间，本月继续显示剩余天数与日期。
+- DeepSeek 菜单栏完整和紧凑模式均使用 `DS CNY 123.45`，移除汉字“余额”；完整模式使用 13 pt medium 与 7 pt 词间距，紧凑模式使用 12 pt medium 与 4 pt 词间距。
+- DeepSeek 详情卡改为 `416 × 48 pt` 单行：Logo、wordmark、连接状态、可点击服务状态和余额位于同一水平线；余额改用 `110.00 CNY` 行内格式，极端宽度不足时保留主币种完整金额并把其余币种合并为溢出提示。
+- 脱敏渲染更新为 `440 × 552` 全卡片和 `440 × 330` 双 ChatGPT 页面，并增加新菜单栏字号与单行 DeepSeek 卡片检查。
+
+### 回归修订（2026-09-17）
+
+- 启动入口改为显式 AppKit（`@main enum MingetMain` + `NSApplication.run()`），不再声明任何 SwiftUI `Scene`。此前的 `Settings { EmptyView() }` 仍是真实场景，系统可在启动时把它打开，用户会看到一个空的「设置」窗口；现在该失败模式在结构上不再存在，而不是启动后补一次 `close()`。设置窗口仍只由用户点击设置时创建。
+- 详情页由 720 pt 双列恢复为 520 pt 单列，一排一张卡片，顺序固定为 ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张全开 `520 × 560 pt`，仅 Command Code `486 pt`，仅 DeepSeek `398 pt`，都隐藏 `324 pt`。新增纯几何模型 `DetailPageLayout`，视图与测试共用同一套 frame 计算。
+- 详情页与普通详情窗口继续不包含任何滚动容器；新增断言覆盖四种页面状态、四张卡片的 `minX` 一致、宽度均为 496、`minY` 严格递增且两两不相交。
+- ChatGPT 卡片恢复 1.2.1 的信息层级：每个窗口都是「剩余额度轨道 + 其正下方的分段时间轨道」成对出现，5 小时 5 段、周额度 7 段，时间轨道表示距离重置的剩余时间并从右向左收缩；未知或非法时间显示灰色轨道与中央 `?`，已到重置时间显示「等待刷新」。卡片 `496 × 126 pt`，内边距 10 pt。
+- Command Code 卡片额度轨道方向修正为 `remaining / limit`（原为 `used / limit`），亮色左对齐、越用越短；右侧固定显示 `剩余 $X.XX / $Y.YY · Z%`。每条额度下方新增重置时间轨道：5 小时 5 段、周 7 段、本月连续单条、system indigo，同样表示剩余时间。
+- 月度进度不再猜测：`ProviderUsage` 新增可选 `billingPeriodStart`，`CommandCodeProvider` 只解析响应真实包含的 `currentPeriodStart`，且开始必须早于结束；只有两端都存在才绘制月度进度，只有结束时间时画中性空轨道。新增字段为可选，既有 `ProviderCache` JSON 仍可解码。
+- DeepSeek 卡片改为 1.2.1 的横向紧凑形态 `496 × 68 pt`，最多显示 3 个币种金额，超过 3 个时第三项显示「另有 N 个币种」。
+- 弹层在 `show` 之前先把 hosting controller 与 `NSPopover` 的内容尺寸设成当前页面尺寸，再以状态按钮 `midX` 处的 2 pt 中心锚点显示；当前屏幕容纳不下整页时不再显示被裁掉的弹层，改用普通详情窗口。普通详情窗口首次打开时以菜单栏图标的屏幕坐标为水平中心，并把 frame clamp 到 `visibleFrame`。
+- 点火生命周期修复：新增 `ChatGPTFireService.stopAll()`，退出时在 coordinator drain 之前终止并回收仍在运行的 `codex exec` 子进程（原实现只取消 Swift 任务，无法触及阻塞中的 `Process`）；`fetchFiveHourReset` 改为只在 `FetchResult.isLive == true` 时返回新 `resetsAt`，缓存成功不再被当作新窗口确认。
+- 新增冷启动真实进程测试：启动签名包后 2 秒内该进程不得拥有任何非 520 pt 宽度的窗口，退出后不得遗留自有子进程；另新增 `FireLifecycleTests` 覆盖「缓存 → 重试 → 实时确认」与「stop 终止运行中的点火子进程」。
+- 渲染测试证据改为 `520 × 560` 浅色/深色、`520 × 324`、ChatGPT 未知与已到期时间条、Command Code 剩余收缩与三种时间轨道，并输出弹层在屏幕中央与左右边缘的 frame 记录；全部只写 `$TMPDIR/Minget-1.3.0-Evidence/`。
+
+### 首轮实现（2026-09-16）
+
+- 新增 `ChatGPTAccountProfile`：两个固定只读 Profile（`chatgpt-a` / `chatgpt-b`，短标签 `A` / `B`，相对路径 `.codex-minget-a` / `.codex-minget-b`）。默认值不含个人绝对路径，运行时按当前用户主目录解析；1.3.0 不提供新增、删除或改名界面。
+- 新增 `CodexProfileRuntime` 与 `CodexProfilesCoordinator`：每个 Profile 一个长生命周期 `UsageService` 与独立 `codex app-server` 子进程，独立失败预算，并行刷新，退出时并发 drain。
+- `UsageService` 新增 Profile 归属与 `childEnvironment(base:codexHome:)`：复制当前环境并只覆盖该 Profile 的 `CODEX_HOME`；`CodexLocator` 保持只负责定位可执行文件，子进程仍由 `Process.executableURL` 直启，不经过 shell。
+- `UsageCache` 的 last-known account 改为按 Profile 保存，并新增 v3 `profileID + accountID` 命名空间。旧 1.2.1 缓存在升级后不展示；账号 A 首次成功读到相同 accountID 才迁移，不同或缺失时删除，账号 B 永不接收。DeepSeek 与 Command Code 的 `ProviderCache` 格式未变。
+- `UsageViewModel` 改为发布 `[CodexProfileViewState]`；`displayState`、`connectionState`、`codexAccount` 三个单值形态移除。一轮刷新并行覆盖两个 Profile，单个 Profile 点火后只强制刷新该 Profile。
+- 新增 `MenuBarPreferences`：菜单栏来源以稳定标识持久化（Profile ID 或 DeepSeek），升级默认账号 A，损坏值回退账号 A，不扫描用户目录寻找其他账号。
+- 菜单栏构建器改为接收已解析来源。ChatGPT 完整 `A 5H 78% | W 42%`、紧凑 `A 78% 42%`，保留双额度与两排重置时间条；DeepSeek 完整 `DS CNY 余额 123.45`、紧凑 `DS CNY 123.45`，不显示时间条，无可用余额时显示 `DS —` 并加一个前置警告标记。
+- DeepSeek 多币种菜单栏选择顺序固定为「已保存且仍存在 → CNY → USD → 币种代码升序 → 币种未确认」，优先 `available`，否则 `total`；不换算、不合计、不显示零。
+- 新增 `CodexProfileCard`：显示 Profile 名称、连接/缓存状态、套餐、实际账号邮箱、两个额度窗口、重置时间、可用重置次数、点火结果与“5 小时点火”按钮。邮箱中间省略并支持选择复制。
+- 设置页固定 `520 × 600 pt`，新增纵向 radio group 的“菜单栏显示”（账号 A、账号 B、DeepSeek）与 DeepSeek 币种 Picker；服务组列出两个只读 ChatGPT 行（仅显示 `CODEX_HOME` 尾段），DeepSeek 与 Command Code 管理表单改为单开 accordion。详情显示开关与菜单栏来源保持相互独立。
+- 新增 `ChatGPTFireService` 与 `ChatGPTFireResult`：使用 `CodexLocator` 定位官方 CLI，`Process` 直启固定参数 `exec --ephemeral --sandbox read-only --skip-git-repo-check -C <临时目录> -m gpt-5.6-luna -c model_reasoning_effort="none" "Reply exactly: OK"`，不调用 `minget-fire`，不使用 shell。
+- 点火子进程的 stdout/stderr 持续 drain 后丢弃，不写入日志、UserDefaults、测试快照或文档；不记录 session id、prompt 或 token。超时固定 120 秒，terminate 后等待 3 秒，仍未退出时只对本次 PID 发送 `SIGKILL` 并回收。
+- 同一 Profile 进行中再次请求立即返回 `.alreadyRunning`，不排队、不合并；不同 Profile 可并行。点火成功后等待 2 秒强制刷新该 Profile，失败再等 5 秒重试一次；只有同一 Profile 的实时新值比点火前晚至少 60 秒才显示“新窗口已确认”，否则显示“请求成功，窗口未变化”。
+- 现有 `~/.local/bin/minget-fire`、`com.minget.chatgpt-fire` LaunchAgent 和两个 `CODEX_HOME` 未被读取、修改或调用；应用内手动点火不产生 raw log。本版本不实现 LaunchAgent 编辑、自动点火开关、定时表、睡眠唤醒、Fire All 或点火历史。
+- 渲染测试输出统一改为 `$TMPDIR/Minget-1.3.0-Evidence/`，不再写入 `docs/archive/` 或任何历史 evidence 目录。
+
 ## 1.2.1（2026-09-15）
 
 状态：金额显示与详情卡片空间修订已实现；310 项自动化测试、Release 构建和严格签名检查通过，真实界面已由用户确认，随 [Minget v1.2.1](https://github.com/ym911x/Minget/releases/tag/v1.2.1) 发布。
@@ -146,6 +191,19 @@
 ---
 
 ## English summary
+
+### 1.3.0 (2026-09-17)
+
+Released as [Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0). Two isolated ChatGPT (Codex) accounts, a selectable menu bar source, and a per-account manual fire button are included. The third UI revision uses a fixed 440 pt single column, adds modest spacing between quota-window groups, simplifies Command Code values and reset copy, enlarges the DeepSeek menu-bar label, and places the DeepSeek detail card on one line. 425 automated tests (325 Core, 100 App), a release build, strict signing, and real detail-page acceptance pass. Real DeepSeek menu-bar balances and both real fire requests remain unverified.
+
+- The entry point is explicit AppKit with no SwiftUI scene, so a cold start shows only the menu-bar icon; the `Settings { EmptyView() }` scene that macOS could open is gone structurally rather than closed after the fact.
+- The detail page is a 440 pt single column, one card per row in the fixed order ChatGPT A, ChatGPT B, DeepSeek, Command Code, with page heights 552 / 498 / 384 / 330. A pure `DetailPageLayout` model is shared by the view and the layout tests.
+- Each ChatGPT window is again a pair of tracks: remaining-credit above, its own segmented reset-time rail below (five and seven segments), with a grey `?` rail for unknown times and 等待刷新 once the reset time has passed.
+- Command Code's credit tracks show `balance / total` without a duplicate percentage. Five-hour and weekly rows show only an absolute reset date and time; the monthly row retains relative days. Each row keeps its own time rail.
+- The DeepSeek menu-bar label is `DS CNY 123.45` with larger full-mode typography, and its 48 pt detail card places the logo, wordmark, statuses, and balances on one horizontal line.
+- The panel fixes its content size before `show` and falls back to the regular detail window when the page cannot fit the screen, so a clipped panel can no longer be left off-screen. The regular detail window centres on the menu-bar icon and is clamped into the visible frame.
+- Fire lifecycle: `ChatGPTFireService.stopAll()` terminates and reaps a running `codex exec` at exit, and only a live refresh (`isLive == true`) may confirm a new window; a cached refresh never does.
+- A real-process cold-start test asserts the signed app owns no layer-0 window at cold start and leaves no child behind; `FireLifecycleTests` cover the cached-then-live retry and stopping a running fire.
 
 ### 1.0.2 (2026-09-12)
 

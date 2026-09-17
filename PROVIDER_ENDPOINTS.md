@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-15
-适用版本：1.2.1
+更新日期：2026-09-16
+适用版本：1.3.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -15,24 +15,37 @@
 
 ## Codex
 
+1.3.0 起应用同时维护两个隔离的 ChatGPT 账号 Profile。每个 Profile 拥有一个独立的长生命周期 `codex app-server` 子进程，子进程环境为当前环境的副本并只覆盖该 Profile 的 `CODEX_HOME`（`~/.codex-minget-a`、`~/.codex-minget-b`，按当前用户主目录解析）。Minget 不打开、不列出、不解析、不复制这两个目录的内容，也不读取其中任何文件。
+
 ### `account/rateLimits/read`
 
-- 传输：本机 `codex app-server` 的 stdio JSON-RPC。
+- 传输：本机 `codex app-server` 的 stdio JSON-RPC，每个 Profile 一条连接。
 - 用途：读取额度窗口、已用百分比和重置时间。
-- 验证：A。真实本机服务已验证，解析和进程生命周期由自动化测试覆盖。
+- 验证：A。真实本机服务已验证，解析、进程生命周期和双 Profile 环境隔离均由自动化测试覆盖；两个真实 `CODEX_HOME` 同时读取和额度核对待用户验收。
 - 可选字段：[`rateLimitResetCredits`](https://learn.chatgpt.com/docs/app-server) 的 `availableCount` 是账号当前可用的 earned rate-limit reset 数量；`credits` 明细可能提供 `expiresAt`。应用只保留数量和最近一个未来到期时间，明细缺失时仍以 `availableCount` 为准。
-- 展示边界：1.1.2 只在 OpenAI 详情页显示该只读摘要，不消费重置权益；缓存快照不被标记为当前可用，字段缺失或非法时显示不可用。
+- 展示边界：只在 ChatGPT 卡片显示该只读摘要，不消费重置权益；缓存快照不被标记为当前可用，字段缺失或非法时显示不可用。
+- 缓存归属：快照按 `profileID + accountID` 隔离。1.2.1 的账号级缓存升级后不展示；账号 A 首次成功读到相同 accountID 时迁移，不同或缺失时删除，账号 B 永不接收。
 
 ### `account/rateLimitResetCredit/consume`
 
-- 1.1.2 不调用此写入方法。重置消费、幂等键和二次确认留待后续版本单独评估。
+- 应用不调用此写入方法。重置消费、幂等键和二次确认留待后续版本单独评估。
 
 ### `account/read`
 
 - 参数：`{"refreshToken": false}`。
-- 用途：读取账号类型和可用的邮箱标识。
-- 验证：请求为 A，响应结构为 B。响应结构依据本机 Codex 协议 schema，线上账号显示已由用户实际运行确认。
+- 用途：读取账号类型和可用的邮箱标识，并确定该 Profile 当次读数的归属。
+- 验证：请求为 A，响应结构为 B。响应结构依据本机 Codex 协议 schema；真实账号显示待用户验收。
 - 边界：不读取 `~/.codex/auth.json`，不触发 token 刷新。
+
+### 手动点火（`codex exec`，模型请求例外）
+
+- 传输：`CodexLocator` 定位官方 `codex` 可执行文件后由 `Process.executableURL` 直启，不经过 shell，也不调用 `~/.local/bin/minget-fire`。
+- 参数固定为：`exec --ephemeral --sandbox read-only --skip-git-repo-check -C <临时工作目录> -m gpt-5.6-luna -c model_reasoning_effort="none" "Reply exactly: OK"`；临时工作目录固定为系统临时目录下的 `minget-fire`。
+- 子进程环境为当前环境的副本并只覆盖当前 Profile 的 `CODEX_HOME`；不读取该目录内容。
+- 验证：命令形态和进程生命周期由自动化测试以 fake executable 固定（C）。真实点火请求待用户按验收台账执行。
+- 这是本应用唯一的模型请求路径，只能由用户点击卡片上的“5 小时点火”按钮并经固定确认对话框触发；不参与任何定时刷新。定时点火继续由现有外部 LaunchAgent 和 `minget-fire` 承担，与本应用无关。
+- 子进程 stdout/stderr 持续 drain 后丢弃，不写入日志、UserDefaults、测试快照或文档；不记录 session id、prompt、token 或退出输出。单次超时 120 秒，terminate 后等待 3 秒，仍未退出时只对本次 PID 发送 `SIGKILL` 并回收。
+- 诊断只记录 Profile ID、固定结果分类和自有子进程生命周期。
 
 菜单栏安全区域检查只读取本机屏幕和状态项几何位置，不调用网络或模型。
 
@@ -91,18 +104,21 @@ Command Code Studio 公开说明确认其展示成本、token 和运行分析，
 - 余额缺失、字段不合法或接口口径不明时显示不可用，不伪造为零。
 - 测试使用合成凭据，不包含真实 API Key。
 - Command Code 只允许上述三个精确 GET 路径；`/alpha/generate`、`/provider/v1/chat/completions`、`/provider/v1/messages` 和其他模型路径均拒绝。
+- 唯一的窄例外：允许把用户配置的隔离目录作为 `CODEX_HOME` 传给官方 Codex CLI 子进程（`codex app-server` 与手动 `codex exec`）。Minget 自身仍禁止打开、解析、复制、显示或上传任何 Codex 配置或认证文件；应用不读取这两个目录中的任何文件。
 
 ---
 
 ## English summary
 
-This document records the data sources, evidence level, and security boundaries used by Minget 1.1.2.
+This document records the data sources, evidence level, and security boundaries used by Minget 1.3.0.
 
 ### Codex
 
-- `account/rateLimits/read` and `account/read` are called through the local `codex app-server` stdio JSON-RPC connection.
-- `account/rateLimits/read` may return `rateLimitResetCredits.availableCount` and optional credit expiry details; Minget displays only the normalized count and nearest future expiry and never calls the consume method in 1.1.2.
-- `account/read` uses `{"refreshToken": false}` and does not read `~/.codex/auth.json`.
+- Minget maintains two isolated ChatGPT profiles, each with its own long-lived `codex app-server` child launched under its own `CODEX_HOME` (`.codex-minget-a`, `.codex-minget-b`).
+- `account/rateLimits/read` and `account/read` are called through that local stdio JSON-RPC connection.
+- `account/rateLimits/read` may return `rateLimitResetCredits.availableCount` and optional credit expiry details; Minget displays only the normalized count and nearest future expiry and never calls the consume method.
+- `account/read` uses `{"refreshToken": false}` and does not read `~/.codex/auth.json`. The profile's cache namespace is keyed by `profileID + accountID`, and the 1.2.1 account-scoped cache is retired by a one-time migration.
+- Manual fire is the single model-request path. It runs the official Codex CLI directly with a fixed argument list, drains and discards the child's output, and is only reachable through the user's confirmation dialog. Scheduled firing stays with the external LaunchAgent and `minget-fire`, which Minget neither calls nor modifies.
 - Menu bar geometry checks are local and do not use network requests or model tokens.
 
 ### DeepSeek

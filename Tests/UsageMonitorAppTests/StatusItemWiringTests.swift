@@ -115,6 +115,164 @@ final class StatusItemWiringTests: XCTestCase {
         controller.uninstall()
     }
 
+    // MARK: - Popover geometry (REVISION_SPEC.md §8, §11.5)
+
+    /// The panel's size must be the page's real size, for every display-preference state.
+    func testPanelSizeMatchesTheFixedPageSizes() {
+        let defaults = UserDefaults(suiteName: "UsageMonitorAppTests.PanelSize." + UUID().uuidString)!
+        defer { defaults.removePersistentDomain(forName: "UsageMonitorAppTests.PanelSize") }
+        let preferences = DetailPreferences(defaults: defaults)
+
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 552))
+
+        preferences.showDeepSeek = false
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 498))
+
+        preferences.showCommandCode = false
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 330))
+
+        preferences.showDeepSeek = true
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 384))
+    }
+
+    /// The hosting controller and the popover must be given the same size before `show`, so
+    /// AppKit places a panel of the final size instead of resizing one already on screen.
+    func testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow() {
+        let controller = StatusItemController()
+        let model = makeModel()
+        controller.install(model: model)
+        defer { controller.uninstall() }
+
+        let preferences = DetailPreferences.shared
+        let hosting = try? XCTUnwrap(controller.makePanelViewController())
+        XCTAssertNotNil(hosting)
+
+        let expected = StatusItemController.panelSize(for: preferences)
+        let popover = NSPopover()
+        // Mirrors exactly what `togglePanel` does, in the same order, before `show`.
+        hosting?.preferredContentSize = expected
+        popover.contentSize = expected
+        popover.contentViewController = hosting
+
+        XCTAssertEqual(hosting?.preferredContentSize, expected)
+        XCTAssertEqual(popover.contentSize, expected)
+        XCTAssertEqual(NSSize(width: hosting!.view.fittingSize.width,
+                              height: hosting!.view.fittingSize.height),
+                       expected,
+                       "the hosted page must lay out at the size the popover was given")
+    }
+
+    func testTheAnchorIsTheButtonMidpoint() {
+        let bounds = NSRect(x: 0, y: 0, width: 96, height: 24)
+        let anchor = StatusItemController.centerAnchor(in: bounds)
+        XCTAssertEqual(anchor.midX, bounds.midX, accuracy: 0.001)
+        XCTAssertEqual(anchor.width, 2)
+        XCTAssertEqual(anchor.minY, bounds.minY)
+        XCTAssertEqual(anchor.height, bounds.height)
+
+        // A wider label moves the anchor with it rather than pinning to an edge.
+        let wide = StatusItemController.centerAnchor(in: NSRect(x: 0, y: 0, width: 180, height: 24))
+        XCTAssertEqual(wide.midX, 90, accuracy: 0.001)
+    }
+
+    func testThePanelOnlyShowsWhenTheWholePageFitsOnScreen() {
+        let size = NSSize(width: 440, height: 552)
+
+        // A normal laptop screen: the panel fits with room to spare.
+        XCTAssertTrue(StatusItemController.panelFits(
+            size: size, visibleFrame: CGRect(x: 0, y: 25, width: 1512, height: 944)))
+
+        // A narrow portrait or split screen: the 440 pt page no longer fits, so the caller
+        // must fall back to the detail window instead of showing a clipped popover.
+        XCTAssertFalse(StatusItemController.panelFits(
+            size: size, visibleFrame: CGRect(x: 0, y: 25, width: 420, height: 944)))
+        XCTAssertFalse(StatusItemController.panelFits(
+            size: size, visibleFrame: CGRect(x: 0, y: 25, width: 1512, height: 500)))
+
+        // No screen at all: never claim it fits.
+        XCTAssertFalse(StatusItemController.panelFits(size: size, visibleFrame: nil))
+        XCTAssertFalse(StatusItemController.panelFits(size: size, visibleFrame: .zero))
+    }
+
+    /// The three menu-bar positions REVISION_SPEC.md §12 asks evidence for, recorded as the
+    /// numbers the fit decision is actually made from. Final placement is AppKit's; what this
+    /// pins is that the page can never be shown where it does not fit.
+    func testRecordPopoverFrameEvidenceForCentreAndBothEdges() throws {
+        let preferences = DetailPreferences.shared
+        let size = StatusItemController.panelSize(for: preferences)
+        let screen = CGRect(x: 0, y: 25, width: 1512, height: 944)
+
+        let positions: [(String, CGFloat)] = [
+            ("中央", screen.midX),
+            ("左边缘", screen.minX + 20),
+            ("右边缘", screen.maxX - 20),
+        ]
+
+        var lines = [
+            "1.3.0 弹层 frame 证据（合成屏幕，非截图）",
+            "屏幕 visibleFrame: \(Int(screen.width))×\(Int(screen.height)) @ (\(Int(screen.minX)),\(Int(screen.minY)))",
+            "弹层内容尺寸: \(Int(size.width))×\(Int(size.height))",
+            "锚点：状态按钮 bounds.midX 处 2 pt 宽矩形",
+            "",
+            "位置\t图标 midX\t锚点 minX\t能否完整容纳\t决策",
+        ]
+        for (name, midX) in positions {
+            let anchor = StatusItemController.centerAnchor(
+                in: NSRect(x: midX - 48, y: 0, width: 96, height: 24))
+            let fits = StatusItemController.panelFits(size: size, visibleFrame: screen)
+            lines.append("\(name)\t\(Int(midX))\t\(Int(anchor.minX))\t\(fits ? "是" : "否")\t\(fits ? "显示弹层" : "打开普通详情窗口")")
+        }
+        lines.append("")
+        lines.append("说明：图标中心两侧各约 220 pt；弹层整体宽度 440 pt。图标贴近屏幕边缘时由 AppKit 调整箭头位置，")
+        lines.append("本实现只在 440 × 页面高度无法完整落在 visibleFrame 内时改用普通详情窗口（AppKit 会自行把弹层移入屏幕）。")
+
+        let directory = try MenuBarEvidenceRenderTests.evidenceDirectory()
+        try lines.joined(separator: "\n").write(to: directory.appendingPathComponent("11-popover-frame-evidence.txt"),
+                                                atomically: true, encoding: .utf8)
+    }
+
+    // MARK: - Settings window lifecycle (REVISION_SPEC.md §11.1)
+
+    /// The settings window is created on demand and reused, so opening it repeatedly never
+    /// stacks a second window — and, because nothing creates it at launch, a cold start has
+    /// no window at all.
+    func testTheSettingsWindowIsCreatedOnDemandAndReused() {
+        let controller = StatusItemController()
+        let model = makeModel()
+        controller.install(model: model)
+        defer { controller.uninstall() }
+
+        XCTAssertEqual(visibleSettingsWindows().count, 0,
+                       "nothing may create the settings window before the user asks for it")
+
+        controller.showSettingsWindow()
+        let first = visibleSettingsWindows()
+        XCTAssertEqual(first.count, 1, "one settings window per request at most")
+
+        let size = first.first?.contentView?.fittingSize
+        XCTAssertEqual(size?.width, 520)
+        XCTAssertEqual(size?.height, 600)
+
+        controller.showSettingsWindow()
+        controller.showSettingsWindow()
+        XCTAssertEqual(visibleSettingsWindows().count, 1, "reopening must not add another instance")
+    }
+
+    private func visibleSettingsWindows() -> [NSWindow] {
+        NSApp.windows.filter { $0.title == "明明有数设置" && $0.isVisible }
+    }
+
+    /// The regular detail window uses the same fixed page width and the same height the
+    /// preferences ask for, so the fallback presentation is not a second layout.
+    func testTheDetailWindowUsesTheFixedPageSize() {
+        let controller = DetailWindowController(model: makeModel(), onSettings: nil)
+        let window = controller.window
+        XCTAssertEqual(window?.frame.width, DetailPageLayout.pageWidth)
+        XCTAssertEqual(window?.contentView?.fittingSize.width, DetailPageLayout.pageWidth)
+        XCTAssertEqual(window?.contentView?.fittingSize.height,
+                       UsagePanelView.preferredHeight(for: DetailPreferences.shared))
+    }
+
     // MARK: - Redirect pollution at the app boundary
 
     /// The provider flows run through transports built exactly like the app builds them.

@@ -3,10 +3,13 @@ import Foundation
 /// Persists the most recent successful snapshot as normalized numbers only
 /// (PROJECT_SPEC.md §11, §14: no auth payloads, no raw RPC responses).
 ///
-/// v1.1 adds account attribution: an entry can be stored for a specific Codex account and
-/// is only ever returned to that account. The pre-existing unattributed store is kept for
-/// the no-account-known case and is deliberately never served when an account is known, so
-/// a v1.0 cache can never be presented as the current account's data.
+/// Three generations of storage coexist here, each deliberately unable to serve another's
+/// data:
+/// - v1: unattributed, kept only for the no-account-known case;
+/// - v2 (1.1+): keyed by Codex account, for the single-account wiring;
+/// - v3 (1.3.0): keyed by `profileID + accountID`, which is what two long-lived ChatGPT
+///   profiles need. A v2 entry is never served to a profile; it is retired by the one-time
+///   migration in `migrateLegacyCacheIfNeeded(profileID:resolvedAccountID:)`.
 public final class UsageCache: @unchecked Sendable {
     public static let maxAgeForPanelOpenRefresh: TimeInterval = 30
     public static let stalenessWarnThreshold: TimeInterval = 10 * 60
@@ -15,6 +18,9 @@ public final class UsageCache: @unchecked Sendable {
     private let storageKey = "UsageMonitor.lastSnapshot.v1"
     private let accountStorageKey = "UsageMonitor.lastSnapshotByAccount.v2"
     private let accountIDKey = "UsageMonitor.lastAccountID.v2"
+    private let profileStorageKey = "UsageMonitor.lastSnapshotByProfileAccount.v3"
+    private let profileAccountIDKey = "UsageMonitor.lastAccountIDByProfile.v3"
+    private let legacyMigrationKey = "UsageMonitor.legacyCacheMigration.v3"
     private let queue = DispatchQueue(label: "usagemonitor.cache")
 
     public init(userDefaults: UserDefaults = .standard) {
@@ -119,6 +125,169 @@ public final class UsageCache: @unchecked Sendable {
         if let encoded = try? JSONEncoder().encode(entries) {
             userDefaults.set(encoded, forKey: accountStorageKey)
         }
+    }
+
+    // MARK: Profile-scoped store (1.3.0)
+
+    /// Stores a snapshot for exactly one `profileID + accountID` pair.
+    ///
+    /// A nil `accountID` is a real state, not a wildcard: it is how a profile whose identity
+    /// could not be established yet keeps its own entry. Two profiles therefore never share
+    /// a bucket, even while neither knows which account it is signed in as.
+    public func save(_ snapshot: UsageSnapshot, profileID: String, accountID: String?) {
+        guard !profileID.isEmpty else { return }
+        guard let data = try? JSONEncoder().encode(snapshot.persisted) else { return }
+        queue.sync {
+            var entries = loadProfileEntries()
+            entries[Self.profileCacheKey(profileID: profileID, accountID: accountID)] = data
+            persistProfileEntries(entries)
+        }
+    }
+
+    /// Returns the snapshot stored for this profile and account, and only that one.
+    /// A known account is never served the profile's unattributed entry, and vice versa.
+    public func load(profileID: String, accountID: String?) -> UsageSnapshot? {
+        guard !profileID.isEmpty else { return nil }
+        var result: UsageSnapshot?
+        queue.sync {
+            let entries = loadProfileEntries()
+            guard let data = entries[Self.profileCacheKey(profileID: profileID, accountID: accountID)] else { return }
+            do {
+                let persisted = try JSONDecoder().decode(UsageSnapshot.Persisted.self, from: data)
+                result = UsageSnapshot.from(persisted: persisted)
+            } catch {
+                // Corrupt entry: drop it, never surface garbage as data.
+                var updated = entries
+                updated.removeValue(forKey: Self.profileCacheKey(profileID: profileID, accountID: accountID))
+                persistProfileEntries(updated)
+                result = nil
+            }
+        }
+        return result
+    }
+
+    @discardableResult
+    public func clear(profileID: String, accountID: String?) -> Bool {
+        guard !profileID.isEmpty else { return false }
+        return queue.sync {
+            var entries = loadProfileEntries()
+            let removed = entries.removeValue(forKey: Self.profileCacheKey(profileID: profileID, accountID: accountID)) != nil
+            if removed { persistProfileEntries(entries) }
+            return removed
+        }
+    }
+
+    /// Remembers the account one profile last read successfully.
+    ///
+    /// Per profile on purpose: a single global value is exactly what let two long-lived
+    /// profiles overwrite each other's attribution before 1.3.0.
+    public func saveLastKnownAccountID(_ accountID: String, profileID: String) {
+        guard !accountID.isEmpty, !profileID.isEmpty else { return }
+        queue.sync {
+            var entries = loadProfileAccountIDs()
+            entries[profileID] = accountID
+            if let encoded = try? JSONEncoder().encode(entries) {
+                userDefaults.set(encoded, forKey: profileAccountIDKey)
+            }
+        }
+    }
+
+    public func loadLastKnownAccountID(profileID: String) -> String? {
+        guard !profileID.isEmpty else { return nil }
+        return queue.sync {
+            let value = loadProfileAccountIDs()[profileID]
+            return (value?.isEmpty == false) ? value : nil
+        }
+    }
+
+    // MARK: 1.2.1 -> 1.3.0 migration
+
+    /// One-time migration of the v2 account cache, run the first time profile A completes a
+    /// successful `account/read` (REQUIREMENTS.md §4.3).
+    ///
+    /// Rules, all enforced here:
+    /// - nothing is displayed from the v2 store before this runs, because 1.3.0 only ever
+    ///   reads the v3 namespace;
+    /// - the v2 entry moves to `chatgpt-a` only when its `accountID` is *identical* to the
+    ///   account A actually resolved;
+    /// - a mismatch, or a missing v2 entry, deletes the v2 entry outright rather than leaving
+    ///   it to be picked up later;
+    /// - account B is never a migration target, whatever the v2 entry says;
+    /// - the v1 unattributed store is retired at the same moment, so no pre-1.3.0 number can
+    ///   reappear through the legacy accessors.
+    public func migrateLegacyCacheIfNeeded(profileID: String, resolvedAccountID: String) {
+        guard profileID == ChatGPTAccountProfile.chatGPTA.id else { return }
+        guard !resolvedAccountID.isEmpty else { return }
+        queue.sync {
+            guard !userDefaults.bool(forKey: legacyMigrationKey) else { return }
+
+            let legacyAccountID = {
+                let value = userDefaults.string(forKey: accountIDKey)
+                return (value?.isEmpty == false) ? value : nil
+            }()
+            let legacyEntries = loadAccountEntries()
+
+            if let legacyAccountID,
+               legacyAccountID == resolvedAccountID,
+               let data = legacyEntries[legacyAccountID] {
+                var entries = loadProfileEntries()
+                entries[Self.profileCacheKey(profileID: profileID, accountID: legacyAccountID)] = data
+                persistProfileEntries(entries)
+                var accountIDs = loadProfileAccountIDs()
+                accountIDs[profileID] = legacyAccountID
+                if let encoded = try? JSONEncoder().encode(accountIDs) {
+                    userDefaults.set(encoded, forKey: profileAccountIDKey)
+                }
+            }
+
+            // Retired either way: migrated or not, the v2 and v1 stores must never be read
+            // again by this app.
+            userDefaults.removeObject(forKey: accountStorageKey)
+            userDefaults.removeObject(forKey: accountIDKey)
+            userDefaults.removeObject(forKey: storageKey)
+            userDefaults.set(true, forKey: legacyMigrationKey)
+        }
+    }
+
+    /// Whether the one-time v2 retirement has already happened. Test and diagnostic seam.
+    public var hasCompletedLegacyMigration: Bool {
+        queue.sync { userDefaults.bool(forKey: legacyMigrationKey) }
+    }
+
+    private func loadProfileEntries() -> [String: Data] {
+        guard let data = userDefaults.data(forKey: profileStorageKey) else { return [:] }
+        do {
+            return try JSONDecoder().decode([String: Data].self, from: data)
+        } catch {
+            userDefaults.removeObject(forKey: profileStorageKey)
+            return [:]
+        }
+    }
+
+    private func persistProfileEntries(_ entries: [String: Data]) {
+        if entries.isEmpty {
+            userDefaults.removeObject(forKey: profileStorageKey)
+            return
+        }
+        if let encoded = try? JSONEncoder().encode(entries) {
+            userDefaults.set(encoded, forKey: profileStorageKey)
+        }
+    }
+
+    private func loadProfileAccountIDs() -> [String: String] {
+        guard let data = userDefaults.data(forKey: profileAccountIDKey) else { return [:] }
+        do {
+            return try JSONDecoder().decode([String: String].self, from: data)
+        } catch {
+            userDefaults.removeObject(forKey: profileAccountIDKey)
+            return [:]
+        }
+    }
+
+    /// `profileID|accountID`. The separator is a unit separator, which cannot occur in either
+    /// a profile identifier or an account identifier, so two pairs can never collide.
+    static func profileCacheKey(profileID: String, accountID: String?) -> String {
+        "\(profileID)\u{1F}\(accountID ?? "")"
     }
 
     // MARK: Last known account

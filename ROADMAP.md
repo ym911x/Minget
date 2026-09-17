@@ -18,13 +18,16 @@
 
 `v1.2.1` 已完成：Command Code 卡片金额统一为两位小数，并移除卡片内重复的相对更新时间，保留详情页顶部的全局刷新状态。310 项自动化测试、Release 构建和严格签名检查通过，真实界面已由用户确认。资料位于 `docs/versions/1.2.1/`，发布页为 [GitHub Release v1.2.1](https://github.com/ym911x/Minget/releases/tag/v1.2.1)。
 
+`v1.3.0` 已完成并发布。首轮的 720 pt 双列和启动空窗口已经修复；用户后续实测推动详情页收窄为 440 pt 单列，ChatGPT 与 Command Code 周期块增加克制间距，Command Code 额度文字精简为余额/总计且非月度只显示绝对重置时间，DeepSeek 菜单栏移除“余额”二字并放大，详情卡改成 48 pt 单行。双轨语义、屏幕容纳降级、点火退出清理与实时确认规则继续保持。425 项自动测试、Release 构建、严格签名和真实详情页验收通过。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。资料位于 `docs/versions/1.3.0/`，发布页为 [GitHub Release v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0)。
+
 ## 候选方向
 
 以下内容作为迭代候选，尚未确定版本号和优先级：
 
 - 改善 DeepSeek 密钥输入框的焦点、保存反馈和保存后的自动关闭行为。
 - 为 DeepSeek 增加可选的菜单栏展示项。
-- 增加多个 Codex 账号的切换和分别展示。
+- 增加第三个及更多 ChatGPT Account Profile 的配置界面；1.3.0 的底层模型已按可扩展设计，但只落地两个只读 Profile。
+- 增加自动点火开关、定时表和点火历史；1.3.0 明确不做，这些继续由现有外部 LaunchAgent 和 `minget-fire` 承担。
 - 增加余额过低、额度临近耗尽和连接失效的本地通知。
 - 制作可分发的签名、公证和更新流程。
 - 增加版本内诊断导出，默认排除 Cookie、令牌和 API Key。
@@ -41,6 +44,6 @@
 
 ## English summary
 
-The `v1.0.0` baseline is frozen. Candidate directions include stronger Zhipu session recovery, improved DeepSeek credential UX, optional provider balances in the menu bar, multiple Codex accounts, local threshold notifications, notarized distribution, and privacy-safe diagnostics export.
+The `v1.0.0` baseline is frozen. `v1.3.0` is released with an explicit AppKit entry, a fixed 440 pt single column, restored ChatGPT dual tracks, simplified Command Code balance/reset copy, a single-line DeepSeek card, enlarged DeepSeek menu-bar typography, screen-aware panel fallback, and complete fire-child shutdown. Candidate directions include improved DeepSeek credential UX, more account profiles, scheduled firing, local notifications, notarized distribution, and privacy-safe diagnostics export.
 
 Each future version receives its own requirements, implementation plan, review, and acceptance records under `docs/versions/<version>/`. Historical v1.0 documents remain unchanged.

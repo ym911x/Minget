@@ -56,8 +56,34 @@ public struct ProviderUsage: Equatable, Sendable, Codable {
     public let summary: ProviderUsageSummary?
     public let planName: String?
     public let billingPeriodEnd: Date?
-    public init(windows: [ProviderUsageWindow], summary: ProviderUsageSummary?, planName: String? = nil, billingPeriodEnd: Date? = nil) {
-        self.windows = windows; self.summary = summary; self.planName = planName; self.billingPeriodEnd = billingPeriodEnd
+    /// Billing-cycle start. Only populated when the service actually reported it, so the
+    /// monthly progress line can refuse to draw instead of assuming a 30-day month
+    /// (REVISION_SPEC.md §7.3).
+    public let billingPeriodStart: Date?
+    public init(windows: [ProviderUsageWindow], summary: ProviderUsageSummary?, planName: String? = nil,
+                billingPeriodEnd: Date? = nil, billingPeriodStart: Date? = nil) {
+        self.windows = windows; self.summary = summary; self.planName = planName
+        self.billingPeriodEnd = billingPeriodEnd; self.billingPeriodStart = billingPeriodStart
+    }
+}
+
+public extension ProviderUsageWindow {
+    /// Remaining credit for this window: the service's own `remaining` when it supplied one,
+    /// otherwise `limit - used`. Nil when neither can be derived, so a caller never prints a
+    /// fabricated zero.
+    var effectiveRemaining: Decimal? {
+        if let remaining { return remaining }
+        guard let used, let limit else { return nil }
+        return limit - used
+    }
+
+    /// Fraction of the window still remaining, in `0...1`, or nil when it cannot be computed
+    /// from real values. REVISION_SPEC.md §7.2: the track shows *remaining*, so the bright
+    /// region shrinks from the right as credit is consumed.
+    var remainingFraction: Double? {
+        guard let limit, limit > 0, let remaining = effectiveRemaining else { return nil }
+        let clamped = min(max(remaining, 0), limit)
+        return NSDecimalNumber(decimal: clamped / limit).doubleValue
     }
 }
 

@@ -29,6 +29,68 @@ public enum UsageFormatting {
         return "\(Int(window.remainingPercent.rounded()))%"
     }
 
+    // MARK: 1.3.0 labelled menu bar content
+
+    /// Placeholder for a missing number in the 1.3.0 menu bar formats. UI_SPEC.md §8 writes
+    /// these as an em dash, distinct from the en dash the 1.0.2 panel helpers use.
+    public static let menuBarPlaceholder = "—"
+
+    /// Rounded remaining percent with the 1.3.0 placeholder, never a fabricated 0.
+    public static func menuBarPercentText(_ window: RateLimitWindow?) -> String {
+        guard let window else { return menuBarPlaceholder }
+        return "\(Int(window.remainingPercent.rounded()))%"
+    }
+
+    /// Full ChatGPT menu bar text: `A 5H 78% | W 42%` (UI_SPEC.md §8).
+    ///
+    /// A window with no data shows `A 5H — | W —`; the account's short label is always
+    /// present, so the user can tell which account the item is showing.
+    public static func labeledMenuBarTitle(shortLabel: String,
+                                           fiveHour: RateLimitWindow?,
+                                           weekly: RateLimitWindow?) -> String {
+        let prefix = shortLabel.isEmpty ? "" : "\(shortLabel) "
+        return "\(prefix)5H \(menuBarPercentText(fiveHour)) | W \(menuBarPercentText(weekly))"
+    }
+
+    /// Compact ChatGPT menu bar text: `A 78% 42%`. Both quota values survive; only the
+    /// separator and the `5H`/`W` words are dropped.
+    public static func labeledCompactMenuBarTitle(shortLabel: String,
+                                                  fiveHour: RateLimitWindow?,
+                                                  weekly: RateLimitWindow?) -> String {
+        let prefix = shortLabel.isEmpty ? "" : "\(shortLabel) "
+        return "\(prefix)\(menuBarPercentText(fiveHour)) \(menuBarPercentText(weekly))"
+    }
+
+    /// Fixed two decimals with no grouping, as UI_SPEC.md §8 requires for the DeepSeek menu
+    /// bar amount. Display-only: the underlying `Decimal` is not changed.
+    public static func menuBarAmount(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        return formatter.string(from: NSDecimalNumber(decimal: value)) ?? menuBarPlaceholder
+    }
+
+    /// Full DeepSeek menu bar text: `DS CNY 123.45`. With no currency reported the
+    /// position is kept but explicitly unnamed: `DS — 123.45`. No code is ever guessed.
+    public static func deepSeekMenuBarTitle(currency: String?, amount: Decimal?) -> String {
+        guard let amount else { return "DS \(menuBarPlaceholder)" }
+        let text = menuBarAmount(amount)
+        guard let currency, !currency.isEmpty else { return "DS \(menuBarPlaceholder) \(text)" }
+        return "DS \(currency) \(text)"
+    }
+
+    /// Compact DeepSeek menu bar text: `DS CNY 123.45`.
+    public static func compactDeepSeekMenuBarTitle(currency: String?, amount: Decimal?) -> String {
+        guard let amount else { return "DS \(menuBarPlaceholder)" }
+        let text = menuBarAmount(amount)
+        guard let currency, !currency.isEmpty else { return "DS \(menuBarPlaceholder) \(text)" }
+        return "DS \(currency) \(text)"
+    }
+
     // MARK: Panel
 
     /// Chinese display name for a window kind.
@@ -78,6 +140,16 @@ public enum UsageFormatting {
     public static func resetPointText(_ window: RateLimitWindow) -> String {
         guard let resetsAt = window.resetsAt else { return "时间未知" }
         return "\(formatDate(resetsAt)) \(formatClock(resetsAt))"
+    }
+
+    /// `09-30`. Used where a date appears without a time (the monthly cycle end).
+    public static func shortDate(_ date: Date) -> String {
+        formatDate(date)
+    }
+
+    /// `09-17 05:35`. Used where a date and a clock time appear together.
+    public static func shortDateTime(_ date: Date) -> String {
+        "\(formatDate(date)) \(formatClock(date))"
     }
 
     /// Displays the optional earned-reset summary. Cached snapshots intentionally do not

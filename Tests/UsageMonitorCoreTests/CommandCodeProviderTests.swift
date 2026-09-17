@@ -97,6 +97,67 @@ final class CommandCodeProviderTests: XCTestCase {
         XCTAssertFalse(fingerprint.contains("command"))
         XCTAssertEqual(fingerprint.count, 6)
     }
+
+    // MARK: - Billing cycle bounds (REVISION_SPEC.md §7.3)
+
+    /// Runs one fetch with a credits/summary payload that always parses, plus the subscription
+    /// body under test.
+    private func usage(subscriptionBody: String) async throws -> ProviderUsage {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{"monthlyCredits":"7.25"},"windowLimits":{"fiveHour":{"cap":"4","used":"1"}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(#"{"totalTokens":"1000","totalCount":10}"#)
+            case CommandCodeProvider.subscriptionsPath:
+                return response(subscriptionBody)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        return try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+    }
+
+    func testBillingPeriodStartIsParsedWhenTheServiceReportsIt() async throws {
+        let parsed = try await usage(subscriptionBody: #"""
+        {"success":true,"data":{"planId":"individual-go","currentPeriodStart":"2026-09-01T00:00:00.000Z","currentPeriodEnd":"2026-10-01T00:00:00.000Z"}}
+        """#)
+        let start = try XCTUnwrap(parsed.billingPeriodStart)
+        let end = try XCTUnwrap(parsed.billingPeriodEnd)
+        XCTAssertLessThan(start, end)
+        XCTAssertEqual(end.timeIntervalSince(start), 30 * 24 * 3600, accuracy: 1)
+    }
+
+    func testBillingPeriodStartStaysAbsentWhenTheServiceOmitsIt() async throws {
+        let parsed = try await usage(subscriptionBody: #"""
+        {"success":true,"data":{"planId":"individual-go","currentPeriodEnd":"2026-10-01T00:00:00.000Z"}}
+        """#)
+        XCTAssertNil(parsed.billingPeriodStart,
+                     "a missing start must stay missing: the monthly bar refuses to guess a cycle")
+        XCTAssertNotNil(parsed.billingPeriodEnd)
+    }
+
+    func testAReversedBillingPeriodIsRejectedAsUnusable() async throws {
+        let parsed = try await usage(subscriptionBody: #"""
+        {"success":true,"data":{"planId":"individual-go","currentPeriodStart":"2026-10-01T00:00:00.000Z","currentPeriodEnd":"2026-09-01T00:00:00.000Z"}}
+        """#)
+        XCTAssertNil(parsed.billingPeriodStart, "a start after the end cannot describe a cycle")
+        XCTAssertNotNil(parsed.billingPeriodEnd, "the end is still reported as the service gave it")
+    }
+
+    func testABillingPeriodStartEqualToTheEndIsRejected() async throws {
+        let parsed = try await usage(subscriptionBody: #"""
+        {"success":true,"data":{"currentPeriodStart":"2026-10-01T00:00:00.000Z","currentPeriodEnd":"2026-10-01T00:00:00.000Z"}}
+        """#)
+        XCTAssertNil(parsed.billingPeriodStart)
+    }
+
+    func testAMissingSubscriptionLeavesBothBoundsAbsent() async throws {
+        let parsed = try await usage(subscriptionBody: #"{"success":true,"data":null}"#)
+        XCTAssertNil(parsed.billingPeriodStart)
+        XCTAssertNil(parsed.billingPeriodEnd)
+    }
 }
 
 private func response(_ json: String) -> ProviderHTTPResponse {

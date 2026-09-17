@@ -3,7 +3,7 @@ import Foundation
 /// What the UI should render. Mapping lives in core so the live/cached distinction is
 /// testable and so the snapshot's own `source` is authoritative: a result the service
 /// labels non-live can never be displayed as live, whatever its error field says.
-public enum UsageDisplay: Equatable {
+public enum UsageDisplay: Equatable, Sendable {
     case live(UsageSnapshot)
     case stale(UsageSnapshot, UsageError)
     case unavailable(UsageError)

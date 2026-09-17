@@ -94,10 +94,57 @@ final class ProductionWiringTests: XCTestCase {
                                            cache: ProviderCache(userDefaults: defaults))
         let service = UsageService(factory: { throw UsageError.appServerStartupFailed(.launchFailed) },
                                    cache: UsageCache(userDefaults: defaults))
-        return UsageViewModel(service: service, providerEngine: engine)
+        return UsageViewModel(service: service,
+                              providerEngine: engine,
+                              menuBarPreferences: MenuBarPreferences(defaults: defaults))
     }
 
     // MARK: - The production composition root
+
+    /// 1.3.0 (revision): the entry point is explicit AppKit, so no SwiftUI scene — and in
+    /// particular no `Settings { EmptyView() }` scene — can be restored at launch.
+    ///
+    /// This is the compile-time half of the proof: `MingetMain` is the `@main` type and the
+    /// delegate is an `NSApplicationDelegate`, with no `App`/`Scene` conformance in the
+    /// module. `StartupWindowTests` supplies the behavioural half by launching the signed
+    /// bundle and inspecting the windows it really owns.
+    func testTheEntryPointIsAppKitWithoutAnyScene() {
+        let entryPoint: () -> Void = MingetMain.main
+        _ = entryPoint
+        XCTAssertTrue(AppDelegate.self is NSApplicationDelegate.Type)
+    }
+
+    /// 1.3.0: the container must build the multi-profile runtime, not a single Codex service.
+    /// Each profile gets its own service and its own isolated `CODEX_HOME`; a container that
+    /// still created one service would silently show one account in both cards.
+    func testTheProductionContainerCreatesOneRuntimePerProfileWithDistinctCodexHomes() {
+        let container = AppContainer(credentials: InMemoryCredentialStore(),
+                                     transport: StubTransport(),
+                                     menuBarPreferences: MenuBarPreferences(defaults: defaults))
+
+        XCTAssertEqual(container.codexProfiles.profileIDs, ["chatgpt-a", "chatgpt-b"])
+        XCTAssertEqual(container.model.profileStates.count, 2,
+                       "the production composition must publish both profile cards")
+        XCTAssertEqual(container.model.profileStates.map(\.profile.shortLabel), ["A", "B"])
+
+        // Two separate services, so a hung account cannot block the other.
+        let serviceA = container.codexProfiles.runtime(for: "chatgpt-a")?.service
+        let serviceB = container.codexProfiles.runtime(for: "chatgpt-b")?.service
+        XCTAssertNotNil(serviceA)
+        XCTAssertNotNil(serviceB)
+        XCTAssertFalse(serviceA === serviceB, "each profile owns its own service object")
+
+        let homeA = container.codexProfiles.childEnvironment(for: "chatgpt-a")?["CODEX_HOME"]
+        let homeB = container.codexProfiles.childEnvironment(for: "chatgpt-b")?["CODEX_HOME"]
+        XCTAssertNotNil(homeA)
+        XCTAssertNotNil(homeB)
+        XCTAssertNotEqual(homeA, homeB, "the two children must not share a CODEX_HOME")
+        XCTAssertEqual(homeA?.hasSuffix("/.codex-minget-a"), true)
+        XCTAssertEqual(homeB?.hasSuffix("/.codex-minget-b"), true)
+        // The rest of the environment is preserved, not replaced.
+        XCTAssertEqual(container.codexProfiles.childEnvironment(for: "chatgpt-a")?["PATH"],
+                       ProcessInfo.processInfo.environment["PATH"])
+    }
 
     /// The regression test for the Round 6 root cause: saving through the real
     /// `AppContainer` must reach the container's credential store and immediately verify

@@ -26,8 +26,28 @@ final class MenuBarLabelWiringTests: XCTestCase {
                                    cache: UsageCache(userDefaults: Self.isolatedDefaults()))
         return UsageViewModel(service: service,
                               providerEngine: engine,
+                              menuBarPreferences: MenuBarPreferences(defaults: Self.isolatedDefaults()),
                               refreshInterval: refreshInterval,
                               providerRefreshInterval: 3600)
+    }
+
+    /// Content for one ChatGPT account, through the 1.3.0 source-based builder.
+    private func content(_ display: UsageDisplay,
+                         label: String = "A",
+                         connection: UsageService.ConnectionState = .connected,
+                         mode: MenuBarSpaceMode = .full) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .chatGPT(shortLabel: label, display: display,
+                                                    connectionState: connection),
+                                   now: Date(), mode: mode)
+    }
+
+    private func deepSeekContent(currency: String?, amount: Decimal?,
+                                 cached: Bool = false,
+                                 mode: MenuBarSpaceMode = .full) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(currency: currency,
+                                                                            amount: amount,
+                                                                            isCached: cached)),
+                                   now: Date(), mode: mode)
     }
 
     private static func isolatedDefaults() -> UserDefaults {
@@ -118,10 +138,9 @@ final class MenuBarLabelWiringTests: XCTestCase {
         let display = UsageDisplay.live(snapshot)
 
         for mode in [MenuBarSpaceMode.full, .compact] {
-            let content = MenuBarContentBuilder.make(display: display, connectionState: .connected,
-                                                     now: Date(), mode: mode)
-            let textWidth = MenuBarLabelContent.estimatedTextWidth(content.text)
-            let measured = fittingWidth(MenuBarLabelContent(content: content))
+            let built = content(display, mode: mode)
+            let textWidth = MenuBarLabelContent.estimatedTextWidth(built.text)
+            let measured = fittingWidth(MenuBarLabelContent(content: built))
             XCTAssertEqual(measured, textWidth, accuracy: 0.5,
                            "\(mode.description): the label must be exactly the text width")
             // And the rows use that same width for both rows.
@@ -136,10 +155,8 @@ final class MenuBarLabelWiringTests: XCTestCase {
         let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
                                      weekly: window(.weekly, remainingPercent: 42),
                                      fetchedAt: Date(), source: .codexAppServer)
-        let normal = MenuBarContentBuilder.make(display: .live(snapshot), connectionState: .connected,
-                                                now: Date(), mode: .full)
-        let warned = MenuBarContentBuilder.make(display: .stale(snapshot, .rpcFailed(.other)),
-                                                connectionState: .connected, now: Date(), mode: .full)
+        let normal = content(.live(snapshot), mode: .full)
+        let warned = content(.stale(snapshot, .rpcFailed(.other)), mode: .full)
 
         XCTAssertEqual(normal.attention, .none)
         XCTAssertEqual(warned.attention, .warning)
@@ -155,12 +172,77 @@ final class MenuBarLabelWiringTests: XCTestCase {
         let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
                                      weekly: window(.weekly, remainingPercent: 42),
                                      fetchedAt: Date(), source: .codexAppServer)
-        let content = MenuBarContentBuilder.make(display: .live(snapshot), connectionState: .connected,
-                                                 now: Date(), mode: .compact)
-        XCTAssertEqual(content.text, "5H 78% W 42%")
-        XCTAssertTrue(content.showsTimeBars)
-        let measured = fittingWidth(MenuBarLabelContent(content: content))
-        XCTAssertEqual(measured, MenuBarLabelContent.estimatedTextWidth(content.text), accuracy: 0.5)
+        let built = content(.live(snapshot), mode: .compact)
+        XCTAssertEqual(built.text, "A 78% 42%")
+        XCTAssertTrue(built.showsTimeBars)
+        let measured = fittingWidth(MenuBarLabelContent(content: built))
+        XCTAssertEqual(measured, MenuBarLabelContent.estimatedTextWidth(built.text), accuracy: 0.5)
+    }
+
+    // MARK: 1.3.0: three sources, each measured
+
+    /// The two accounts must be distinguishable on the menu bar, and both must still fit the
+    /// compact fallback width.
+    func testBothAccountsAndDeepSeekAreMeasurableInBothModes() {
+        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
+                                     weekly: window(.weekly, remainingPercent: 42),
+                                     fetchedAt: Date(), source: .codexAppServer)
+        let contents: [(String, MenuBarContent)] = [
+            ("A full", content(.live(snapshot), label: "A", mode: .full)),
+            ("B full", content(.live(snapshot), label: "B", mode: .full)),
+            ("A compact", content(.live(snapshot), label: "A", mode: .compact)),
+            ("B compact", content(.live(snapshot), label: "B", mode: .compact)),
+            ("DS full", deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)),
+            ("DS compact", deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)),
+            ("DS no data", deepSeekContent(currency: nil, amount: nil, mode: .compact)),
+        ]
+
+        for (name, built) in contents {
+            let measured = fittingWidth(MenuBarLabelContent(content: built))
+            let textWidth = MenuBarLabelContent.estimatedTextWidth(built.text)
+            XCTAssertGreaterThan(measured, 0, "\(name) must never measure as zero width")
+            XCTAssertGreaterThanOrEqual(measured, textWidth - 0.5,
+                                        "\(name): the label is at least its text width")
+            if built.attention == .none && built.showsTimeBars {
+                XCTAssertEqual(measured, textWidth, accuracy: 0.5,
+                               "\(name): ChatGPT with no warning marker is exactly its text width")
+            }
+        }
+
+        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(contents[0].1.text),
+                             MenuBarLabelContent.estimatedTextWidth(contents[2].1.text),
+                             "full mode is wider than compact for the same account")
+    }
+
+    func testDeepSeekSourceHasNoTimeRowsAndIsNarrowerThanTheChatGPTFullLabel() {
+        let deepSeek = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)
+        XCTAssertFalse(deepSeek.showsTimeBars)
+        let deepSeekWidth = fittingWidth(MenuBarLabelContent(content: deepSeek))
+        // Without the two rows the DeepSeek label is a single text line.
+        XCTAssertGreaterThan(deepSeekWidth, 0)
+        XCTAssertGreaterThan(deepSeekWidth, MenuBarLabelContent.estimatedTextWidth(deepSeek.text),
+                             "the DeepSeek line uses larger type and deliberate token spacing")
+    }
+
+    func testDeepSeekFullModeIsMoreOpenThanCompactMode() {
+        let full = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)
+        let compact = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)
+        XCTAssertEqual(full.text, "DS CNY 123.45")
+        XCTAssertEqual(compact.text, "DS CNY 123.45")
+        XCTAssertGreaterThan(fittingWidth(MenuBarLabelContent(content: full)),
+                             fittingWidth(MenuBarLabelContent(content: compact)))
+        XCTAssertEqual(MenuBarLabelContent.deepSeekFullFontSize, 13)
+        XCTAssertEqual(MenuBarLabelContent.deepSeekCompactFontSize, 12)
+    }
+
+    /// A longer balance widens the item, so the source change must be re-measured rather than
+    /// reusing the previous width.
+    func testTheSameSourceAtDifferentAmountsChangesTheMeasuredWidth() {
+        let small = deepSeekContent(currency: "CNY", amount: Decimal(string: "9.00"), mode: .compact)
+        let large = deepSeekContent(currency: "USD", amount: Decimal(string: "1234567.89"), mode: .compact)
+        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(large.text),
+                             MenuBarLabelContent.estimatedTextWidth(small.text))
+        XCTAssertNotEqual(small.sizeSignature, large.sizeSignature)
     }
 
     /// Fitting width of the real label view, measured the same way the status item measures it.
@@ -170,9 +252,13 @@ final class MenuBarLabelWiringTests: XCTestCase {
         return ceil(hosting.fittingSize.width)
     }
 
-    func testCompactFallbackWidthFitsTheCompactText() {
+    func testCompactFallbackWidthFitsTheCompactTextForEverySource() {
         let compact = MenuBarLabelMetrics.fallbackWidth(for: .compact)
-        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("5H 78% W 42%"))
+        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("A 78% 42%"))
+        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("B 78% 42%"))
+        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("DS —"))
+        let full = MenuBarLabelMetrics.fallbackWidth(for: .full)
+        XCTAssertGreaterThanOrEqual(full, MenuBarLabelContent.estimatedTextWidth("A 5H 78% | W 42%"))
     }
 
     // MARK: §8.1.9 The item is sized from a measurement, not from the fallback

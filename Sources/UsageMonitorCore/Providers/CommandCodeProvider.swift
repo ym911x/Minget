@@ -39,7 +39,9 @@ public struct CommandCodeProvider: Sendable {
                                                limit: limit, remaining: credits.monthlyRemaining, resetsAt: nil))
         }
         return ProviderUsage(windows: windows, summary: summary.summary,
-                             planName: subscription?.planName, billingPeriodEnd: subscription?.periodEnd)
+                             planName: subscription?.planName,
+                             billingPeriodEnd: subscription?.periodEnd,
+                             billingPeriodStart: subscription?.periodStart)
     }
 
     private func request(path: String, headers: [String: String], timeout: TimeInterval) async throws -> ProviderHTTPResponse {
@@ -81,13 +83,27 @@ public struct CommandCodeProvider: Sendable {
         return (summary, nonNegativeDecimal(root["totalMonthlyCredits"]))
     }
 
-    private func parseSubscription(_ response: ProviderHTTPResponse) throws -> (planName: String?, periodEnd: Date?) {
+    /// Reads the optional subscription enrichment.
+    ///
+    /// `currentPeriodStart` is only returned when the response actually carries it: the
+    /// monthly progress line refuses to draw without a real start, so a missing field must
+    /// stay missing rather than be back-filled with an assumed cycle (REVISION_SPEC.md §7.3).
+    /// A start that is not strictly before the end is discarded as unusable.
+    private func parseSubscription(_ response: ProviderHTTPResponse) throws -> (planName: String?, periodStart: Date?, periodEnd: Date?) {
         try validResponse(response)
         guard let root = json(response.body), root["success"] as? Bool == true else { throw ProviderFailure.structureUnsupported }
         guard let data = root["data"] else { throw ProviderFailure.structureUnsupported }
-        if data is NSNull { return (nil, nil) }
+        if data is NSNull { return (nil, nil, nil) }
         guard let object = data as? [String: Any] else { throw ProviderFailure.structureUnsupported }
-        return (object["planId"] as? String, date(object["currentPeriodEnd"]))
+        let start = date(object["currentPeriodStart"])
+        let end = date(object["currentPeriodEnd"])
+        let usableStart: Date?
+        if let start, let end, start < end {
+            usableStart = start
+        } else {
+            usableStart = nil
+        }
+        return (object["planId"] as? String, usableStart, end)
     }
 
     private func validResponse(_ response: ProviderHTTPResponse) throws {

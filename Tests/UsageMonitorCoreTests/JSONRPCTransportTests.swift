@@ -80,6 +80,20 @@ final class JSONRPCTransportTests: XCTestCase {
         time.sleep(1)
     """
 
+    /// Reports back the `CODEX_HOME` it was actually launched with, so a test can prove the
+    /// environment reaches the child rather than merely being stored on the parent side.
+    static let environmentEchoServer = """
+    import sys, json, os
+    for raw in sys.stdin:
+        try:
+            msg = json.loads(raw)
+        except Exception:
+            continue
+        if msg.get("method") == "initialize":
+            sys.stdout.write(json.dumps({"id": msg.get("id"), "result": {"codexHome": os.environ.get("CODEX_HOME", "")}}) + "\\n")
+            sys.stdout.flush()
+    """
+
     static let rateLimitsResult: [String: Any] = [
         "rateLimitsByLimitId": [
             "codex": [
@@ -222,5 +236,48 @@ final class JSONRPCTransportTests: XCTestCase {
         // The reaped PID must no longer be alive; kill(2) with signal 0 probes only.
         XCTAssertEqual(kill(pid, 0), -1, "child process \(pid) should have been terminated and reaped")
         XCTAssertEqual(errno, ESRCH)
+    }
+
+    // MARK: - Child environment (1.3.0 profile isolation)
+
+    /// The environment passed to the transport is the environment the child runs under. The
+    /// fixture reports back the `CODEX_HOME` it observed, so this is the child's own view of
+    /// its environment rather than the parent's bookkeeping.
+    func testChildReceivesTheConfiguredEnvironmentOverride() throws {
+        let codexHome = "/tmp/minget-test-home-a"
+        let client = JSONRPCClient(executableURL: URL(fileURLWithPath: "/usr/bin/python3"),
+                                   arguments: ["-c", Self.environmentEchoServer],
+                                   environment: UsageService.childEnvironment(base: ["PATH": "/usr/bin"],
+                                                                              codexHome: URL(fileURLWithPath: codexHome)))
+        try client.start()
+        defer { client.stop() }
+
+        let response = try client.request(method: "initialize", params: [:], timeout: 10)
+        XCTAssertEqual(response.resultObject?["codexHome"] as? String, codexHome,
+                       "the child must observe the CODEX_HOME it was launched with")
+    }
+
+    /// Two profiles must reach two different children with two different isolated homes.
+    /// The values are compared as strings; neither is logged anywhere.
+    func testTwoTransportsReceiveDifferentCodexHomes() throws {
+        func makeClient(home: String) throws -> JSONRPCClient {
+            let client = JSONRPCClient(executableURL: URL(fileURLWithPath: "/usr/bin/python3"),
+                                       arguments: ["-c", Self.environmentEchoServer],
+                                       environment: UsageService.childEnvironment(base: ["PATH": "/usr/bin"],
+                                                                                  codexHome: URL(fileURLWithPath: home)))
+            try client.start()
+            return client
+        }
+
+        let a = try makeClient(home: "/tmp/minget-test-home-a")
+        let b = try makeClient(home: "/tmp/minget-test-home-b")
+        defer { a.stop(); b.stop() }
+
+        let homeA = try a.request(method: "initialize", params: [:], timeout: 10).resultObject?["codexHome"] as? String
+        let homeB = try b.request(method: "initialize", params: [:], timeout: 10).resultObject?["codexHome"] as? String
+        XCTAssertEqual(homeA, "/tmp/minget-test-home-a")
+        XCTAssertEqual(homeB, "/tmp/minget-test-home-b")
+        XCTAssertNotEqual(homeA, homeB, "the two account children must not share a CODEX_HOME")
+        XCTAssertNotEqual(a.childEnvironment?["CODEX_HOME"], b.childEnvironment?["CODEX_HOME"])
     }
 }

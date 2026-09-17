@@ -1,8 +1,8 @@
-import SwiftUI
+import AppKit
 import UsageMonitorCore
 
-/// Composition root. One instance owns the Codex service, the provider engine and the
-/// status item, so a refresh started at launch and cleanup at exit cannot diverge.
+/// Composition root. One instance owns the ChatGPT profile coordinator, the provider engine
+/// and the status item, so a refresh started at launch and cleanup at exit cannot diverge.
 ///
 /// The credential store and the transport are injectable so the wiring tests can run this
 /// exact production composition path with an in-memory store and an in-process transport —
@@ -10,7 +10,9 @@ import UsageMonitorCore
 @MainActor
 final class AppContainer {
 
-    let codexService: UsageService
+    /// Both ChatGPT profiles, each with its own `codex app-server` child and `CODEX_HOME`.
+    /// Replaces the single `codexService` of 1.2.1 (IMPLEMENTATION_TASKS.md §2).
+    let codexProfiles: CodexProfilesCoordinator
     let providerCache: ProviderCache
     let providerEngine: ProviderRefreshEngine
     let model: UsageViewModel
@@ -22,8 +24,9 @@ final class AppContainer {
     /// `CredentialAccessCoordinator`, and the key is passed into the request that needs it
     /// (KEYCHAIN_REVISION_PLAN.md P1.2 and P1.7).
     init(credentials: ProviderCredentialStoring = KeychainCredentialStore(),
-         transport: ProviderTransport = URLSessionProviderTransport()) {
-        codexService = UsageService()
+         transport: ProviderTransport = URLSessionProviderTransport(),
+         menuBarPreferences: MenuBarPreferences = .shared) {
+        codexProfiles = CodexProfilesCoordinator()
         providerCache = ProviderCache()
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
@@ -31,8 +34,9 @@ final class AppContainer {
                                               credentials: credentials)
         ProviderRetirementMigration(credentials: credentials, cache: providerCache).run()
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, commandCode], cache: providerCache)
-        model = UsageViewModel(service: codexService,
+        model = UsageViewModel(coordinator: codexProfiles,
                                providerEngine: providerEngine,
+                               menuBarPreferences: menuBarPreferences,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
         statusItem = StatusItemController()
     }
@@ -48,15 +52,23 @@ enum AppLifecycle {
 
 /// UsageMonitor — macOS menu bar app.
 ///
-/// One long-lived `codex app-server` child is created for the app's lifetime and terminated
-/// when the app exits (PROJECT_SPEC.md §8.2). The status item shows the Codex windows only;
-/// DeepSeek appears in the detail panel when enabled by the user.
+/// One long-lived `codex app-server` child per ChatGPT profile is created for the app's
+/// lifetime and terminated when the app exits (PROJECT_SPEC.md §8.2). The status item shows
+/// exactly one selected source: account A, account B, or the DeepSeek balance.
+///
+/// The entry point is explicit AppKit rather than a SwiftUI `App` (REVISION_SPEC.md §3).
+/// A SwiftUI `Settings { EmptyView() }` scene is still a real scene: macOS may restore or
+/// open it, which showed the user an empty “设置” window at cold start. Declaring no scene at
+/// all removes that failure mode structurally instead of closing the window after the fact.
 @main
-struct UsageMonitorApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    var body: some Scene {
-        Settings { EmptyView() }
+enum MingetMain {
+    static func main() {
+        let application = NSApplication.shared
+        let delegate = AppDelegate()
+        application.delegate = delegate
+        withExtendedLifetime(delegate) {
+            application.run()
+        }
     }
 }
 
@@ -104,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// and the detail window (v1.1 requirement 1).
     func applicationWillTerminate(_ notification: Notification) {
         MainActor.assumeIsolated {
-            AppLifecycle.container.codexService.stop()
+            AppLifecycle.container.codexProfiles.stop()
             AppLifecycle.statusItem.uninstall()
         }
     }

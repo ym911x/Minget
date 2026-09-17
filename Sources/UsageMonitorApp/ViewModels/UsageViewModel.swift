@@ -5,24 +5,26 @@ import UsageMonitorCore
 
 /// Drives the menu bar UI and the detail panel.
 ///
-/// Two independent refresh loops live here (v1.1 requirement 5):
-/// - Codex, every 60 seconds, on the long-lived `codex app-server` child,
-/// - DeepSeek, every 5 minutes, over HTTPS with its own credential and in-flight
-///   in-flight coalescing.
+/// Three independent refresh loops live here:
+/// - two ChatGPT profiles, every 60 seconds, each on its own long-lived `codex app-server`
+///   child under its own `CODEX_HOME`. Both profiles are refreshed in parallel inside one
+///   cycle, so one slow or signed-out account cannot delay the other
+///   (REQUIREMENTS.md §4.1, IMPLEMENTATION_TASKS.md §2);
+/// - DeepSeek, every 5 minutes, over HTTPS with its own credential;
+/// - the DeepSeek public status page, every 5 minutes, unauthenticated.
 ///
-/// All fetches run off the main thread; `stop()` hands the Codex join to a background queue
-/// and reports completion, so the application can defer termination until the in-flight
-/// fetch and the owned child are quiescent (Round 3 blocker 2).
+/// All fetches run off the main thread; `stop()` hands both drains to a background queue and
+/// reports completion, so the application can defer termination until every owned child is
+/// quiescent.
 @MainActor
 public final class UsageViewModel: ObservableObject {
 
-    // MARK: Codex
+    // MARK: ChatGPT profiles
 
-    @Published public private(set) var displayState: UsageDisplay = .unavailable(.rpcFailed(.other))
-    @Published public private(set) var connectionState: UsageService.ConnectionState = .idle
-    /// Account email from `account/read`, or nil when it could not be established this cycle.
-    @Published public private(set) var codexAccount: CodexAccount?
-    @Published public private(set) var codexAccountAvailable = false
+    /// One entry per enabled profile, in the fixed order account A, account B. A single
+    /// `displayState`/`codexAccount` pair is deliberately gone: it could only ever describe
+    /// one account.
+    @Published public private(set) var profileStates: [CodexProfileViewState] = []
 
     // MARK: Providers
 
@@ -34,80 +36,149 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: Shared
 
+    /// True while a ChatGPT refresh cycle is in flight (any profile).
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var isProviderRefreshing = false
     @Published public private(set) var isDeepSeekStatusRefreshing = false
     /// Per-platform, fixed-vocabulary feedback for the credential settings forms (Round 6).
-    /// Absence means "nothing to say". Text is fixed and safe: no provider text, no system
-    /// error text, never credential material.
     @Published public private(set) var credentialFeedback: [ProviderPlatform: CredentialFeedback] = [:]
     /// Bumped whenever relative timestamps should be re-evaluated (staleness ages).
     @Published public private(set) var tick = 0
-    /// Whether the call-level credential diagnostics are being written. Toggled from the
-    /// panel; works on a normal launch because it reads an app-owned preference instead of an
-    /// environment variable (KEYCHAIN_REVISION_PLAN.md P0.4).
     @Published public private(set) var isCredentialDiagnosticOn = CredentialAccessLog.isEnabled
 
-    private let service: UsageService
+    /// Owns the per-profile runtimes and their services.
+    let coordinator: CodexProfilesCoordinator
+    /// Menu bar source and DeepSeek currency choice. Display preferences only.
+    let menuBarPreferences: MenuBarPreferences
+    private let fireService: ChatGPTFireService
+
     /// Non-optional by design (Round 6): a view model without an engine has no save path
-    /// at all, which is exactly the silent-failure shape this round removes. The readings
-    /// inside the engine own their credentials; the view model holds no separate store.
-    /// Internal (not private) so the wiring tests can read engine state directly.
+    /// at all. Internal (not private) so the wiring tests can read engine state directly.
     let providerEngine: ProviderRefreshEngine
+
     private let refreshInterval: TimeInterval
     private let panelOpenRefreshAge: TimeInterval
     private let providerRefreshInterval: TimeInterval
     private let providerPanelOpenRefreshAge: TimeInterval
     private let deepSeekStatusReader: DeepSeekStatusReading?
     private let deepSeekStatusRefreshInterval: TimeInterval = 5 * 60
+
+    /// How long to wait after a successful request before the confirming refresh, and how
+    /// long to wait before the single retry. Fixed by REQUIREMENTS.md §7.2; injectable so
+    /// tests do not have to sleep for real.
+    private let fireConfirmDelay: TimeInterval
+    private let fireRetryDelay: TimeInterval
+
+    /// A new 5-hour window counts as confirmed only when the service's reset time moved
+    /// forward by at least this much. `exit 0` alone proves nothing.
+    static let windowConfirmationThreshold: TimeInterval = 60
+
     private var timer: AnyCancellable?
     private var providerTimer: AnyCancellable?
     private var clockTimer: AnyCancellable?
-    /// Wake and system-clock observers, with the centre each was registered on so `stop()` can
-    /// release exactly the right one.
+    /// Re-publishes when the menu bar source or the DeepSeek currency changes, so the status
+    /// item re-measures its width immediately instead of waiting for the next data change.
+    private var menuBarPreferenceObserver: AnyCancellable?
     private var clockObservers: [(NotificationCenter, NSObjectProtocol)] = []
     private var refreshTask: Task<Void, Never>?
     private var providerRefreshTask: Task<Void, Never>?
     private var deepSeekStatusTask: Task<Void, Never>?
+    private var fireTasks: [String: Task<Void, Never>] = [:]
     private var deepSeekStatusCheckedAt: Date?
     private(set) var isStopped = false
 
-    public init(service: UsageService,
+    /// Designated initializer: the production composition path.
+    public init(coordinator: CodexProfilesCoordinator,
                 providerEngine: ProviderRefreshEngine,
+                menuBarPreferences: MenuBarPreferences = .shared,
+                fireService: ChatGPTFireService = ChatGPTFireService(),
                 refreshInterval: TimeInterval = 60,
                 panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                 providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
                 providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
-                deepSeekStatusReader: DeepSeekStatusReading? = nil) {
-        self.service = service
+                deepSeekStatusReader: DeepSeekStatusReading? = nil,
+                fireConfirmDelay: TimeInterval = 2,
+                fireRetryDelay: TimeInterval = 5) {
+        self.coordinator = coordinator
         self.providerEngine = providerEngine
+        self.menuBarPreferences = menuBarPreferences
+        self.fireService = fireService
         self.refreshInterval = refreshInterval
         self.panelOpenRefreshAge = panelOpenRefreshAge
         self.providerRefreshInterval = providerRefreshInterval
         self.providerPanelOpenRefreshAge = providerPanelOpenRefreshAge
         self.deepSeekStatusReader = deepSeekStatusReader
+        self.fireConfirmDelay = fireConfirmDelay
+        self.fireRetryDelay = fireRetryDelay
+        publishProfileStates()
         publishProviderReports()
+    }
+
+    /// Single-service convenience, used by tests that only need one account.
+    public convenience init(service: UsageService,
+                            providerEngine: ProviderRefreshEngine,
+                            menuBarPreferences: MenuBarPreferences = .shared,
+                            fireService: ChatGPTFireService = ChatGPTFireService(),
+                            refreshInterval: TimeInterval = 60,
+                            panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
+                            providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
+                            providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
+                            deepSeekStatusReader: DeepSeekStatusReading? = nil,
+                            fireConfirmDelay: TimeInterval = 2,
+                            fireRetryDelay: TimeInterval = 5) {
+        self.init(coordinator: CodexProfilesCoordinator(profiles: [ChatGPTAccountProfile.chatGPTA],
+                                                          makeService: { _ in service }),
+                  providerEngine: providerEngine,
+                  menuBarPreferences: menuBarPreferences,
+                  fireService: fireService,
+                  refreshInterval: refreshInterval,
+                  panelOpenRefreshAge: panelOpenRefreshAge,
+                  providerRefreshInterval: providerRefreshInterval,
+                  providerPanelOpenRefreshAge: providerPanelOpenRefreshAge,
+                  deepSeekStatusReader: deepSeekStatusReader,
+                  fireConfirmDelay: fireConfirmDelay,
+                  fireRetryDelay: fireRetryDelay)
     }
 
     // MARK: - Derived values
 
-    public var menuBarTitle: String { displayState.menuBarTitle }
+    /// The state of one profile, or nil when the identifier is unknown.
+    public func profileState(_ profileID: String) -> CodexProfileViewState? {
+        profileStates.first { $0.profile.id == profileID }
+    }
 
     /// Everything the status item draws for one mode and one clock reading.
     ///
     /// `now` is read per frame rather than accumulated, so sleep, a delayed main thread or a
-    /// system clock change can never leave the two rows drifting away from the real time
-    /// (v1.0.2 §4.4).
+    /// system clock change can never leave the rows drifting away from the real time.
     public func menuBarContent(for mode: MenuBarSpaceMode, now: Date = Date()) -> MenuBarContent {
-        MenuBarContentBuilder.make(display: displayState,
-                                   connectionState: connectionState,
-                                   now: now,
-                                   mode: mode)
+        MenuBarContentBuilder.make(source: menuBarSource(), now: now, mode: mode)
+    }
+
+    /// The single resolved source the menu bar currently shows.
+    ///
+    /// The selection is validated when it is loaded, so a stale or hand-edited preference
+    /// falls back to account A rather than to "no source".
+    public func menuBarSource() -> MenuBarSource {
+        switch menuBarPreferences.selection {
+        case .profile(let id):
+            if let state = profileStates.first(where: { $0.profile.id == id }) {
+                return .chatGPT(shortLabel: state.profile.shortLabel,
+                                display: state.display,
+                                connectionState: state.connectionState)
+            }
+            let fallback = profileStates.first
+            return .chatGPT(shortLabel: fallback?.profile.shortLabel ?? "",
+                            display: fallback?.display ?? .unavailable(.rpcFailed(.other)),
+                            connectionState: fallback?.connectionState ?? .idle)
+        case .deepSeek:
+            return .deepSeek(deepSeekMenuBarContent())
+        }
     }
 
     /// Identity of everything that can change the status item's width, across all modes. The
     /// countdown is deliberately absent: the item is re-measured only when its content or its
-    /// warning changes, not once a second (v1.0.2 §4.4).
+    /// warning changes, not once a second.
     public var menuBarSizeSignature: String {
         let now = Date()
         return MenuBarSpaceMode.allCases
@@ -115,37 +186,81 @@ public final class UsageViewModel: ObservableObject {
             .joined(separator: "|")
     }
 
-    public var currentSnapshot: UsageSnapshot? { displayState.snapshot }
-
     /// Cached data is always shown with a warning; it must never read as live data.
-    public var isStale: Bool { displayState.isStale }
+    public var isStale: Bool { profileStates.contains { $0.isStale } }
 
-    /// Signature of the displayed label content, so the status item only re-measures its
-    /// width when the text actually changed.
-    public var menuBarStalenessMarker: String {
-        return displayState.isStale ? "stale" : "live"
+    /// Every timestamp the header's global update line must aggregate: both ChatGPT profiles
+    /// and the visible provider cards (REQUIREMENTS.md §5.1, IMPLEMENTATION_TASKS.md §4).
+    public var codexSnapshotDates: [Date] {
+        profileStates.compactMap { $0.snapshot?.fetchedAt }
+    }
+
+    /// Currencies the current DeepSeek response actually reports, for the settings picker.
+    public var deepSeekCurrencies: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for balance in deepSeekReport?.balances ?? [] {
+            guard let currency = balance.currency, !currency.isEmpty else { continue }
+            guard !seen.contains(currency.uppercased()) else { continue }
+            seen.insert(currency.uppercased())
+            result.append(currency)
+        }
+        return result.sorted()
+    }
+
+    private var deepSeekReport: ProviderReport? {
+        providerReports.first { $0.platform == .deepseek }
+    }
+
+    /// The DeepSeek half of the menu bar, resolved from the current report.
+    ///
+    /// A stale report keeps its amount and adds the warning marker; a report with nothing
+    /// attributable shows `DS —` with a warning. A zero balance can never be produced here.
+    private func deepSeekMenuBarContent() -> MenuBarDeepSeekContent {
+        guard let report = deepSeekReport else {
+            return MenuBarDeepSeekContent(currency: nil, amount: nil, isCached: false)
+        }
+        let isCached = report.connection == .stale
+        let usable = report.connection == .connected || report.connection == .stale
+        guard usable, !report.balances.isEmpty else {
+            return MenuBarDeepSeekContent(currency: nil, amount: nil, isCached: isCached)
+        }
+        let resolution = DeepSeekMenuBarResolver.resolve(balances: report.balances,
+                                                         savedCurrency: menuBarPreferences.deepSeekCurrency)
+        return MenuBarDeepSeekContent(currency: resolution.currency,
+                                      amount: resolution.amount,
+                                      isCached: isCached)
     }
 
     // MARK: - Lifecycle
 
-    /// Starts the app: immediate refresh, then on both schedules.
+    /// Starts the app: immediate refresh of both profiles, then on both schedules.
     public func start() {
         Diagnostics.log("viewmodel start")
         isStopped = false
         scheduleTimers()
         observeClockChanges()
-        // Age the relative timestamps once a second so "更新于 X 秒前" stays truthful, and so
-        // the two reset-time rows advance without any network or service work.
+        observeMenuBarPreferences()
         clockTimer = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.tick += 1 }
         refresh()
         refreshProviders(force: false)
         refreshDeepSeekStatus(force: false)
-        // The credential pass runs after the first paint, off the main actor, and never shows
-        // UI. Until it finishes, status questions answer "still finding out" rather than
-        // asking the keychain (KEYCHAIN_REVISION_PLAN.md P0 and P1.3).
         primeCredentialAccess()
+    }
+
+    /// The menu bar source is a separate observable object, so a change to it must still make
+    /// the status item re-render and re-measure. `tick` is published, which is what
+    /// `StatusItemController.noteContentMayHaveChanged` listens for.
+    private func observeMenuBarPreferences() {
+        guard menuBarPreferenceObserver == nil else { return }
+        menuBarPreferenceObserver = menuBarPreferences.objectWillChange
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.tick += 1 }
+                }
+            }
     }
 
     /// One background credential pass for every provider, so the panel can answer
@@ -176,11 +291,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Recomputes the displayed countdowns immediately when the machine wakes or the system
-    /// clock is changed, instead of waiting for the next one-second tick. The observers are
-    /// released in `stop()`.
-    ///
-    /// `NSWorkspace.didWakeNotification` is posted on the workspace's own centre; observing it
-    /// on `NotificationCenter.default` never fires (v1.0.2 §4.4).
+    /// clock is changed, instead of waiting for the next one-second tick.
     private func observeClockChanges() {
         guard clockObservers.isEmpty else { return }
         let wake = NSWorkspace.shared.notificationCenter.addObserver(
@@ -200,43 +311,49 @@ public final class UsageViewModel: ObservableObject {
         clockObservers.removeAll()
     }
 
-    /// Cancels in-flight Codex work, stops timers and joins the fetch plus the owned child
-    /// cleanup on a dedicated join queue. `completion` is called on that queue once the
-    /// service reports quiescence (or once its bounded drain timed out).
+    /// Cancels in-flight work, stops timers and joins *both* profile drains on a dedicated
+    /// queue. `completion` is called on that queue once every service reports quiescence (or
+    /// once its bounded drain timed out).
     ///
-    /// The join happens off the main actor on purpose: `service.stop()` blocks, and waiting
-    /// for it on the main actor would deadlock `apply()`. `completion` is likewise delivered
-    /// from the join queue: hopping back to the main queue would never run while
-    /// `applicationShouldTerminate` blocks the main thread waiting for that completion.
+    /// The join happens off the main actor on purpose: the drains block, and waiting for them
+    /// on the main actor would deadlock `applicationShouldTerminate`, which is itself waiting
+    /// on this completion.
     public func stop(completion: (() -> Void)? = nil) {
         guard !isStopped else {
-            completion?()   // already quiescent or already draining
+            completion?()
             return
         }
         isStopped = true
-        isRefreshing = false   // teardown: no further state is published (apply() early-returns)
+        isRefreshing = false
         isProviderRefreshing = false
         isDeepSeekStatusRefreshing = false
         timer?.cancel()
         providerTimer?.cancel()
         clockTimer?.cancel()
+        menuBarPreferenceObserver?.cancel()
         timer = nil
         providerTimer = nil
         clockTimer = nil
+        menuBarPreferenceObserver = nil
         stopObservingClockChanges()
         providerRefreshTask?.cancel()
         providerRefreshTask = nil
         deepSeekStatusTask?.cancel()
         deepSeekStatusTask = nil
+        for task in fireTasks.values { task.cancel() }
+        fireTasks.removeAll()
 
         let task = refreshTask
         refreshTask = nil
-        let service = self.service
-        // The closure captures only locals; the view model itself is not touched here, so
-        // teardown cannot race a mutating call.
+        let coordinator = self.coordinator
+        let fireService = self.fireService
         joinQueue.async {
-            task?.cancel()      // stops publishing; the blocking fetch itself is drained below
-            service.stop()      // bounded drain of the fetch and the owned child
+            task?.cancel()
+            // `fire()` blocks in `Process.waitUntilExit()`, so cancelling the task above does
+            // not reach the child. Terminating it explicitly is what keeps a `codex exec`
+            // from outliving the app (REVISION_SPEC.md §9.1).
+            fireService.stopAll()
+            coordinator.stop()
             Diagnostics.log("viewmodel stopped")
             completion?()
         }
@@ -260,7 +377,7 @@ public final class UsageViewModel: ObservableObject {
     // MARK: - Panel
 
     /// Called when the user opens the detail: each source is refreshed on its own freshness
-    /// rule, Codex at 30 seconds and the providers at 60 seconds.
+    /// rule, ChatGPT at 30 seconds per profile and the providers at 60 seconds.
     public func panelWillOpen() {
         guard !isStopped else { return }
         panelWillOpenCodex()
@@ -268,14 +385,15 @@ public final class UsageViewModel: ObservableObject {
         refreshDeepSeekStatus(force: false)
     }
 
+    /// A cycle is due when *any* profile has no data or has data older than the open-age.
+    /// Both profiles are then refreshed together, so the two cards never disagree about
+    /// which cycle they belong to.
     private func panelWillOpenCodex() {
-        guard let snapshot = currentSnapshot else {
-            refresh()
-            return
+        let due = coordinator.runtimes.contains { runtime in
+            guard let snapshot = runtime.state().snapshot else { return true }
+            return UsageCache.isStale(fetchedAt: snapshot.fetchedAt, maxAge: panelOpenRefreshAge)
         }
-        if UsageCache.isStale(fetchedAt: snapshot.fetchedAt, maxAge: panelOpenRefreshAge) {
-            refresh()
-        }
+        if due { refresh() }
     }
 
     private func panelWillOpenProviders() {
@@ -287,7 +405,8 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: - Refreshing
 
-    /// Manual refresh: always fetches; the only path that re-opens the Codex failure budget.
+    /// Manual refresh: always fetches both profiles and every provider; the only path that
+    /// re-opens the Codex failure budget.
     public func refreshNow() {
         guard !isStopped else { return }
         refresh(resetFailureBudget: true)
@@ -297,15 +416,24 @@ public final class UsageViewModel: ObservableObject {
         refreshDeepSeekStatus(force: true)
     }
 
+    /// Refreshes every profile in parallel inside one cycle. No request is stacked: a slow
+    /// profile simply finishes later than the other.
     private func refresh(resetFailureBudget: Bool = false) {
         guard !isStopped, !isRefreshing else { return }
         isRefreshing = true
-        let service = self.service
+        let coordinator = self.coordinator
+        let profileIDs = coordinator.profileIDs
         refreshTask = Task.detached(priority: .utility) { [weak self] in
-            let outcome = Result<UsageService.FetchResult, Error> {
-                try service.fetch(resetFailureBudget: resetFailureBudget)
+            await withTaskGroup(of: Void.self) { group in
+                for profileID in profileIDs {
+                    group.addTask {
+                        _ = coordinator.fetch(profileID: profileID,
+                                              resetFailureBudget: resetFailureBudget)
+                    }
+                }
+                await group.waitForAll()
             }
-            await self?.apply(outcome)
+            await self?.applyProfileStates()
         }
     }
 
@@ -337,8 +465,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Refreshes the public DeepSeek status page independently from the credential-backed
-    /// balance loop. This keeps status visibility useful even when no API key is configured,
-    /// while the five-minute freshness window avoids turning a compact panel into a poller.
+    /// balance loop, so status visibility stays useful even with no API key configured.
     private func refreshDeepSeekStatus(force: Bool) {
         guard let reader = deepSeekStatusReader, !isStopped else { return }
         guard deepSeekStatusTask == nil else { return }
@@ -380,46 +507,119 @@ public final class UsageViewModel: ObservableObject {
         providerReports = providerEngine.allReports()
     }
 
-    private func apply(_ outcome: Result<UsageService.FetchResult, Error>) {
+    /// Publishes the current runtime state of both profiles as value snapshots.
+    private func publishProfileStates() {
+        profileStates = coordinator.runtimes.map { CodexProfileViewState(runtime: $0.state()) }
+    }
+
+    private func applyProfileStates() {
         // A cancelled or stopped view model must not publish state after teardown.
         guard !isStopped, !Task.isCancelled else {
             isRefreshing = false
             return
         }
         isRefreshing = false
-        connectionState = service.connectionState
-        switch outcome {
-        case .success(let result):
-            // `UsageDisplay` decides live vs cached from isLive and snapshot.source, so a
-            // cached result can never be presented as live even when its error is nil.
-            let display = UsageDisplay(fetchResult: result)
-            Diagnostics.log("display \(display.diagnosticLabel)")
-            displayState = display
-            codexAccount = result.account
-            codexAccountAvailable = result.account?.displayEmail != nil
-        case .failure(let error):
-            let usageError = (error as? UsageError) ?? .rpcFailed(.other)
-            Diagnostics.log("display unavailable: \(usageError.debugSummary)")
-            displayState = UsageDisplay(error: usageError, cached: service.cachedSnapshotForCurrentAccount())
-            codexAccount = nil
-            codexAccountAvailable = false
-        }
+        publishProfileStates()
         tick += 1
+    }
+
+    // MARK: - Fire
+
+    /// Runs one manual 5-hour fire for the profile. The caller must already have shown the
+    /// fixed confirmation; this method never asks again.
+    ///
+    /// The result the card shows separates "the request ran" from "a new window was
+    /// confirmed": only a refresh that moves the service's 5-hour `resetsAt` forward by at
+    /// least `windowConfirmationThreshold` produces the confirmed text.
+    public func fire(profileID: String) {
+        guard !isStopped, let runtime = coordinator.runtime(for: profileID) else { return }
+        let current = runtime.state()
+        guard !current.isFiring else { return }
+
+        let previousFiveHourReset = current.display.snapshot?.fiveHour?.resetsAt
+        coordinator.recordFireStart(profileID: profileID)
+        publishProfileStates()
+        tick += 1
+
+        let service = fireService
+        let profile = runtime.profile
+        fireTasks[profileID] = Task.detached(priority: .userInitiated) { [weak self] in
+            let outcome = service.fire(profile: profile)
+            await self?.finishFire(profileID: profileID,
+                                   outcome: outcome,
+                                   previousFiveHourReset: previousFiveHourReset)
+        }
+    }
+
+    private func finishFire(profileID: String,
+                            outcome: ChatGPTFireProcessOutcome,
+                            previousFiveHourReset: Date?) async {
+        guard !isStopped else { return }
+
+        if let immediate = outcome.immediateResult {
+            coordinator.recordFireFinished(profileID: profileID, result: immediate)
+            fireTasks[profileID] = nil
+            publishProfileStates()
+            tick += 1
+            return
+        }
+
+        // The request ran. Wait, then force-refresh this profile only — the other account's
+        // window was not touched by this request.
+        try? await Task.sleep(nanoseconds: Self.nanoseconds(fireConfirmDelay))
+        guard !isStopped else { return }
+        var newReset = await fetchFiveHourReset(profileID: profileID)
+        if newReset == nil {
+            try? await Task.sleep(nanoseconds: Self.nanoseconds(fireRetryDelay))
+            guard !isStopped else { return }
+            newReset = await fetchFiveHourReset(profileID: profileID)
+        }
+
+        let confirmed: Bool
+        if let newReset, let previousFiveHourReset {
+            confirmed = newReset.timeIntervalSince(previousFiveHourReset) >= Self.windowConfirmationThreshold
+        } else {
+            // Without a before/after pair there is no evidence a new window started, so the
+            // card reports the request alone rather than inferring success.
+            confirmed = false
+        }
+
+        coordinator.recordFireFinished(profileID: profileID,
+                                       result: confirmed ? .requestSucceededWindowConfirmed
+                                                         : .requestSucceededWindowUnchanged)
+        fireTasks[profileID] = nil
+        publishProfileStates()
+        tick += 1
+    }
+
+    /// One forced refresh of a single profile, returning its new 5-hour reset time.
+    ///
+    /// Only a *live* result counts (REVISION_SPEC.md §9.2). `UsageService.fetch` returns
+    /// `.success` for a cache-served snapshot too, and a cached `resetsAt` is last cycle's
+    /// number: treating it as freshly observed would let the card claim a new window that was
+    /// never confirmed. A cached success therefore reports "no evidence" and the caller
+    /// retries once.
+    private func fetchFiveHourReset(profileID: String) async -> Date? {
+        let coordinator = self.coordinator
+        return await Task.detached(priority: .userInitiated) {
+            let outcome = coordinator.fetch(profileID: profileID, resetFailureBudget: true)
+            guard case .success(let result) = outcome, result.isLive else { return nil }
+            return result.snapshot.fiveHour?.resetsAt
+        }.value
+    }
+
+    private static func nanoseconds(_ seconds: TimeInterval) -> UInt64 {
+        UInt64(max(0, seconds) * 1_000_000_000)
     }
 
     // MARK: - Credentials
 
     /// Saves a DeepSeek API key and verifies it immediately against the official read-only
-    /// balance endpoint (v1.1 requirement 5). The reading owns the keychain write; the view
-    /// model holds no second store that could be left unconnected (Round 6).
-    ///
-    /// Feedback is explicit from the first click. The input field may only be cleared when
-    /// this returns true (the keychain accepted the key); verification then continues
-    /// asynchronously and updates `credentialFeedback`.
+    /// balance endpoint. The reading owns the keychain write; the view model holds no second
+    /// store that could be left unconnected (Round 6).
     @discardableResult
     public func saveDeepSeekKey(_ key: String) -> Bool {
         guard let reading = engineReading(.deepseek) as? DeepSeekReading else {
-            // Unreachable with the production engine wiring; reported, never silent.
             setFeedback(.saveFailed(platform: .deepseek))
             return false
         }
@@ -451,9 +651,7 @@ public final class UsageViewModel: ObservableObject {
         return true
     }
 
-    /// Deletes the stored DeepSeek key, its cached numbers and any auth suspension
-    /// (Round 6: the form says so instead of failing silently). A failed removal is reported
-    /// as a failure, never as a completed disconnect (KEYCHAIN_REVISION_PLAN.md P1.8).
+    /// Deletes the stored DeepSeek key, its cached numbers and any auth suspension.
     @discardableResult
     public func deleteDeepSeekKey() -> Bool {
         if let failure = providerEngine.disconnect(platform: .deepseek) {
@@ -508,8 +706,7 @@ public final class UsageViewModel: ObservableObject {
     // MARK: - Credential authorisation
 
     /// The only path that may put a keychain dialog on screen, and only because the user
-    /// pressed a button. One press, one read per credential; nothing here is on a timer
-    /// (KEYCHAIN_REVISION_PLAN.md P1.4).
+    /// pressed a button. One press, one read per credential.
     public func authorizeCredentialAccess(_ platform: ProviderPlatform) {
         setFeedback(.authorizing(platform: platform))
         isProviderRefreshing = true
@@ -530,15 +727,13 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: - Credential feedback
 
-    /// Flips the call-level credential diagnostics and records the change, so a log segment
-    /// always says when and why it started.
+    /// Flips the call-level credential diagnostics and records the change.
     public func setCredentialDiagnostics(_ enabled: Bool) {
         CredentialAccessLog.isEnabled = enabled
         isCredentialDiagnosticOn = enabled
         CredentialAccessLog.note(enabled ? "diagnostics enabled" : "diagnostics disabled")
     }
 
-    /// Where the credential diagnostics are written, for display in the panel.
     public var credentialDiagnosticPath: String? {
         return CredentialAccessLog.logFileURL?.path
     }
@@ -547,8 +742,6 @@ public final class UsageViewModel: ObservableObject {
         credentialFeedback[feedback.platform] = feedback
     }
 
-    /// The feedback to show in `platform`'s settings form, or nil when there is nothing
-    /// to say.
     public func credentialFeedback(for platform: ProviderPlatform) -> CredentialFeedback? {
         return credentialFeedback[platform]
     }
@@ -556,7 +749,6 @@ public final class UsageViewModel: ObservableObject {
     private func engineReading(_ platform: ProviderPlatform) -> ProviderReading? {
         return providerEngine.reading(for: platform)
     }
-
 }
 
 /// Fixed-vocabulary feedback for the credential settings forms (Round 6 requirement 2).
@@ -566,29 +758,16 @@ public final class UsageViewModel: ObservableObject {
 /// credential material — only what the user needs to decide the next step.
 public enum CredentialFeedback: Equatable, Sendable {
 
-    /// The keychain write is running.
     case saving(platform: ProviderPlatform)
-    /// Stored locally; the official read-only balance endpoint is being asked.
     case verifying(platform: ProviderPlatform)
-    /// The endpoint answered and the balance is on display.
     case connected(platform: ProviderPlatform)
-    /// 401/403: the key (or session) was rejected. Not a network problem.
     case invalidCredential(platform: ProviderPlatform)
-    /// The keychain write itself failed. The input stays for retry.
     case saveFailed(platform: ProviderPlatform)
-    /// Stored locally, but the verification could not complete right now (offline,
-    /// timeout, server error). Not an authentication verdict.
     case savedUnverified(platform: ProviderPlatform)
-    /// Credential removed, caches cleared, not connected.
     case deleted(platform: ProviderPlatform)
-    /// The user asked for a credential read; the system dialog may be on screen.
     case authorizing(platform: ProviderPlatform)
-    /// The credential is stored but unreadable without the user's decision. Never rendered
-    /// as "nothing stored" (KEYCHAIN_REVISION_PLAN.md P1.8).
     case authorizationRequired(platform: ProviderPlatform)
-    /// The user declined, or the request was cancelled. The credential is untouched.
     case authorizationDenied(platform: ProviderPlatform)
-    /// The credential could not be removed, so the account is still connected.
     case disconnectFailed(platform: ProviderPlatform)
 
     public var platform: ProviderPlatform {
@@ -655,16 +834,10 @@ public enum CredentialFeedback: Equatable, Sendable {
         case .connecting:
             self = .verifying(platform: platform)
         case .notConfigured:
-            // Only reachable if the credential vanished mid-flight; treated as a failed
-            // cycle rather than an invented success.
             self = .saveFailed(platform: platform)
         case .needsAuthorization:
-            // The credential is there; the system dialog has not been answered. Never
-            // reported as "save failed", which would invite overwriting a stored key.
             self = .authorizationRequired(platform: platform)
         case .stale, .unavailable:
-            // A previous value may still be on display, but this verification did not
-            // complete: the key is stored locally either way.
             self = .savedUnverified(platform: platform)
         }
     }

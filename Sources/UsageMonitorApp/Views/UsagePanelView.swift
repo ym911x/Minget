@@ -2,12 +2,78 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// The compact daily overview shown from the menu bar and the regular detail window.
+/// Fixed geometry of the detail page, as one pure model the view and the tests both read.
 ///
-/// Connection forms and diagnostics live in `MingetSettingsView`; this view answers the
-/// everyday questions first: how much Codex capacity remains, when it resets, and which
-/// connected balances are available.
+/// The page is a single 440 pt column — one card per row, top to bottom
+/// ChatGPT A, ChatGPT B, DeepSeek, Command Code — and every state fits on one screen with no
+/// scroll container. Keeping the arithmetic here means the layout tests assert the same
+/// numbers the view lays out, instead of re-deriving them.
+enum DetailPageLayout {
+
+    static let pageWidth: CGFloat = 440
+    static let margin: CGFloat = 12
+    static let contentWidth: CGFloat = 416
+    static let headerHeight: CGFloat = 36
+    /// Every vertical gap on the page is this.
+    static let rowSpacing: CGFloat = 6
+
+    static let codexCardHeight: CGFloat = 129
+    static let deepSeekCardHeight: CGFloat = 48
+    static let commandCodeCardHeight: CGFloat = 162
+
+    enum Kind: String, Equatable, Sendable {
+        case header, chatGPTA, chatGPTB, deepSeek, commandCode
+    }
+
+    struct Row: Equatable {
+        let kind: Kind
+        let frame: CGRect
+    }
+
+    /// The visible rows, in draw order, with the frame each one occupies.
+    static func rows(showDeepSeek: Bool, showCommandCode: Bool) -> [Row] {
+        var rows: [Row] = []
+        var y = margin
+        func append(_ kind: Kind, _ height: CGFloat) {
+            rows.append(Row(kind: kind,
+                            frame: CGRect(x: margin, y: y, width: contentWidth, height: height)))
+            y += height + rowSpacing
+        }
+        append(.header, headerHeight)
+        append(.chatGPTA, codexCardHeight)
+        append(.chatGPTB, codexCardHeight)
+        if showDeepSeek { append(.deepSeek, deepSeekCardHeight) }
+        if showCommandCode { append(.commandCode, commandCodeCardHeight) }
+        return rows
+    }
+
+    /// 552 with both service cards, 498 with only Command Code, 384 with only DeepSeek,
+    /// 330 with neither.
+    static func pageHeight(showDeepSeek: Bool, showCommandCode: Bool) -> CGFloat {
+        guard let last = rows(showDeepSeek: showDeepSeek, showCommandCode: showCommandCode).last else {
+            return margin * 2
+        }
+        return last.frame.maxY + margin
+    }
+}
+
+/// The daily overview shown from the menu bar and the regular detail window.
+///
+/// One column, four cards, no scroll container of any kind. The popover and the regular
+/// detail window render this same view at this same size, so the two presentations cannot
+/// drift apart.
 struct UsagePanelView: View {
+
+    // Convenience aliases so existing call sites and tests keep reading the page constants
+    // from the view. The values live in `DetailPageLayout`.
+    static var pageWidth: CGFloat { DetailPageLayout.pageWidth }
+    static var margin: CGFloat { DetailPageLayout.margin }
+    static var contentWidth: CGFloat { DetailPageLayout.contentWidth }
+    static var headerHeight: CGFloat { DetailPageLayout.headerHeight }
+    static var rowSpacing: CGFloat { DetailPageLayout.rowSpacing }
+    static var pageHeightWithServices: CGFloat { DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true) }
+    static var pageHeightWithoutServices: CGFloat { DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false) }
+
     @ObservedObject var model: UsageViewModel
     @ObservedObject private var preferences: DetailPreferences
     var onSettings: (() -> Void)?
@@ -21,28 +87,32 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DetailPageLayout.rowSpacing) {
             header
-            codexCard
-            providerCards
+            ForEach(model.profileStates) { state in
+                CodexProfileCard(state: state) {
+                    model.fire(profileID: state.profile.id)
+                }
+            }
+            if preferences.showDeepSeek {
+                DeepSeekOverviewCard(report: report(for: .deepseek),
+                                     status: model.deepSeekStatus,
+                                     openSettings: { onSettings?() })
+            }
+            if preferences.showCommandCode {
+                CommandCodeOverviewCard(report: report(for: .commandcode),
+                                        openSettings: { onSettings?() })
+            }
         }
-        .padding(16)
-        // The detail page is deliberately a single, non-scrolling surface. Keep the
-        // provider-enabled height leaves room for the full Codex card, reset summary and
-        // DeepSeek card, including the two-currency balance state, without a trailing blank
-        // region that would make the detail page look unfinished.
-        .frame(width: 420, height: preferredHeight, alignment: .top)
+        .padding(DetailPageLayout.margin)
+        .frame(width: DetailPageLayout.pageWidth, height: preferredHeight, alignment: .top)
         .background(.regularMaterial)
         .onAppear { model.panelWillOpen() }
     }
 
     static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
-        switch (preferences.showDeepSeek, preferences.showCommandCode) {
-        case (false, false): return 320
-        case (true, false): return 420
-        case (false, true): return 510
-        case (true, true): return 610
-        }
+        DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
+                                    showCommandCode: preferences.showCommandCode)
     }
 
     private var preferredHeight: CGFloat {
@@ -55,7 +125,7 @@ struct UsagePanelView: View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(Self.productName())
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .fixedSize()
                 Text("v\(appVersion)")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
@@ -69,7 +139,7 @@ struct UsagePanelView: View {
                 model.refreshNow()
             } label: {
                 HStack(spacing: 5) {
-                    Image(systemName: model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing
+                    Image(systemName: isAnyRefreshInFlight
                           ? "arrow.triangle.2.circlepath"
                           : "arrow.clockwise")
                         .font(.system(size: 13, weight: .semibold))
@@ -80,7 +150,7 @@ struct UsagePanelView: View {
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .disabled(model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing)
+            .disabled(isAnyRefreshInFlight)
             .accessibilityLabel("刷新，\(updateStatusText)")
 
             Button {
@@ -94,11 +164,12 @@ struct UsagePanelView: View {
             .disabled(onSettings == nil)
             .accessibilityLabel("设置")
         }
+        .frame(height: DetailPageLayout.headerHeight)
         .frame(maxWidth: .infinity)
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.2.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.0"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -106,17 +177,16 @@ struct UsagePanelView: View {
         return preferred.hasPrefix("en") ? "Minget" : "明明有数"
     }
 
+    private var isAnyRefreshInFlight: Bool {
+        model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing
+    }
+
+    /// The global line aggregates every visible source: both ChatGPT profiles and every
+    /// displayed provider card. Reporting only account A would hide a stalled account B.
     private var updateStatusText: String {
         _ = model.tick
-        if model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing { return "刷新中…" }
+        if isAnyRefreshInFlight { return "刷新中…" }
 
-        let visibleReports = model.providerReports.filter { report in
-            switch report.platform {
-            case .deepseek: return preferences.showDeepSeek
-            case .commandcode: return preferences.showCommandCode
-            case .codex: return false
-            }
-        }
         let hasProviderProblem = visibleReports.contains { report in
             switch report.connection {
             case .stale, .unavailable, .authSuspended, .needsAuthorization, .unverified: return true
@@ -125,86 +195,18 @@ struct UsagePanelView: View {
         }
         if model.isStale || hasProviderProblem { return "部分数据未更新" }
 
-        var dates: [Date] = []
-        if let snapshot = model.currentSnapshot { dates.append(snapshot.fetchedAt) }
+        var dates: [Date] = model.codexSnapshotDates
         dates.append(contentsOf: visibleReports.compactMap(\.lastSuccessAt))
         guard let fetchedAt = dates.min() else { return "等待更新" }
         return UsageFormatting.updatedText(fetchedAt: fetchedAt)
     }
 
-    // MARK: Codex
-
-    private var codexCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 9) {
-                BrandImage(asset: .openAIBlossom, fallbackSystemName: "circle.hexagongrid.circle")
-                    .frame(width: 50, height: 50)
-                    // The supplied Blossom canvas contains transparent padding. Offset the
-                    // original artwork so its visible left edge aligns with the whale mark.
-                    .offset(x: -7)
-
-                Text(model.codexAccount?.displayPlanType ?? "套餐暂不可用")
-                    .font(.system(size: 20, weight: .bold))
-
-                Spacer(minLength: 8)
-
-                Text(model.codexAccount?.displayEmail ?? "账号暂不可用")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                    .accessibilityLabel("Codex 套餐")
-                    .accessibilityValue(model.codexAccount?.displayEmail ?? "账号暂不可用")
-            }
-
-            let snapshot = model.currentSnapshot
-            CodexQuotaGrid(fiveHour: snapshot?.fiveHour,
-                           weekly: snapshot?.weekly,
-                           now: Date())
-
-            Text(UsageFormatting.rateLimitResetText(snapshot?.rateLimitResetCredits,
-                                                    source: snapshot?.source ?? .cached))
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .accessibilityLabel("OpenAI 可用重置")
-
-            if case .unavailable(let error) = model.displayState {
-                Text(UsageFormatting.errorText(error).replacingOccurrences(of: "\n", with: " "))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(16)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    // MARK: Provider cards
-
-    @ViewBuilder
-    private var providerCards: some View {
-        let deepSeek = report(for: .deepseek)
-        let commandCode = report(for: .commandcode)
-        let showDeepSeek = preferences.showDeepSeek
-        let showCommandCode = preferences.showCommandCode
-
-        VStack(spacing: 12) {
-            if showDeepSeek {
-                DeepSeekOverviewCard(report: deepSeek,
-                                     status: model.deepSeekStatus,
-                                     openSettings: { onSettings?() })
-            }
-            if showCommandCode {
-                CommandCodeOverviewCard(report: commandCode, openSettings: { onSettings?() })
+    private var visibleReports: [ProviderReport] {
+        model.providerReports.filter { report in
+            switch report.platform {
+            case .deepseek: return preferences.showDeepSeek
+            case .commandcode: return preferences.showCommandCode
+            case .codex: return false
             }
         }
     }
@@ -222,151 +224,151 @@ struct UsagePanelView: View {
     }
 }
 
-// MARK: - Codex quota grid
+// MARK: - Shared track drawing
 
-private struct CodexQuotaGrid: View {
-    let fiveHour: RateLimitWindow?
-    let weekly: RateLimitWindow?
-    let now: Date
-
-    private let labelWidth: CGFloat = 70
-    private let valueWidth: CGFloat = 92
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            quotaRow(label: "5 小时", window: fiveHour, color: quotaColor(fiveHour))
-            resetRow(window: fiveHour, count: ResetTimeModel.fiveHourSegmentCount)
-            quotaRow(label: "周额度", window: weekly, color: quotaColor(weekly))
-            resetRow(window: weekly, count: ResetTimeModel.weeklySegmentCount)
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private func quotaRow(label: String,
-                           window: RateLimitWindow?,
-                           color: Color) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: labelWidth, alignment: .leading)
-
-            DetailQuotaBar(fraction: fraction(window), color: color)
-                .frame(maxWidth: .infinity)
-
-            Text(window.map { "剩余 \(Int($0.remainingPercent.rounded()))%" } ?? "剩余 —")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(color)
-                .lineLimit(1)
-                .frame(width: valueWidth, alignment: .trailing)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label)，\(window.map { "剩余 \(Int($0.remainingPercent.rounded()))%" } ?? "额度不可用")")
-    }
-
-    private func resetRow(window: RateLimitWindow?, count: Int) -> some View {
-        let progress = ResetTimeModel.progress(expected: count == 5 ? .fiveHour : .weekly,
-                                               window: window,
-                                               now: now)
-        let resetText: String
-        switch progress.state {
-        case .active:
-            resetText = window.map(UsageFormatting.resetPointText) ?? "时间未知"
-        case .arrived:
-            resetText = "等待刷新"
-        case .unknown:
-            resetText = "时间未知"
-        case .invalid:
-            resetText = "时间不可用"
-        }
-        return HStack(spacing: 8) {
-            Text("重置时间")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .frame(width: labelWidth, alignment: .leading)
-
-            DetailResetBar(progress: progress)
-                .frame(maxWidth: .infinity)
-
-            Text(resetText)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(width: valueWidth, alignment: .trailing)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("重置时间，\(resetText)")
-    }
-
-    private func fraction(_ window: RateLimitWindow?) -> Double {
-        guard let window, window.remainingPercent.isFinite else { return 0 }
-        return min(max(window.remainingPercent / 100, 0), 1)
-    }
-
-    private func quotaColor(_ window: RateLimitWindow?) -> Color {
-        guard let window, window.remainingPercent.isFinite else { return .secondary }
-        switch UsageFormatting.usageLevel(remainingPercent: window.remainingPercent) {
-        case .normal: return .green
-        case .warning: return .orange
-        case .critical: return .red
-        }
-    }
-}
-
-private struct DetailQuotaBar: View {
-    let fraction: Double
-    let color: Color
+/// The empty track plus the filled remainder, drawn from the left so the bright region shrinks
+/// from the right as the resource is consumed. Used by the provider cards.
+struct ProviderTrackBar: View {
+    /// `0...1` remaining, or nil when the value cannot be computed: then only the empty track
+    /// is drawn, never a pretend zero.
+    let fraction: Double?
+    let tint: Color
+    let height: CGFloat
+    let isCached: Bool
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
                     .fill(Color.secondary.opacity(0.16))
-                Capsule(style: .continuous)
-                    .fill(color.opacity(0.86))
-                    .frame(width: geometry.size.width * fraction)
-            }
-        }
-        .frame(height: 8)
-        .accessibilityHidden(true)
-    }
-}
-
-private struct DetailResetBar: View {
-    let progress: ResetTimeProgress
-
-    private let gap: CGFloat = 3
-
-    var body: some View {
-        GeometryReader { geometry in
-            let count = progress.fills.count
-            let width = count > 0
-                ? max(0, (geometry.size.width - CGFloat(count - 1) * gap) / CGFloat(count))
-                : 0
-            HStack(spacing: gap) {
-                ForEach(Array(progress.fills.enumerated()), id: \.offset) { _, fill in
-                    ZStack(alignment: .leading) {
-                        Capsule(style: .continuous)
-                            .fill(Color.secondary.opacity(0.16))
-                        Capsule(style: .continuous)
-                            .fill(Color.blue)
-                            .frame(width: width * min(max(fill, 0), 1))
-                    }
-                    .frame(width: width, height: 6)
+                if let fraction {
+                    Capsule(style: .continuous)
+                        .fill(tint.opacity(isCached ? 0.45 : 0.86))
+                        .frame(width: geometry.size.width * min(max(fraction, 0), 1))
                 }
             }
         }
-        .frame(height: 6)
+        .frame(height: height)
         .accessibilityHidden(true)
     }
 }
 
-// MARK: - Provider branding and cards
+/// The provider time rail: segments for the 5-hour and weekly windows, one continuous bar for
+/// the monthly cycle, and a grey rail with a centred `?` when there is no usable time.
+struct ProviderTimeBar: View {
+    let progress: ProviderTimeProgress
+    let isCached: Bool
+    /// Blue on the ChatGPT cards (1.2.1), system indigo on the Command Code card so the two
+    /// rails are told apart from that provider's purple credit track.
+    var tint: Color = .indigo
+
+    static let height: CGFloat = 3
+    static let segmentGap: CGFloat = 2
+
+    var body: some View {
+        Group {
+            switch progress {
+            case .segments(let fills):
+                segmented(fills)
+            case .continuous(let fraction):
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous).fill(Color.secondary.opacity(0.16))
+                        Capsule(style: .continuous)
+                            .fill(tint.opacity(isCached ? 0.45 : 0.85))
+                            .frame(width: geometry.size.width * min(max(fraction, 0), 1))
+                    }
+                }
+            case .arrived:
+                // Emptied out: the app is waiting for the service, not refilling locally.
+                Capsule(style: .continuous).fill(Color.secondary.opacity(0.16))
+            case .unavailable:
+                ZStack {
+                    Capsule(style: .continuous).fill(Color.secondary.opacity(0.16))
+                    Text("?")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                }
+            }
+        }
+        .frame(height: Self.height)
+        .accessibilityHidden(true)
+    }
+
+    private func segmented(_ fills: [Double]) -> some View {
+        GeometryReader { geometry in
+            let count = max(fills.count, 1)
+            let width = max(0, (geometry.size.width - CGFloat(count - 1) * Self.segmentGap) / CGFloat(count))
+            HStack(spacing: Self.segmentGap) {
+                ForEach(Array(fills.enumerated()), id: \.offset) { _, fill in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous).fill(Color.secondary.opacity(0.16))
+                        Capsule(style: .continuous)
+                            .fill(tint.opacity(isCached ? 0.45 : 0.85))
+                            .frame(width: width * min(max(fill, 0), 1))
+                    }
+                    .frame(width: width)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - DeepSeek balance strip
+
+/// Selection and ordering of the balances shown in the DeepSeek card.
+///
+/// REVISION_SPEC.md §6: currency codes ascending with the unknown bucket last, at most three
+/// slots, and beyond three the third slot becomes a fixed overflow line. Nothing is converted,
+/// nothing is summed.
+enum DeepSeekBalanceRows {
+
+    static let stripSlots = 3
+
+    struct Strip: Equatable {
+        let amounts: [ProviderBalance]
+        let overflowCount: Int
+
+        /// Fixed overflow wording; nil when every balance fits.
+        var overflowText: String? {
+            guard overflowCount > 0 else { return nil }
+            return "另有 \(overflowCount) 个币种"
+        }
+    }
+
+    static func strip(_ balances: [ProviderBalance]) -> Strip {
+        let sorted = ordered(balances)
+        guard sorted.count > stripSlots else { return Strip(amounts: sorted, overflowCount: 0) }
+        let amountSlots = stripSlots - 1
+        return Strip(amounts: Array(sorted.prefix(amountSlots)),
+                     overflowCount: sorted.count - amountSlots)
+    }
+
+    /// Currency code ascending; a bucket whose currency the response did not name goes last.
+    /// Ties keep the provider's own order, so re-rendering cannot reshuffle equal codes.
+    static func ordered(_ balances: [ProviderBalance]) -> [ProviderBalance] {
+        balances.enumerated().sorted { lhs, rhs in
+            let left = normalizedCode(lhs.element.currency)
+            let right = normalizedCode(rhs.element.currency)
+            switch (left, right) {
+            case let (l?, r?): return l == r ? lhs.offset < rhs.offset : l < r
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return lhs.offset < rhs.offset
+            }
+        }.map(\.element)
+    }
+
+    private static func normalizedCode(_ currency: String?) -> String? {
+        guard let currency, !currency.isEmpty else { return nil }
+        return currency.uppercased()
+    }
+}
+
+// MARK: - Provider branding
 
 private enum BrandAsset {
-    case openAIBlossom
     case deepSeekWhale
 }
 
@@ -378,23 +380,13 @@ private struct BrandImage: View {
 
     var body: some View {
         if let image = image {
-            if case .deepSeekWhale = asset {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFit()
-                    .colorInvertIfNeeded(colorScheme == .dark)
-                    .blendMode(colorScheme == .dark ? .screen : .multiply)
-                    .accessibilityHidden(true)
-            } else {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .renderingMode(.template)
-                    .foregroundStyle(.primary)
-                    .scaledToFit()
-                    .accessibilityHidden(true)
-            }
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .colorInvertIfNeeded(colorScheme == .dark)
+                .blendMode(colorScheme == .dark ? .screen : .multiply)
+                .accessibilityHidden(true)
         } else {
             Image(systemName: fallbackSystemName)
                 .font(.system(size: 22, weight: .medium))
@@ -404,28 +396,11 @@ private struct BrandImage: View {
     }
 
     private var image: NSImage? {
-        let resourceNames: [String]
-        switch asset {
-        case .openAIBlossom:
-            let variant = colorScheme == .dark ? "White" : "Black"
-            resourceNames = ["OAI_OpenAI-Blossom_\(variant).svg",
-                             "OAI_OpenAI-Blossom_\(variant).png"]
-        case .deepSeekWhale:
-            resourceNames = ["deepseek-whale-black.png"]
+        guard case .deepSeekWhale = asset else { return nil }
+        guard let path = Bundle.main.path(forResource: "deepseek-whale-black", ofType: "png") else {
+            return nil
         }
-        for resourceName in resourceNames {
-            let parts = resourceName.split(separator: ".", maxSplits: 1).map(String.init)
-            guard parts.count == 2,
-                  let path = Bundle.main.path(forResource: parts[0], ofType: parts[1]),
-                  let image = NSImage(contentsOfFile: path) else {
-                continue
-            }
-            if case .openAIBlossom = asset {
-                image.isTemplate = true
-            }
-            return image
-        }
-        return nil
+        return NSImage(contentsOfFile: path)
     }
 }
 
@@ -466,33 +441,57 @@ private extension View {
     }
 }
 
-private struct DeepSeekOverviewCard: View {
+// MARK: - DeepSeek card (416 × 48)
+
+/// Internal rather than private so the evidence-render tests can compose the card at its fixed
+/// size from a fixture report, without standing up a provider engine.
+struct DeepSeekOverviewCard: View {
+
+    static let size = CGSize(width: DetailPageLayout.contentWidth, height: DetailPageLayout.deepSeekCardHeight)
+
     let report: ProviderReport
     let status: DeepSeekStatusSnapshot
     let openSettings: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // There is no verified DeepSeek account field. Put the real balance directly in
-            // this brand row so the card does not reserve an empty account slot or a second
-            // blank row before the status information.
-            // Centering the frames compensates for the whale PNG's internal whitespace and
-            // keeps the visible whale, wordmark and amount on one visual axis.
-            HStack(alignment: .center, spacing: 10) {
-                BrandImage(asset: .deepSeekWhale, fallbackSystemName: "drop.fill")
-                    .frame(width: 38, height: 36)
+        HStack(alignment: .center, spacing: 6) {
+            BrandImage(asset: .deepSeekWhale, fallbackSystemName: "drop.fill")
+                .frame(width: 22, height: 22)
+            DeepSeekWordmarkImage()
+                .frame(width: 66, height: 18, alignment: .leading)
 
-                DeepSeekWordmarkImage()
-                    .frame(width: 128, height: 28, alignment: .leading)
-
-                Spacer(minLength: 12)
-
-                balanceSummary
+            Button {
+                NSWorkspace.shared.open(DeepSeekStatusProvider.statusPageURL)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(connectionText)
+                        .font(.system(size: 9))
+                        .foregroundStyle(connectionColor)
+                        .lineLimit(1)
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 5, height: 5)
+                    Text(statusText)
+                        .font(.system(size: 9))
+                        .foregroundStyle(statusColor)
+                        .lineLimit(1)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 7, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
             }
+            .buttonStyle(.plain)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .help("打开 DeepSeek 状态页")
 
-            serviceStatusRow
+            Spacer(minLength: 2)
+            balanceStrip
+                .layoutPriority(2)
         }
-        .padding(14)
+        .padding(10)
+        .frame(width: Self.size.width, height: Self.size.height, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
@@ -503,54 +502,53 @@ private struct DeepSeekOverviewCard: View {
     }
 
     @ViewBuilder
-    private var balanceSummary: some View {
-        if !report.balances.isEmpty,
-           report.connection == .connected || report.connection == .stale {
-            VStack(alignment: .trailing, spacing: 4) {
-                ForEach(Array(report.balances.enumerated()), id: \.offset) { _, balance in
-                    HStack(alignment: .lastTextBaseline, spacing: 5) {
-                        Text(DecimalFormatting.overviewBalanceLabel(balance))
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Text(DecimalFormatting.overviewBalanceText(balance))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                    }
-                }
-            }
-        } else {
-            VStack(alignment: .trailing, spacing: 4) {
-                Button(report.connection == .notConfigured ? "前往设置" : "查看设置") {
-                    openSettings()
-                }
+    private var balanceStrip: some View {
+        if balances.isEmpty {
+            Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
                 .buttonStyle(.link)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
+        } else {
+            ViewThatFits(in: .horizontal) {
+                let strip = DeepSeekBalanceRows.strip(balances)
+                balanceRow(amounts: strip.amounts, overflowText: strip.overflowText)
+
+                let primary = Array(DeepSeekBalanceRows.ordered(balances).prefix(1))
+                balanceRow(amounts: primary,
+                           overflowText: balances.count > 1 ? "另有 \(balances.count - 1) 个币种" : nil)
             }
         }
     }
 
-    private var serviceStatusRow: some View {
-        HStack(spacing: 5) {
-            Text(connectionText)
-                .font(.system(size: 10))
-                .foregroundStyle(connectionColor)
-                .fixedSize(horizontal: true, vertical: false)
-            Circle()
-                .fill(statusColor)
-                .frame(width: 6, height: 6)
-            Text(status.status.displayTitle)
-                .font(.system(size: 10))
-                .foregroundStyle(statusColor)
-                .fixedSize(horizontal: true, vertical: false)
-            Button("状态页") {
-                NSWorkspace.shared.open(DeepSeekStatusProvider.statusPageURL)
+    private func balanceRow(amounts: [ProviderBalance], overflowText: String?) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            ForEach(Array(amounts.enumerated()), id: \.offset) { _, balance in
+                Text("\(amountText(balance)) \(balance.currency ?? "币种未确认")")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .accessibilityLabel("\(balance.currency ?? "币种未确认") \(amountText(balance))")
             }
-            .buttonStyle(.link)
-            .font(.system(size: 10))
+            if let overflowText {
+                Text(overflowText)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
         }
-        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    /// The main amount prefers `available`, then `total`. A balance with neither is not a
+    /// zero: it shows the placeholder.
+    private func amountText(_ balance: ProviderBalance) -> String {
+        guard let main = balance.available ?? balance.total else { return "—" }
+        return DecimalFormatting.amountText(main)
+    }
+
+    /// Only a connected or cached report may show amounts at all.
+    private var balances: [ProviderBalance] {
+        guard report.connection == .connected || report.connection == .stale else { return [] }
+        return report.balances
     }
 
     private var connectionText: String {
@@ -580,136 +578,136 @@ private struct DeepSeekOverviewCard: View {
         case .unknown: return .secondary
         }
     }
+
+    /// The single-line card keeps the official state meaningful without spending the width
+    /// of the previous second row. The unknown state is the only provider title shortened.
+    private var statusText: String {
+        status.status == .unknown ? "状态未知" : status.status.displayTitle
+    }
 }
 
-// MARK: - Provider overview card
+// MARK: - Command Code card (416 × 162)
 
-private struct ProviderOverviewCard: View {
+/// Internal rather than private for the same reason as the DeepSeek card.
+struct CommandCodeOverviewCard: View {
+
+    static let size = CGSize(width: DetailPageLayout.contentWidth, height: DetailPageLayout.commandCodeCardHeight)
+    static let windowBlockHeight: CGFloat = 25
+    static let windowGroupSpacing: CGFloat = 4
+    static let headerHeight: CGFloat = 24
+    static let summaryHeight: CGFloat = 33
+    static let valueWidth: CGFloat = 116
+
     let report: ProviderReport
-    let icon: String
-    let tint: Color
     let openSettings: () -> Void
+    /// Injected so the render tests can pin one clock reading.
+    var now: Date = Date()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 28, height: 28)
-                    .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(report.platform.displayName)
-                        .font(.system(size: 15, weight: .bold))
-                        .lineLimit(1)
-                    Text(statusText)
-                        .font(.system(size: 11))
-                        .foregroundStyle(statusColor)
-                        .lineLimit(1)
-                }
+        VStack(alignment: .leading, spacing: 1) {
+            header.frame(height: Self.headerHeight)
+            ForEach(CommandCodeCardPresentation.windowKinds, id: \.self) { kind in
+                windowBlock(kind)
+                    .frame(height: Self.windowBlockHeight)
+                    .padding(.bottom, kind == .billingPeriod ? 0 : Self.windowGroupSpacing - 1)
             }
-
-            if !report.balances.isEmpty,
-               report.connection == .connected || report.connection == .stale {
-                ForEach(Array(report.balances.enumerated()), id: \.offset) { _, balance in
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(DecimalFormatting.overviewBalanceText(balance))
-                            .font(.system(size: 19, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        Text(DecimalFormatting.overviewBalanceLabel(balance))
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } else {
-                Button(report.connection == .notConfigured ? "前往设置" : "查看设置") {
-                    openSettings()
-                }
-                .buttonStyle(.link)
-                .font(.system(size: 11))
-            }
+            summary.frame(height: Self.summaryHeight)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(10)
+        .frame(width: Self.size.width, height: Self.size.height, alignment: .topLeading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var statusText: String {
-        switch report.connection {
-        case .connected: return "● 已连接"
-        case .stale: return "● 缓存数据"
-        case .connecting: return "正在获取…"
-        case .notConfigured: return "未连接"
-        case .authSuspended, .needsAuthorization: return "需要重新连接"
-        case .unavailable, .unverified: return "暂不可用"
-        }
-    }
-
-    private var statusColor: Color {
-        switch report.connection {
-        case .connected: return .green
-        case .stale: return .orange
-        default: return .secondary
-        }
-    }
-}
-
-private struct CommandCodeOverviewCard: View {
-    let report: ProviderReport
-    let openSettings: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                CommandCodeLogomark()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Command Code").font(.system(size: 15, weight: .bold))
-                    Text(report.usage?.planName ?? connectionText).font(.system(size: 10)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                if report.usage == nil {
-                    Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }.buttonStyle(.link).font(.system(size: 11))
-                }
-            }
-            if let usage = report.usage {
-                ForEach(usage.windows.filter { $0.kind != .billingPeriod }, id: \.kind) { window in
-                    usageRow(window)
-                }
-                if let monthly = usage.windows.first(where: { $0.kind == .billingPeriod }) { usageRow(monthly) }
-                if let summary = usage.summary { summaryRows(summary) }
-            }
-        }
-        .padding(14)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.82), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.primary.opacity(0.05), lineWidth: 1) }
         .accessibilityElement(children: .contain)
     }
 
-    private func usageRow(_ window: ProviderUsageWindow) -> some View {
-        HStack(spacing: 8) {
-            Text(label(window.kind)).font(.system(size: 11, weight: .semibold)).frame(width: 42, alignment: .leading)
-            ProgressView(value: fraction(window)).tint(Color.purple).frame(maxWidth: .infinity)
-            Text(valueText(window)).font(.system(size: 10, design: .rounded)).foregroundStyle(.secondary).frame(width: 140, alignment: .trailing)
+    /// Cached numbers stay on display but every track is drawn fainter.
+    private var isCached: Bool { report.connection == .stale }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 8) {
+            CommandCodeLogomark()
+                .frame(width: 20, height: 20)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Command Code").font(.system(size: 12, weight: .bold)).lineLimit(1)
+                Text(report.usage?.planName ?? connectionText)
+                    .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if report.usage == nil {
+                Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
+                    .buttonStyle(.link).font(.system(size: 10))
+            }
         }
     }
 
-    private func summaryRows(_ summary: ProviderUsageSummary) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("\(periodText(summary.periodBasis)) · Token \(count(summary.totalTokens)) · 请求 \(count(summary.totalRuns))")
-                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
-            Text("输入 \(count(summary.inputTokens)) · 输出 \(count(summary.outputTokens)) · 成功 \(count(summary.completedRuns)) · 失败 \(count(summary.failedRuns))")
-                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
-            Text("成功率 \(percent(summary.successRate)) · 成本 \(money(summary.totalCostUSD))")
-                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+    // MARK: Window rows
+
+    /// One window: a remaining-credit track above its own reset-time rail
+    /// (REVISION_SPEC.md §7.1–§7.3).
+    private func windowBlock(_ kind: ProviderUsageWindow.Kind) -> some View {
+        let window = window(kind)
+        let time = ProviderTimeModel.progress(kind: kind,
+                                             window: window,
+                                             billingPeriodStart: report.usage?.billingPeriodStart,
+                                             billingPeriodEnd: report.usage?.billingPeriodEnd,
+                                             now: now)
+        return VStack(spacing: 2) {
+            HStack(spacing: 6) {
+                Text(CommandCodeCardPresentation.label(kind))
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 46, alignment: .leading)
+                ProviderTrackBar(fraction: window?.remainingFraction,
+                                 tint: .purple,
+                                 height: 5,
+                                 isCached: isCached)
+                    .frame(maxWidth: .infinity)
+                Text(CommandCodeCardPresentation.quotaText(window))
+                    .font(.system(size: 9, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(width: Self.valueWidth, alignment: .trailing)
+            }
+            HStack(spacing: 6) {
+                Text("重置时间")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 46, alignment: .leading)
+                ProviderTimeBar(progress: time.progress, isCached: isCached)
+                    .frame(maxWidth: .infinity)
+                Text(CommandCodeCardPresentation.timeText(kind: kind,
+                                                          window: window,
+                                                          usage: report.usage,
+                                                          outcome: time,
+                                                          now: now))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(width: Self.valueWidth, alignment: .trailing)
+            }
+        }
+    }
+
+    private func window(_ kind: ProviderUsageWindow.Kind) -> ProviderUsageWindow? {
+        report.usage?.windows.first { $0.kind == kind }
+    }
+
+    // MARK: Summary
+
+    private var summary: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(CommandCodeCardPresentation.summaryLines(report.usage?.summary).enumerated()),
+                    id: \.offset) { _, line in
+                Text(line)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 11, alignment: .leading)
+            }
         }
     }
 
@@ -723,13 +721,89 @@ private struct CommandCodeOverviewCard: View {
         case .unavailable, .unverified: return "暂不可用"
         }
     }
-    private func label(_ kind: ProviderUsageWindow.Kind) -> String { switch kind { case .fiveHour: return "5 小时"; case .weekly: return "周额度"; case .billingPeriod: return "本月" } }
-    private func fraction(_ window: ProviderUsageWindow) -> Double { guard let used = window.used, let limit = window.limit, limit > 0 else { return 0 }; return min(1, max(0, NSDecimalNumber(decimal: used / limit).doubleValue)) }
-    private func money(_ value: Decimal?) -> String { UsageFormatting.usdAmount(value) }
-    private func count(_ value: Int64?) -> String { value.map { NumberFormatter.localizedString(from: NSNumber(value: $0), number: .decimal) } ?? "—" }
-    private func percent(_ value: Decimal?) -> String { guard let value else { return "—" }; return NSDecimalNumber(decimal: value).stringValue + "%" }
-    private func valueText(_ window: ProviderUsageWindow) -> String { "已用 \(money(window.used)) · 剩余 \(money(window.remaining))" }
-    private func periodText(_ period: ProviderUsageSummary.PeriodBasis) -> String { switch period { case .billingPeriod: return "当前计费周期"; case .last30Days: return "近 30 天"; case .unknown: return "统计周期未确认" } }
+}
+
+/// Pure text rules for the Command Code card, kept out of the view so the fixed three-row
+/// structure, the remaining-credit wording and the placeholder rules are testable without
+/// AppKit.
+enum CommandCodeCardPresentation {
+
+    /// Fixed quota-row order (UI_SPEC.md §6).
+    static let windowKinds: [ProviderUsageWindow.Kind] = [.fiveHour, .weekly, .billingPeriod]
+
+    static func label(_ kind: ProviderUsageWindow.Kind) -> String {
+        switch kind {
+        case .fiveHour: return "5 小时"
+        case .weekly: return "周额度"
+        case .billingPeriod: return "本月"
+        }
+    }
+
+    /// `$3.00 / $4.00`, built only from values the service actually reported. The track carries
+    /// the approximate proportion, so the compact right-hand text does not repeat a percentage.
+    static func quotaText(_ window: ProviderUsageWindow?) -> String {
+        guard let window else { return "—" }
+        if let remaining = window.effectiveRemaining {
+            if let limit = window.limit {
+                return "\(UsageFormatting.usdAmount(remaining)) / \(UsageFormatting.usdAmount(limit))"
+            }
+            return "\(UsageFormatting.usdAmount(remaining)) / —"
+        }
+        if let limit = window.limit { return "— / \(UsageFormatting.usdAmount(limit))" }
+        return "—"
+    }
+
+    /// Five-hour and weekly windows show only the reset point. The monthly cycle keeps the
+    /// remaining-day context because its span is substantially longer.
+    static func timeText(kind: ProviderUsageWindow.Kind,
+                         window: ProviderUsageWindow?,
+                         usage: ProviderUsage?,
+                         outcome: ProviderTimeModel.Outcome,
+                         now: Date) -> String {
+        switch outcome.progress {
+        case .unavailable:
+            return "时间未知"
+        case .arrived:
+            return "等待刷新"
+        case .segments, .continuous:
+            if kind == .billingPeriod {
+                let remainingText = ProviderTimeFormatting.dayText(outcome.remainingSeconds)
+                guard let absolute = usage?.billingPeriodEnd.map(UsageFormatting.shortDate) else {
+                    return "剩余 \(remainingText)"
+                }
+                return "剩余 \(remainingText) · \(absolute)"
+            }
+            return window?.resetsAt.map(UsageFormatting.shortDateTime) ?? "时间未知"
+        }
+    }
+
+    /// Exactly three single-line summaries, in the fixed order. Any field the service did not
+    /// report is a `—`, never a fabricated zero and never an extra line.
+    static func summaryLines(_ summary: ProviderUsageSummary?) -> [String] {
+        [
+            "\(periodText(summary?.periodBasis)) · Token \(count(summary?.totalTokens)) · 请求 \(count(summary?.totalRuns))",
+            "输入 \(count(summary?.inputTokens)) · 输出 \(count(summary?.outputTokens)) · 成功 \(count(summary?.completedRuns)) · 失败 \(count(summary?.failedRuns))",
+            "成功率 \(percent(summary?.successRate)) · 成本 \(UsageFormatting.usdAmount(summary?.totalCostUSD))",
+        ]
+    }
+
+    static func periodText(_ period: ProviderUsageSummary.PeriodBasis?) -> String {
+        switch period {
+        case .billingPeriod: return "当前计费周期"
+        case .last30Days: return "近 30 天"
+        case .unknown, .none: return "统计周期未确认"
+        }
+    }
+
+    static func count(_ value: Int64?) -> String {
+        guard let value else { return "—" }
+        return NumberFormatter.localizedString(from: NSNumber(value: value), number: .decimal)
+    }
+
+    static func percent(_ value: Decimal?) -> String {
+        guard let value else { return "—" }
+        return NSDecimalNumber(decimal: value).stringValue + "%"
+    }
 }
 
 private struct CommandCodeLogomark: View {
@@ -738,13 +812,14 @@ private struct CommandCodeLogomark: View {
     var body: some View {
         let resource = colorScheme == .dark ? "commandcode-symbol" : "commandcode-symbol-black"
         Group {
-            if let url = Bundle.main.url(forResource: resource, withExtension: "svg"), let image = NSImage(contentsOf: url) {
-                Image(nsImage: image).resizable().interpolation(.high)
+            if let url = Bundle.main.url(forResource: resource, withExtension: "svg"),
+               let image = NSImage(contentsOf: url) {
+                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
             } else {
-                Image(systemName: "chevron.left.forwardslash.chevron.right").foregroundStyle(Color.purple)
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .foregroundStyle(Color.purple)
             }
         }
-        .frame(width: 30, height: 30)
         .accessibilityLabel("Command Code")
     }
 }

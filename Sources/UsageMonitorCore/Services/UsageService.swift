@@ -30,6 +30,11 @@ public final class UsageService: @unchecked Sendable {
 
     private let factory: ClientFactory
     private let cache: UsageCache
+    /// Owning ChatGPT profile, or nil for the pre-1.3.0 single-account wiring.
+    ///
+    /// When set, every cached read and write is scoped to `profileID + accountID`, so two
+    /// long-lived profiles can never serve each other's numbers (REQUIREMENTS.md §4.3).
+    private let profileID: String?
     private let restartDelay: TimeInterval
     private let clock: () -> Date
 
@@ -60,23 +65,51 @@ public final class UsageService: @unchecked Sendable {
 
     public init(factory: @escaping ClientFactory,
                 cache: UsageCache = UsageCache(),
+                profileID: String? = nil,
                 restartDelay: TimeInterval = 0.5,
                 clock: @escaping () -> Date = Date.init) {
         self.factory = factory
         self.cache = cache
+        self.profileID = profileID
         self.restartDelay = restartDelay
         self.clock = clock
     }
 
+    /// Builds the environment one child is launched with: a copy of `base` with `CODEX_HOME`
+    /// replaced. Account isolation lives entirely here, so `CodexLocator` stays a plain
+    /// executable finder (IMPLEMENTATION_TASKS.md §1.2).
+    ///
+    /// The result never reaches `Diagnostics`: only the profile identifier and the process
+    /// lifecycle are logged, never environment values.
+    public static func childEnvironment(base: [String: String],
+                                        codexHome: URL?) -> [String: String] {
+        guard let codexHome else { return base }
+        var copy = base
+        copy["CODEX_HOME"] = codexHome.path
+        return copy
+    }
+
     /// Default production wiring: locate `codex`, launch `codex app-server`, reuse it.
+    ///
+    /// - Parameters:
+    ///   - environment: the process environment to copy for the child.
+    ///   - codexHome: when given, the child's `CODEX_HOME`; the copy makes the profile's
+    ///     isolated account directory apply to this child only.
+    ///   - profileID: scopes the cache to one profile when set.
     public convenience init(cache: UsageCache = UsageCache(),
-                            environment: [String: String] = ProcessInfo.processInfo.environment) {
+                            environment: [String: String] = ProcessInfo.processInfo.environment,
+                            codexHome: URL? = nil,
+                            profileID: String? = nil) {
+        let childEnvironment = Self.childEnvironment(base: environment, codexHome: codexHome)
         self.init(
             factory: {
                 let executable = try CodexLocator().locate(environment: environment)
-                return CodexAppServerClient(transport: JSONRPCClient(executableURL: executable, arguments: ["app-server"]))
+                return CodexAppServerClient(transport: JSONRPCClient(executableURL: executable,
+                                                                     arguments: ["app-server"],
+                                                                     environment: childEnvironment))
             },
-            cache: cache
+            cache: cache,
+            profileID: profileID
         )
     }
 
@@ -102,15 +135,19 @@ public final class UsageService: @unchecked Sendable {
     public var currentAccountID: String? {
         lock.lock(); let account = lastAccount; lock.unlock()
         if let id = account?.cacheAccountID { return id }
+        if let profileID { return cache.loadLastKnownAccountID(profileID: profileID) }
         return cache.loadLastKnownAccountID()
     }
 
     /// Cached snapshot for the account the app believes is current.
     ///
     /// Strictness (v1.1 requirement 2): when an account is known, only that account's entry
-    /// is returned. The pre-existing unattributed store is served solely when no account is
-    /// known at all, so v1.0 data can never be presented as a specific account's data.
+    /// is returned. In profile mode the lookup is additionally scoped to this profile, so
+    /// account A's cache can never appear behind account B (REQUIREMENTS.md §4.3).
     public func cachedSnapshotForCurrentAccount() -> UsageSnapshot? {
+        if let profileID {
+            return cache.load(profileID: profileID, accountID: currentAccountID)
+        }
         if let accountID = currentAccountID, !accountID.isEmpty {
             return cache.load(accountID: accountID)
         }
@@ -264,7 +301,14 @@ public final class UsageService: @unchecked Sendable {
         do {
             guard let account = try client.readAccount(timeout: timeout) else { return nil }
             if let id = account.cacheAccountID {
-                cache.saveLastKnownAccountID(id)
+                if let profileID {
+                    // Profile-scoped attribution, plus the one-time 1.2.1 -> 1.3.0 cache
+                    // migration this first successful identity read unlocks.
+                    cache.saveLastKnownAccountID(id, profileID: profileID)
+                    cache.migrateLegacyCacheIfNeeded(profileID: profileID, resolvedAccountID: id)
+                } else {
+                    cache.saveLastKnownAccountID(id)
+                }
                 lock.lock(); lastAccount = account; lock.unlock()
             }
             return account
@@ -274,11 +318,15 @@ public final class UsageService: @unchecked Sendable {
         }
     }
 
-    /// Writes the snapshot to the store that matches its attribution: the account store when
-    /// an account can be identified (this read's own, or the last known one), the legacy
-    /// store only when no account is known at all.
+    /// Writes the snapshot to the store that matches its attribution: the profile-scoped
+    /// store when this service owns a profile, otherwise the v1.1 account store when an
+    /// account can be identified, and the legacy store only in the no-account case.
     private func persistSnapshot(_ snapshot: UsageSnapshot, account: CodexAccount?) {
         let accountID = account?.cacheAccountID ?? currentAccountID
+        if let profileID {
+            cache.save(snapshot, profileID: profileID, accountID: accountID)
+            return
+        }
         if let accountID, !accountID.isEmpty {
             cache.save(snapshot, accountID: accountID)
         } else {
@@ -289,6 +337,9 @@ public final class UsageService: @unchecked Sendable {
     /// Cache the failure paths may serve. Strict when an account is known; the legacy
     /// unattributed store is reachable only when no account is known at all.
     private func servedCachedSnapshot() -> UsageSnapshot? {
+        if let profileID {
+            return cache.load(profileID: profileID, accountID: currentAccountID)
+        }
         if let accountID = currentAccountID, !accountID.isEmpty {
             return cache.load(accountID: accountID)
         }

@@ -28,7 +28,6 @@ public enum MenuBarAttention: String, Equatable, Sendable {
 /// The view is a pure function of this value, which is what lets the layout, the two time
 /// rows and the warning be tested without a window server.
 public struct MenuBarContent: Equatable, Sendable {
-
     public let mode: MenuBarSpaceMode
     /// The quota text only. Never contains a marker, in any mode.
     public let text: String
@@ -77,38 +76,95 @@ public struct MenuBarContent: Equatable, Sendable {
     }
 }
 
+/// The DeepSeek half of the menu bar, already reduced to what the item draws.
+///
+/// `amount` is the resolved single balance; `nil` means nothing attributable is on display,
+/// which the item reports as `DS —` with a warning rather than as a zero balance.
+public struct MenuBarDeepSeekContent: Equatable, Sendable {
+    public let currency: String?
+    public let amount: Decimal?
+    public let isCached: Bool
+
+    public init(currency: String?, amount: Decimal?, isCached: Bool) {
+        self.currency = currency
+        self.amount = amount
+        self.isCached = isCached
+    }
+
+    public var hasAmount: Bool { amount != nil }
+}
+
+/// Exactly one source feeds the menu bar at a time (REQUIREMENTS.md §6.1).
+///
+/// A ChatGPT source carries its short label so the item always names the account it shows;
+/// the DeepSeek source carries no time rows at all, because the balance endpoint has no
+/// window to draw.
+public enum MenuBarSource: Equatable, Sendable {
+    case chatGPT(shortLabel: String,
+                 display: UsageDisplay,
+                 connectionState: UsageService.ConnectionState)
+    case deepSeek(MenuBarDeepSeekContent)
+}
+
 /// The only place the menu bar's text, warning marker and time rows are decided.
 public enum MenuBarContentBuilder {
 
     /// - Parameters:
-    ///   - display: the Codex display state the panel already uses.
-    ///   - connectionState: used to tell "no data yet" apart from "the read failed".
+    ///   - source: the already-resolved menu bar source (one ChatGPT profile, or DeepSeek).
     ///   - now: the single clock reading shared by both rows.
     ///   - mode: which of the two production width modes is being drawn.
-    public static func make(display: UsageDisplay,
-                            connectionState: UsageService.ConnectionState,
+    public static func make(source: MenuBarSource,
                             now: Date,
                             mode: MenuBarSpaceMode) -> MenuBarContent {
-        let snapshot = display.snapshot
-        let rows = ResetTimeModel.rows(snapshot: snapshot, now: now)
-        return MenuBarContent(mode: mode,
-                              text: text(for: mode, snapshot: snapshot),
-                              attention: attention(for: display, connectionState: connectionState),
-                              showsTimeBars: true,
-                              fiveHour: rows.fiveHour,
-                              weekly: rows.weekly,
-                              isCached: display.isStale)
+        switch source {
+        case .chatGPT(let shortLabel, let display, let connectionState):
+            let snapshot = display.snapshot
+            let rows = ResetTimeModel.rows(snapshot: snapshot, now: now)
+            return MenuBarContent(mode: mode,
+                                  text: text(for: mode, shortLabel: shortLabel, snapshot: snapshot),
+                                  attention: attention(for: display, connectionState: connectionState),
+                                  showsTimeBars: true,
+                                  fiveHour: rows.fiveHour,
+                                  weekly: rows.weekly,
+                                  isCached: display.isStale)
+
+        case .deepSeek(let content):
+            return MenuBarContent(mode: mode,
+                                  text: text(for: mode, content: content),
+                                  attention: deepSeekAttention(for: content),
+                                  // The balance endpoint reports no window, so the two
+                                  // reset-time rows are absent rather than drawn empty.
+                                  showsTimeBars: false,
+                                  fiveHour: ResetTimeProgress(state: .invalid, fills: []),
+                                  weekly: ResetTimeProgress(state: .invalid, fills: []),
+                                  isCached: content.isCached)
+        }
     }
 
-    /// `5H 78% | W 42%` (full) or `5H 78% W 42%` (compact).
-    public static func text(for mode: MenuBarSpaceMode, snapshot: UsageSnapshot?) -> String {
-        let fiveHour = snapshot?.fiveHour
-        let weekly = snapshot?.weekly
+    /// `A 5H 78% | W 42%` (full) or `A 78% 42%` (compact).
+    public static func text(for mode: MenuBarSpaceMode,
+                            shortLabel: String,
+                            snapshot: UsageSnapshot?) -> String {
         switch mode {
         case .full:
-            return UsageFormatting.menuBarTitle(fiveHour: fiveHour, weekly: weekly)
+            return UsageFormatting.labeledMenuBarTitle(shortLabel: shortLabel,
+                                                       fiveHour: snapshot?.fiveHour,
+                                                       weekly: snapshot?.weekly)
         case .compact:
-            return UsageFormatting.compactMenuBarTitle(fiveHour: fiveHour, weekly: weekly)
+            return UsageFormatting.labeledCompactMenuBarTitle(shortLabel: shortLabel,
+                                                              fiveHour: snapshot?.fiveHour,
+                                                              weekly: snapshot?.weekly)
+        }
+    }
+
+    /// `DS CNY 123.45` in both semantic modes; the full and compact views use different
+    /// typography and spacing. With no balance both modes show `DS —`.
+    public static func text(for mode: MenuBarSpaceMode, content: MenuBarDeepSeekContent) -> String {
+        switch mode {
+        case .full:
+            return UsageFormatting.deepSeekMenuBarTitle(currency: content.currency, amount: content.amount)
+        case .compact:
+            return UsageFormatting.compactDeepSeekMenuBarTitle(currency: content.currency, amount: content.amount)
         }
     }
 
@@ -128,5 +184,64 @@ public enum MenuBarContentBuilder {
             // launch that is still in flight.
             return connectionState == .disconnected ? .warning : .none
         }
+    }
+
+    /// DeepSeek has one warning at most: a cached amount keeps its text and adds the marker,
+    /// and a missing amount is always marked. A zero balance can never be produced here;
+    /// `amount == nil` is the only "nothing to show" state.
+    public static func deepSeekAttention(for content: MenuBarDeepSeekContent) -> MenuBarAttention {
+        guard content.hasAmount else { return .warning }
+        return content.isCached ? .warning : .none
+    }
+}
+
+/// Picks the single DeepSeek amount the menu bar shows from a multi-currency response.
+///
+/// Deterministic and documented (REQUIREMENTS.md §6.3): a saved currency that is still
+/// present, then CNY, then USD, then the first currency code in ascending order, then the
+/// currency-unknown bucket. Nothing is converted, nothing is summed, and a currency that is
+/// absent is reported as unnamed rather than guessed.
+public enum DeepSeekMenuBarResolver {
+
+    public struct Resolution: Equatable, Sendable {
+        public let currency: String?
+        public let amount: Decimal?
+        public init(currency: String?, amount: Decimal?) {
+            self.currency = currency
+            self.amount = amount
+        }
+        public var hasAmount: Bool { amount != nil }
+    }
+
+    public static func resolve(balances: [ProviderBalance], savedCurrency: String?) -> Resolution {
+        guard !balances.isEmpty else { return Resolution(currency: nil, amount: nil) }
+
+        let named = balances
+            .filter { !($0.currency?.trimmingCharacters(in: .whitespaces) ?? "").isEmpty }
+            .sorted { ($0.currency ?? "") < ($1.currency ?? "") }
+
+        var chosen: ProviderBalance?
+        if let savedCurrency {
+            chosen = named.first { $0.currency?.caseInsensitiveCompare(savedCurrency) == .orderedSame }
+        }
+        if chosen == nil {
+            chosen = named.first { $0.currency?.uppercased() == "CNY" }
+        }
+        if chosen == nil {
+            chosen = named.first { $0.currency?.uppercased() == "USD" }
+        }
+        if chosen == nil {
+            chosen = named.first
+        }
+        if chosen == nil {
+            // Only currency-unknown buckets remain: the amount is real, the code is not.
+            chosen = balances.first
+        }
+
+        guard let balance = chosen else { return Resolution(currency: nil, amount: nil) }
+        // `available` first, then `total`, matching the detail card's amount semantics.
+        let amount = balance.available ?? balance.total
+        let currency = (balance.currency?.isEmpty == false) ? balance.currency : nil
+        return Resolution(currency: currency, amount: amount)
     }
 }
