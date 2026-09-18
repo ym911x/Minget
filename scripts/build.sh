@@ -9,10 +9,15 @@
 #   MINGET_SIGN_IDENTITY   code signing identity name. `-` selects ad-hoc signing, which
 #                          restores the previous behaviour but makes the keychain ask for
 #                          authorisation again after every code change.
+#   MINGET_BUILD_SCRATCH_DIR
+#                          SwiftPM build cache. Defaults to a system temporary directory
+#                          outside the iCloud-hosted repository.
 #   MINGET_STAGING_DIR     where the bundle is built, signed and strictly verified.
 #                          Defaults to a local directory outside the repository.
 #   MINGET_RUN_PATH        the fixed path the verified bundle is installed to.
 #                          Defaults to ~/Applications/Minget.app.
+#   MINGET_ARCHIVE_PATH    review copy path. Defaults to a system temporary directory
+#                          outside the repository.
 #
 # Why the bundle is not built straight into the repository: the repository lives in iCloud
 # Drive, and the file provider re-attaches `com.apple.FinderInfo` to everything it syncs. A
@@ -22,8 +27,7 @@
 #   stage and sign in a local directory
 #     -> strict verification there (bundle and both nested executables)
 #     -> install to the fixed run path, strict verification again
-#     -> leave a review copy in dist/ (a plain verify passes there; a strict one cannot,
-#        because iCloud rewrites the attributes, and that difference is recorded, not hidden)
+#     -> leave a strictly verified review copy in a system temporary directory
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -38,7 +42,6 @@ fi
 APP_NAME="Minget"
 EXECUTABLE_NAME="UsageMonitor"
 BUNDLE_ID="local.usagemonitor.UsageMonitor"
-DIST="dist"
 
 # --- signing identity -------------------------------------------------------------
 # A stable certificate identity is what keeps the keychain access control list matching.
@@ -77,18 +80,19 @@ else
 fi
 
 # --- staging and run paths --------------------------------------------------------
+BUILD_SCRATCH_DIR="${MINGET_BUILD_SCRATCH_DIR:-${TMPDIR:-/tmp}/minget-swiftpm-build}"
 STAGING_DIR="${MINGET_STAGING_DIR:-${TMPDIR:-/tmp}/minget-staging/Minget.app}"
 RUN_PATH="${MINGET_RUN_PATH:-$HOME/Applications/Minget.app}"
-ARCHIVE_PATH="$DIST/$APP_NAME.app"
+ARCHIVE_PATH="${MINGET_ARCHIVE_PATH:-${TMPDIR:-/tmp}/minget-archive/$APP_NAME.app}"
 STAGING_CONTENTS="$STAGING_DIR/Contents"
 
 echo "== swift build ($CONFIG) =="
 # `--disable-sandbox` concerns SwiftPM's manifest sandbox only: on this machine, wrapping an
 # already-sandboxed process makes the inner `sandbox-exec` fail with EPERM, and the manifest
 # of this first-party project is reviewed source like everything else.
-swift build --package-path . -c "$CONFIG" --disable-sandbox
+swift build --package-path . -c "$CONFIG" --scratch-path "$BUILD_SCRATCH_DIR" --disable-sandbox
 
-BIN_DIR="$(swift build --package-path . -c "$CONFIG" --show-bin-path --disable-sandbox)"
+BIN_DIR="$(swift build --package-path . -c "$CONFIG" --scratch-path "$BUILD_SCRATCH_DIR" --show-bin-path --disable-sandbox)"
 EXEC_APP="$BIN_DIR/UsageMonitorApp"
 EXEC_CLI="$BIN_DIR/UsageMonitorCLI"
 [[ -x "$EXEC_APP" ]] || { echo "missing $EXEC_APP" >&2; exit 1; }
@@ -218,16 +222,11 @@ codesign --verify --strict --verbose=2 "$RUN_PATH" || {
 }
 
 echo "== archive copy to $ARCHIVE_PATH =="
+mkdir -p "$(dirname "$ARCHIVE_PATH")"
 remove_bundle "$ARCHIVE_PATH"
 ditto "$STAGING_DIR" "$ARCHIVE_PATH"
-# The archive lives inside iCloud Drive, so a strict check may fail there for attributes the
-# build never created. The plain verify is what is recorded for this copy, and the strict
-# result is printed too rather than skipped, so the difference stays visible.
-codesign --verify --verbose=1 "$ARCHIVE_PATH" || exit 1
-if ! codesign --verify --strict "$ARCHIVE_PATH" 2>/dev/null; then
-  echo "note: strict verification of $ARCHIVE_PATH fails on file-provider attributes;"
-  echo "      the verified run candidate is $RUN_PATH"
-fi
+xattr -cr "$ARCHIVE_PATH"
+codesign --verify --strict --verbose=1 "$ARCHIVE_PATH" || exit 1
 
 echo "built:   $RUN_PATH"
 echo "archive: $ARCHIVE_PATH"

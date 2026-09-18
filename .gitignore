@@ -5,3 +5,6 @@ artifacts/
 graphify-out/
 releases/**/*.zip
 releases/**/SHA256SUMS.txt
+# 本机 Agent 设置、偏好与记忆，不属于产品源码
+.commandcode/
+.workbuddy/

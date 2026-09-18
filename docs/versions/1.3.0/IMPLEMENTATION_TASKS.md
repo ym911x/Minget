@@ -20,9 +20,11 @@
 - `docs/versions/1.0.2/evidence/01-menubar-states-light.png`
 - `docs/versions/1.0.2/evidence/02-menubar-states-dark.png`
 - `.workbuddy/`
-- `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`
+- 根目录的本机点火实施记录 `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`（未纳入 Git）
 
 这些内容不得清理、覆盖或误提交。
+
+> 2026-09-18 目录整理：该本机实施记录已脱敏迁移为 [FIRE_DESIGN_BACKGROUND.md](FIRE_DESIGN_BACKGROUND.md)，根目录原文件已删除。
 
 ## 1. Profile 与多服务核心
 

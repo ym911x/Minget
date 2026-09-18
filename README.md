@@ -114,19 +114,19 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ```bash
 ./scripts/build.sh
-open dist/Minget.app
+open "$HOME/Applications/Minget.app"
 ```
 
 开发调试：
 
 ```bash
-swift run UsageMonitorApp
+swift run --scratch-path "${TMPDIR:-/tmp}/minget-dev" UsageMonitorApp
 ```
 
 运行测试：
 
 ```bash
-swift test
+swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 ```
 
 ## 资料导航
@@ -213,9 +213,9 @@ Requirements: macOS 13 or later, Apple Silicon, and Swift 5.9 or later.
 
 ```bash
 ./scripts/build.sh
-open dist/Minget.app
+open "$HOME/Applications/Minget.app"
 ```
 
-Run the test suite with `swift test`. Real-interface and live-service evidence is recorded separately in the current acceptance ledger; a missing or unconfirmed provider field remains unavailable rather than replaced by a fixture.
+Run the test suite with `swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"`. Build and test caches stay outside the iCloud-hosted repository. Real-interface and live-service evidence is recorded separately in the current acceptance ledger; a missing or unconfirmed provider field remains unavailable rather than replaced by a fixture.
 
 The source code is available under the [MIT License](LICENSE). The Minget name, Chinese name, M² mark, and logo remain project brand identifiers; see [Trademark and Brand Notice](TRADEMARKS.md). The current local build uses a project-created stable signing identity and has not been notarized by Apple.

@@ -126,7 +126,7 @@ security find-identity -p codesigning 2>/dev/null | grep -F "$IDENTITY" || {
 echo
 echo "Next steps:"
 echo "  1. scripts/build.sh                     # signs with this identity from now on"
-echo "  2. open dist/Minget.app and allow keychain access once (expected)"
-echo "  3. scripts/build.sh && open dist/Minget.app   # the prompt must not come back"
+echo "  2. open \"\$HOME/Applications/Minget.app\" and allow keychain access once (expected)"
+echo "  3. scripts/build.sh && open \"\$HOME/Applications/Minget.app\"   # the prompt must not come back"
 echo
 echo "Ad-hoc fallback, if ever needed: MINGET_SIGN_IDENTITY=- scripts/build.sh"

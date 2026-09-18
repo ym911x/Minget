@@ -17,8 +17,10 @@
 - `docs/versions/1.0.2/evidence/01-menubar-states-light.png`
 - `docs/versions/1.0.2/evidence/02-menubar-states-dark.png`
 - `.commandcode/`、`.workbuddy/`
-- `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`
+- 根目录的本机点火实施记录 `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`
 - `README.md`、`ROADMAP.md` 中由方案阶段加入的 1.3.1 链接与条目
+
+> 2026-09-18 目录整理：该本机实施记录已脱敏迁移为 [FIRE_DESIGN_BACKGROUND.md](../1.3.0/FIRE_DESIGN_BACKGROUND.md)，根目录原文件与 `.workbuddy/` 已清理；`.commandcode/` 保留在本机并加入 `.gitignore`。
 
 ## 1. 修改文件清单
 

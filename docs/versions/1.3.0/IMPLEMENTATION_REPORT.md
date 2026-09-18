@@ -144,7 +144,9 @@ swift test --scratch-path "$MINGET_TEST_SCRATCH"
 - `docs/versions/1.0.2/evidence/01-menubar-states-light.png`
 - `docs/versions/1.0.2/evidence/02-menubar-states-dark.png`
 - `.workbuddy/`
-- `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`
+- 根目录的本机点火实施记录 `明明有数_Minget_双ChatGPT账号额度窗口自动点火_实施记录_2026-09-16.md`
+
+> 2026-09-18 目录整理：该本机实施记录已脱敏迁移为 [FIRE_DESIGN_BACKGROUND.md](FIRE_DESIGN_BACKGROUND.md)，根目录原文件已删除；`.workbuddy/` 也已清理。本文其余内容保持当时的记录不变。
 
 渲染测试默认输出到 `$TMPDIR/Minget-1.3.0-Evidence/`，禁止把历史 evidence 目录作为测试输出位置。
 

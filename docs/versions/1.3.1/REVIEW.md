@@ -76,3 +76,16 @@ PASS AXPress activated=1
 ## 审核边界
 
 本轮没有执行真实点火或模型请求。自动渲染和 AX harness 使用合成数据；真实 Command Code 缓存状态、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器完整重启仍不能标记为通过。发布操作只在用户明确授权后执行。
+
+## 发布后目录整理复核（2026-09-18）
+
+用户授权完成项目目录整理并推送维护提交。Codex 独立核对并执行：
+
+- 恢复两张被渲染测试误改的 1.0.2 evidence PNG，使其与 `v1.0.2` 已提交基线逐字节一致。
+- 保留冻结 v1.0 文档引用的本机 `artifacts/` 资料；实际抽取 22 个唯一引用，缺失数为 0。
+- 删除根目录临时 `待删除/` 中约 167 MB 内容，包括可重建缓存、构建物、旧发布 ZIP、冲突副本、Agent 执行记录和已脱敏迁移的原始点火实施记录。该目录已从 `.gitignore` 撤销，避免形成长期不可见的堆积区。
+- 新增版本、发布和截图索引，根 `REVIEW.md` 收敛为当前版本入口；历史事实保留在各版本目录，`docs/archive/v1.0/` 未修改。
+- `scripts/build.sh` 的 SwiftPM scratch、staging 和审阅副本全部默认位于系统临时目录；固定运行包仍为 `~/Applications/Minget.app`。正常构建后仓库内不再生成 `.build/` 或 `dist/`。
+- CI 更新为 `actions/checkout@v7`，测试使用 `$RUNNER_TEMP/minget-tests`。
+
+本地复核结果：全量 451 项执行，450 项通过、1 项既有 AX XCTest 明确跳过、0 失败；Release 构建成功；staging、固定运行路径和临时审阅副本均通过严格签名；构建后仓库内 `.build/`、`dist/` 与 `待删除/` 均不存在。GitHub CI 由本次维护提交触发，远端结果不在提交内预写。
