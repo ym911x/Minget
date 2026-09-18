@@ -2,7 +2,7 @@
 
 ## 1.3.1（2026-09-18）
 
-状态：稳定性修补已实现；Codex 复核发现的 R1 无障碍阻断已修复。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败；Release 构建和严格签名通过。跳过的 XCTest 进程没有可观测的辅助功能窗口；Codex 另用当前源码编译临时 GUI harness，真实读取系统 AX 树并确认设置入口为独立元素且可激活。真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍未执行，不随本次结论通过。
+状态：稳定性修补已实现；Codex 复核发现的 R1 无障碍阻断已修复。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败；Release 构建和严格签名通过。跳过的 XCTest 进程没有可观测的辅助功能窗口；Codex 另用当前源码编译临时 GUI harness，真实读取系统 AX 树并确认设置入口为独立元素且可激活。用户于 2026-09-18 明确授权发布，`main`、标签 `v1.3.1`、[GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.3.1) 与发布提交 CI 均已完成。真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍未执行，不随发布改记为通过。
 
 本版本是稳定性修补版，窗口尺寸、卡片顺序、额度语义、菜单栏格式和凭证安全边界保持 1.3.0 不变。
 
@@ -251,7 +251,7 @@
 
 ### 1.3.1 (2026-09-18)
 
-A stability patch; window sizes, card order, quota semantics, menu-bar formats, and credential boundaries are unchanged from 1.3.0. 451 automated tests ran (331 Core, 120 App): 450 passed, 1 was skipped, and 0 failed, plus a release build and strict signing. The skipped XCTest process exposed no observable accessibility windows; a separate GUI harness built from the current sources verified the real AX tree and activation. Real-interface, real DeepSeek menu-bar, real A/B fire, and post-reboot checks remain unverified.
+A stability patch; window sizes, card order, quota semantics, menu-bar formats, and credential boundaries are unchanged from 1.3.0. 451 automated tests ran (331 Core, 120 App): 450 passed, 1 was skipped, and 0 failed, plus a release build and strict signing. The skipped XCTest process exposed no observable accessibility windows; a separate GUI harness built from the current sources verified the real AX tree and activation. Released as [Minget v1.3.1](https://github.com/ym911x/Minget/releases/tag/v1.3.1), with the release-commit CI passing. Real-interface, real DeepSeek menu-bar, real A/B fire, and post-reboot checks remain unverified.
 
 - One refresh round publishes each ChatGPT profile as soon as that profile returns, instead of waiting for the whole task group. The published array still reads account A then account B, `isRefreshing` still covers the round, and nothing is published after `stop()`.
 - Fires now distinguish three outcomes: a live before/after comparison that moved by at least 60 s confirms a new window, live reads that did not move report the window unchanged, and missing or cached evidence reports "request succeeded, confirmation unavailable" rather than claiming the window did not change. A conclusive first read skips the second; every other case retries once after 5 s.

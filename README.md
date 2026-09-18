@@ -80,7 +80,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 ## 当前版本
 
 - 当前版本：`1.3.1`
-- 状态：双 Profile 完成即发布、点火确认三态、Command Code 辅助接口容错、缓存标识与辅助功能修复已实现；451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建和严格签名通过。跳过项为需要辅助功能授权的辅助功能树用例。真实界面、真实 DeepSeek 菜单栏余额、A/B 两次真实点火与机器重启复验仍待用户验收，详见 [1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)。
+- 状态：双 Profile 完成即发布、点火确认三态、Command Code 辅助接口容错、缓存标识与辅助功能修复已实现；451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建、严格签名和发布提交 CI 通过。源码发布页：[Minget v1.3.1](https://github.com/ym911x/Minget/releases/tag/v1.3.1)。真实界面、真实 DeepSeek 菜单栏余额、A/B 两次真实点火与机器重启复验仍待用户验收，详见 [1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)

@@ -20,7 +20,7 @@
 
 `v1.3.0` 已完成并发布。首轮的 720 pt 双列和启动空窗口已经修复；用户后续实测推动详情页收窄为 440 pt 单列，ChatGPT 与 Command Code 周期块增加克制间距，Command Code 额度文字精简为余额/总计且非月度只显示绝对重置时间，DeepSeek 菜单栏移除“余额”二字并放大，详情卡改成 48 pt 单行。双轨语义、屏幕容纳降级、点火退出清理与实时确认规则继续保持。425 项自动测试、Release 构建、严格签名和真实详情页验收通过。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。资料位于 `docs/versions/1.3.0/`，发布页为 [GitHub Release v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0)。
 
-`v1.3.1` 已实现，待真实界面验收：两个 ChatGPT Profile 现在按完成顺序独立发布状态，快速账号不再被慢速账号延迟；点火结果细分为“新窗口已确认”“请求成功，窗口未变化”和“请求成功，暂无法确认”，第一次确认未成立时统一在 5 秒后再做一次只读刷新；Command Code 改为 credits 必须、summary/subscriptions 可选，辅助接口失败不再遮住已取得的额度，套餐名存在时明确标识缓存。Codex 复核发现的 Command Code 设置按钮辅助功能阻断已修复：标题行只合并 Logo、标题和状态文字，设置按钮保留独立 press 动作。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建和严格签名通过。窗口尺寸、菜单栏格式和凭证边界保持 1.3.0 不变；真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍待用户执行。资料位于 `docs/versions/1.3.1/`。
+`v1.3.1` 已完成并发布：两个 ChatGPT Profile 现在按完成顺序独立发布状态，快速账号不再被慢速账号延迟；点火结果细分为“新窗口已确认”“请求成功，窗口未变化”和“请求成功，暂无法确认”，第一次确认未成立时统一在 5 秒后再做一次只读刷新；Command Code 改为 credits 必须、summary/subscriptions 可选，辅助接口失败不再遮住已取得的额度，套餐名存在时明确标识缓存。Codex 复核发现的 Command Code 设置入口辅助功能阻断已修复，并以真实 AX 树独立验证。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建、严格签名和发布提交 CI 通过。窗口尺寸、菜单栏格式和凭证边界保持 1.3.0 不变；真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍待用户执行。资料位于 `docs/versions/1.3.1/`，发布页为 [GitHub Release v1.3.1](https://github.com/ym911x/Minget/releases/tag/v1.3.1)。
 
 ## 候选方向
 
@@ -45,6 +45,6 @@
 
 ## English summary
 
-The `v1.0.0` baseline is frozen. `v1.3.0` is released with an explicit AppKit entry, a fixed 440 pt single column, restored ChatGPT dual tracks, simplified Command Code balance/reset copy, a single-line DeepSeek card, enlarged DeepSeek menu-bar typography, screen-aware panel fallback, and complete fire-child shutdown. `v1.3.1` is implemented and awaiting real-interface acceptance: per-account publishing as each refresh finishes, a three-outcome fire confirmation with a single 5 s retry, and layered Command Code tolerance where only `credits` is required. Candidate directions include improved DeepSeek credential UX, more account profiles, scheduled firing, local notifications, notarized distribution, and privacy-safe diagnostics export.
+The `v1.0.0` baseline is frozen. `v1.3.0` is released with an explicit AppKit entry, a fixed 440 pt single column, restored ChatGPT dual tracks, simplified Command Code balance/reset copy, a single-line DeepSeek card, enlarged DeepSeek menu-bar typography, screen-aware panel fallback, and complete fire-child shutdown. `v1.3.1` is released with per-account publishing as each refresh finishes, a three-outcome fire confirmation with a single 5 s retry, and layered Command Code tolerance where only `credits` is required. Real-interface and explicitly listed real-service checks remain pending. Candidate directions include improved DeepSeek credential UX, more account profiles, scheduled firing, local notifications, notarized distribution, and privacy-safe diagnostics export.
 
 Each future version receives its own requirements, implementation plan, review, and acceptance records under `docs/versions/<version>/`. Historical v1.0 documents remain unchanged.
