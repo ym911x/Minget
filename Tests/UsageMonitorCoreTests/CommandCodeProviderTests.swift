@@ -98,6 +98,139 @@ final class CommandCodeProviderTests: XCTestCase {
         XCTAssertEqual(fingerprint.count, 6)
     }
 
+    // MARK: - Layered tolerance (REQUIREMENTS.md §5)
+
+    /// `credits` is the only required source. A failing summary must leave the quota windows
+    /// live and simply report that the statistics are unavailable — never fail the whole read.
+    func testSummaryFailureKeepsCreditsLiveAndReportsNoStatistics() async throws {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":"4","used":"1"},"weekly":{"cap":"20","used":4}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return ProviderHTTPResponse(status: 503, body: Data())
+            case CommandCodeProvider.subscriptionsPath:
+                return response(#"{"success":true,"data":{"planId":"individual-go"}}"#)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+
+        let usage = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+
+        XCTAssertEqual(usage.windows.first(where: { $0.kind == .fiveHour })?.remaining, dec("3"))
+        XCTAssertEqual(usage.windows.first(where: { $0.kind == .weekly })?.remaining, dec("16"))
+        XCTAssertNil(usage.summary, "a failed summary must stay absent, not become zeroes")
+        XCTAssertEqual(usage.planName, "individual-go", "the subscription is independent of the summary")
+    }
+
+    func testMalformedSummaryJSONKeepsTheCreditsWindows() async throws {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response("not json at all")
+            default:
+                return ProviderHTTPResponse(status: 404, body: Data())
+            }
+        }
+
+        let usage = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+
+        XCTAssertEqual(usage.windows.first(where: { $0.kind == .fiveHour })?.remaining, dec("3"))
+        XCTAssertNil(usage.summary)
+    }
+
+    /// An auxiliary 401/403 is not a credential verdict: the same request's credits call proved
+    /// the key reads the main data, so the connection must not be suspended by the summary alone.
+    func testSummaryUnauthorizedDoesNotDiscardCredits() async throws {
+        for status in [401, 403] {
+            let transport = FakeTransport()
+            transport.handler = { request in
+                switch request.url?.path {
+                case CommandCodeProvider.creditsPath:
+                    return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+                case CommandCodeProvider.summaryPath:
+                    return ProviderHTTPResponse(status: status, body: Data())
+                default:
+                    return ProviderHTTPResponse(status: 503, body: Data())
+                }
+            }
+
+            let usage = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+            XCTAssertEqual(usage.windows.first(where: { $0.kind == .fiveHour })?.remaining, dec("3"),
+                           "summary \(status) must not fail the read")
+            XCTAssertNil(usage.summary)
+        }
+    }
+
+    /// A monthly credit reported by `credits` survives a failed summary: the remaining amount is
+    /// real, while the used/total pair is simply not available. Nothing is inferred from a
+    /// period the service did not name (REQUIREMENTS.md §5.2).
+    func testSummaryFailureKeepsTheMonthlyRemainingWithoutFabricatingUsedOrLimit() async throws {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{"monthlyCredits":"7.25"},"windowLimits":{"fiveHour":{"cap":"4","used":"1"}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return ProviderHTTPResponse(status: 500, body: Data())
+            default:
+                return ProviderHTTPResponse(status: 503, body: Data())
+            }
+        }
+
+        let usage = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+        let monthly = try XCTUnwrap(usage.windows.first(where: { $0.kind == .billingPeriod }))
+        XCTAssertEqual(monthly.remaining, dec("7.25"), "the credits balance is real")
+        XCTAssertNil(monthly.used, "an absent used value must not be invented")
+        XCTAssertNil(monthly.limit, "an absent total must not be invented")
+        XCTAssertNil(usage.summary)
+    }
+
+    /// The main source keeps its own error path: a 401/403 on credits still suspends the
+    /// credential, even when the auxiliary endpoints would have answered happily.
+    func testCreditsUnauthorizedStillSuspendsTheCredential() async throws {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            if request.url?.path == CommandCodeProvider.creditsPath {
+                return ProviderHTTPResponse(status: 401, body: Data())
+            }
+            return response(#"{"totalTokens":1,"totalCount":1}"#)
+        }
+        do {
+            _ = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+            XCTFail("a failing credits call must fail the read")
+        } catch {
+            XCTAssertEqual(error as? ProviderFailure, .invalidCredential)
+        }
+    }
+
+    /// An unsupported credits payload must not be reconstructed from summary or subscription:
+    /// the read fails closed rather than presenting another endpoint's numbers as quota.
+    func testUnsupportedCreditsStructureFailsClosedEvenWithAHealthySummary() async throws {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(#"{"totalTokens":"1000","totalCount":10,"periodBasis":"billing-period"}"#)
+            default:
+                return response(#"{"success":true,"data":{"planId":"individual-go"}}"#)
+            }
+        }
+        do {
+            _ = try await CommandCodeProvider(transport: transport).fetchUsage(apiKey: "key")
+            XCTFail("quota cannot be assembled without credits windows")
+        } catch {
+            XCTAssertEqual(error as? ProviderFailure, .structureUnsupported)
+        }
+    }
+
     // MARK: - Billing cycle bounds (REVISION_SPEC.md §7.3)
 
     /// Runs one fetch with a credits/summary payload that always parses, plus the subscription

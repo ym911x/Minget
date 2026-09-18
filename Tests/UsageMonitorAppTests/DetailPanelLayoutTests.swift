@@ -458,8 +458,79 @@ final class DetailPanelLayoutTests: XCTestCase {
         let lines = CommandCodeCardPresentation.summaryLines(nil)
         XCTAssertEqual(lines.count, 3)
         XCTAssertTrue(lines.allSatisfy { $0.contains("—") })
-        XCTAssertEqual(CommandCodeCardPresentation.periodText(nil), "统计周期未确认")
+        XCTAssertEqual(lines[0], "统计暂不可用 · Token — · 请求 —")
+        XCTAssertEqual(lines[1], "输入 — · 输出 — · 成功 — · 失败 —")
+        XCTAssertEqual(lines[2], "成功率 — · 成本 —")
         XCTAssertEqual(CommandCodeCardPresentation.label(.billingPeriod), "本月")
+    }
+
+    /// A missing summary and an unnamed statistic period are different facts and must not share
+    /// one sentence (REQUIREMENTS.md §5.3).
+    func testMissingSummaryAndUnknownPeriodAreWordedDifferently() {
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(nil), "统计暂不可用")
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(.unknown), "统计周期未确认")
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(.billingPeriod), "当前计费周期")
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(.last30Days), "近 30 天")
+
+        let unknownPeriod = ProviderUsageSummary(totalTokens: 10, inputTokens: 6, outputTokens: 4,
+                                                totalRuns: 2, completedRuns: 2, failedRuns: 0,
+                                                successRate: dec("100"), totalCostUSD: dec("0.5"),
+                                                periodBasis: .unknown)
+        XCTAssertTrue(CommandCodeCardPresentation.summaryLines(unknownPeriod)[0].hasPrefix("统计周期未确认 · Token 10"))
+        XCTAssertFalse(CommandCodeCardPresentation.summaryLines(unknownPeriod)[0].contains("暂不可用"))
+    }
+
+    // MARK: §5.4 Cache subtitle and help text
+
+    func testTheHeaderSubtitleFollowsTheConnectionAndPlanMatrix() {
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connected, planName: "individual-go"),
+                       "individual-go")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connected, planName: nil), "已连接")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .stale, planName: "individual-go"),
+                       "individual-go · 缓存",
+                       "a cached card keeps its plan name and still says it is cached")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .stale, planName: nil), "缓存数据")
+
+        // Everything else keeps the pre-existing fixed connection wording.
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connecting, planName: "plan"), "正在获取")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .notConfigured, planName: nil), "未连接")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .authSuspended, planName: "plan"),
+                       "需要重新连接")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .needsAuthorization, planName: nil),
+                       "需要重新连接")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .unavailable, planName: "plan"), "暂不可用")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .unverified, planName: nil), "暂不可用")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connected, planName: ""), "已连接",
+                       "an empty plan name is not a plan name")
+    }
+
+    func testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown() {
+        let lastSuccess = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(CommandCodeCardPresentation.cacheHelpText(lastSuccessAt: lastSuccess),
+                       "缓存数据 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
+        XCTAssertEqual(CommandCodeCardPresentation.cacheHelpText(lastSuccessAt: nil),
+                       "缓存数据 · 成功时间未知")
+
+        // The tooltip follows the same rule, and only a cached card needs the extra sentence.
+        XCTAssertEqual(CommandCodeCardPresentation.helpText(connection: .stale, lastSuccessAt: lastSuccess),
+                       "缓存数据 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
+        XCTAssertEqual(CommandCodeCardPresentation.helpText(connection: .stale, lastSuccessAt: nil),
+                       "缓存数据 · 成功时间未知")
+        XCTAssertFalse(CommandCodeCardPresentation.helpText(connection: .connected, lastSuccessAt: lastSuccess)
+            .contains("缓存"))
+    }
+
+    func testTheAccessibilityValueRepeatsTheCacheSemantics() {
+        let lastSuccess = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(CommandCodeCardPresentation.accessibilitySubtitle(connection: .stale,
+                                                                        planName: "individual-go",
+                                                                        lastSuccessAt: lastSuccess),
+                       "individual-go · 缓存，缓存数据 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
+        XCTAssertEqual(CommandCodeCardPresentation.accessibilitySubtitle(connection: .connected,
+                                                                        planName: "individual-go",
+                                                                        lastSuccessAt: lastSuccess),
+                       "individual-go",
+                       "a live card does not claim to be cached")
     }
 
     // MARK: DeepSeek strip

@@ -63,6 +63,11 @@ final class ChatGPTFireServiceTests: XCTestCase {
 
     /// Sleeps far longer than the test timeout and ignores SIGTERM, so the service must
     /// escalate to SIGKILL on its own PID.
+    ///
+    /// The interpreter stamps its own PID before sleeping, and the test reads that file after
+    /// the timeout fires. The timeout must therefore leave room for a cold `python3` start:
+    /// a sub-second budget makes the assertion race the interpreter's startup instead of the
+    /// behaviour under test.
     private var hangScript: String {
         """
         #!/usr/bin/env python3
@@ -194,7 +199,9 @@ final class ChatGPTFireServiceTests: XCTestCase {
 
     func testTimeoutTerminatesTheChildAndReportsTimeout() throws {
         let executable = try writeExecutable(named: "codex-hang", script: hangScript)
-        let fire = service(executable: executable, timeout: 0.5, terminateGrace: 1)
+        // Five seconds is still far below the 120 s child, but comfortably above a cold
+        // interpreter start, so the PID file is written before the timeout can fire.
+        let fire = service(executable: executable, timeout: 5, terminateGrace: 1)
 
         XCTAssertEqual(fire.fire(profile: profileA), .timedOut)
 

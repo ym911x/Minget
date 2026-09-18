@@ -169,7 +169,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.1"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -629,19 +629,19 @@ struct CommandCodeOverviewCard: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
-            CommandCodeLogomark()
-                .frame(width: 20, height: 20)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Command Code").font(.system(size: 12, weight: .bold)).lineLimit(1)
-                Text(report.usage?.planName ?? connectionText)
-                    .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
-            }
+            CommandCodeHeaderIdentity(connection: report.connection,
+                                      planName: report.usage?.planName,
+                                      lastSuccessAt: report.lastSuccessAt)
             Spacer(minLength: 8)
             if report.usage == nil {
                 Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
-                    .buttonStyle(.link).font(.system(size: 10))
+                    .buttonStyle(.link)
+                    .font(.system(size: 10))
             }
         }
+        // The cached state must be readable, not just implied by the fainter tracks.
+        .help(CommandCodeCardPresentation.helpText(connection: report.connection,
+                                                   lastSuccessAt: report.lastSuccessAt))
     }
 
     // MARK: Window rows
@@ -710,16 +710,41 @@ struct CommandCodeOverviewCard: View {
             }
         }
     }
+}
 
-    private var connectionText: String {
-        switch report.connection {
-        case .connected: return "已连接"
-        case .stale: return "缓存数据"
-        case .connecting: return "正在获取"
-        case .notConfigured: return "未连接"
-        case .authSuspended, .needsAuthorization: return "需要重新连接"
-        case .unavailable, .unverified: return "暂不可用"
+/// The non-interactive part of the Command Code header: logomark, product name and the status
+/// line.
+///
+/// It is a view of its own for two reasons, both about accessibility (REVIEW.md R1):
+/// - it is the only part of the header that may be combined into a single accessibility
+///   element. Combining a container that holds a `Button` merges the button away and leaves it
+///   without its own `AXPress` action, so the settings button must stay *outside* this type;
+/// - a test can host it alone and assert that no interactive control lives inside it.
+struct CommandCodeHeaderIdentity: View {
+    let connection: ProviderConnectionState
+    let planName: String?
+    let lastSuccessAt: Date?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            CommandCodeLogomark()
+                .frame(width: 20, height: 20)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Command Code").font(.system(size: 12, weight: .bold)).lineLimit(1)
+                Text(CommandCodeCardPresentation.subtitle(connection: connection, planName: planName))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
+        // Only these non-interactive parts are combined, so VoiceOver reads
+        // "Command Code, <subtitle>" as one element instead of three fragments.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Command Code")
+        .accessibilityValue(CommandCodeCardPresentation.accessibilitySubtitle(connection: connection,
+                                                                              planName: planName,
+                                                                              lastSuccessAt: lastSuccessAt))
     }
 }
 
@@ -727,7 +752,6 @@ struct CommandCodeOverviewCard: View {
 /// structure, the remaining-credit wording and the placeholder rules are testable without
 /// AppKit.
 enum CommandCodeCardPresentation {
-
     /// Fixed quota-row order (UI_SPEC.md §6).
     static let windowKinds: [ProviderUsageWindow.Kind] = [.fiveHour, .weekly, .billingPeriod]
 
@@ -737,6 +761,48 @@ enum CommandCodeCardPresentation {
         case .weekly: return "周额度"
         case .billingPeriod: return "本月"
         }
+    }
+
+    // MARK: Header subtitle and cache wording
+
+    /// The card's one-line subtitle (REQUIREMENTS.md §5.4). A plan name is only ever appended
+    /// to, never replaced: a cached report with a plan says `<套餐> · 缓存`, so the cache state
+    /// stays visible instead of being hidden behind the plan name.
+    static func subtitle(connection: ProviderConnectionState, planName: String?) -> String {
+        let plan = planName.flatMap { $0.isEmpty ? nil : $0 }
+        switch connection {
+        case .connected:
+            return plan ?? "已连接"
+        case .stale:
+            return plan.map { "\($0) · 缓存" } ?? "缓存数据"
+        case .connecting: return "正在获取"
+        case .notConfigured: return "未连接"
+        case .authSuspended, .needsAuthorization: return "需要重新连接"
+        case .unavailable, .unverified: return "暂不可用"
+        }
+    }
+
+    /// Fixed cache help text. `MM-dd HH:mm` in the local time zone; no relative time and no
+    /// upstream error text. A missing success time is stated rather than guessed.
+    static func cacheHelpText(lastSuccessAt: Date?) -> String {
+        guard let lastSuccessAt else { return "缓存数据 · 成功时间未知" }
+        return "缓存数据 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccessAt))"
+    }
+
+    /// Tooltip for the header. Only a cached report needs anything beyond its own subtitle.
+    static func helpText(connection: ProviderConnectionState, lastSuccessAt: Date?) -> String {
+        guard connection == .stale else { return subtitle(connection: connection, planName: nil) }
+        return cacheHelpText(lastSuccessAt: lastSuccessAt)
+    }
+
+    /// Accessibility value: the subtitle always, plus the cache wording when cached, so the
+    /// cache semantics survive into assistive technology.
+    static func accessibilitySubtitle(connection: ProviderConnectionState,
+                                      planName: String?,
+                                      lastSuccessAt: Date?) -> String {
+        let base = subtitle(connection: connection, planName: planName)
+        guard connection == .stale else { return base }
+        return "\(base)，\(cacheHelpText(lastSuccessAt: lastSuccessAt))"
     }
 
     /// `$3.00 / $4.00`, built only from values the service actually reported. The track carries
@@ -787,11 +853,16 @@ enum CommandCodeCardPresentation {
         ]
     }
 
+    /// Three fixed period labels. A missing summary is not the same fact as a summary whose
+    /// cycle the service did not name: the first says the statistics could not be read at all,
+    /// the second says the numbers are real but their window is unconfirmed
+    /// (REQUIREMENTS.md §5.3).
     static func periodText(_ period: ProviderUsageSummary.PeriodBasis?) -> String {
         switch period {
         case .billingPeriod: return "当前计费周期"
         case .last30Days: return "近 30 天"
-        case .unknown, .none: return "统计周期未确认"
+        case .unknown: return "统计周期未确认"
+        case .none: return "统计暂不可用"
         }
     }
 

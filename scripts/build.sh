@@ -158,8 +158,10 @@ cat > "$STAGING_CONTENTS/Resources/README.txt" <<'TXT'
 你的 AI 使用，心里有数。
 Your AI usage, at a glance.
 
-Runs a single `codex app-server` child process for the app's lifetime and reads
-account rate limits over stdio JSON-RPC. Only normalized usage numbers are cached.
+Runs one long-lived `codex app-server` child per ChatGPT profile — two profiles,
+each with its own CODEX_HOME and its own child process — and reads account rate
+limits over stdio JSON-RPC. Both profiles refresh in parallel. Only normalized
+usage numbers are cached.
 
 Contents/MacOS/MingetCLI is the QA smoke diagnostic:
   Minget.app/Contents/MacOS/MingetCLI

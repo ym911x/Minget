@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-16
-适用版本：1.3.0
+更新日期：2026-09-17
+适用版本：1.3.1
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -68,16 +68,19 @@
 - 认证：用户在 Minget 设置页主动输入的 `Authorization: Bearer <API Key>`；另附 `Accept: application/json`。
 - 用途：读取服务端报告的 5 小时、周窗口和月度剩余信用额。
 - 验证：请求有效性为 A，字段语义为 C。2026-09-15 用户在正式构建中使用真实 API Key 成功显示窗口额度；字段与 Studio 尚未同刻对账。
+- 层级：1.3.1 起为唯一必须成功的来源。本轮失败时有旧值显示 stale，无旧值按既有错误分类显示不可用；`summary` 或 `subscriptions` 的失败不会被算作 credits 失败。
 
 ### `GET https://api.commandcode.ai/alpha/usage/summary`
 
 - 用途：读取当前服务端统计周期的 token、请求结果、成功率、成本，以及可能存在的月度已用信用额。
 - 验证：请求有效性为 A，字段语义为 C。用户截图确认真实 token、请求和成本摘要能够返回；统计周期和字段口径尚未与 Studio 同刻确认。
+- 层级：1.3.1 起为可选辅助数据。网络错误、5xx、401/403、JSON 错误或字段结构变化都只让统计区显示「统计暂不可用」，已由 credits 取得的额度保持实时，凭证状态不因该接口单独暂停。
 
 ### `GET https://api.commandcode.ai/alpha/billing/subscriptions`
 
 - 用途：可选读取套餐名称和计费周期。该请求失败不会让额度与统计失效。
 - 验证：C。仅无凭证 401 与合成 fixture 测试。
+- 层级：可选辅助数据。缺少有效起止时间时月度时间轨道继续显示不可用，不假定 30 天。
 
 Command Code Studio 公开说明确认其展示成本、token 和运行分析，Provider API 说明确认 API Key 为正式认证方式；官方资料未公开上述账户用量读取接口。本版本不会读取 Command Code CLI、本地认证文件、既有浏览器 Cookie 或会话。没有真实响应时不显示数字；未知统计周期会保留服务端数值并标记“统计周期未确认”。
 

@@ -288,6 +288,103 @@ final class DetailEvidenceRenderTests: XCTestCase {
                   named: "05-commandcode-cards-light.png")
     }
 
+    /// 1.3.1: the cached subtitle, the missing statistics row and the unnamed period, in both
+    /// appearances. The long plan name is here to show it still truncates on one line rather
+    /// than wrapping or pushing the header apart.
+    func testRenderCommandCodeCacheAndStatisticsStates() throws {
+        func dec(_ raw: String) -> Decimal { Decimal(string: raw, locale: Locale(identifier: "en_US_POSIX"))! }
+
+        let windows = [
+            ProviderUsageWindow(kind: .fiveHour, used: dec("1.00"), limit: dec("4.00"),
+                                remaining: dec("3.00"), resetsAt: anchor.addingTimeInterval(2 * 3600 + 13 * 60)),
+            ProviderUsageWindow(kind: .weekly, used: dec("4.00"), limit: dec("20.00"),
+                                remaining: dec("16.00"), resetsAt: anchor.addingTimeInterval(3 * 86400)),
+            ProviderUsageWindow(kind: .billingPeriod, used: dec("2.75"), limit: dec("10.00"),
+                                remaining: dec("7.25"), resetsAt: nil),
+        ]
+
+        // Connected, plan, but no summary at all: the credits stay live and the statistics
+        // area says so instead of inventing numbers.
+        let noSummary = ProviderReport(platform: .commandcode, accountID: "fixture",
+                                       balances: [],
+                                       usage: ProviderUsage(windows: windows, summary: nil,
+                                                            planName: "individual-go",
+                                                            billingPeriodEnd: anchor.addingTimeInterval(12 * 86400)),
+                                       lastSuccessAt: anchor, connection: .connected,
+                                       isLive: true, error: nil, consoleURL: nil)
+        // Cached, plan: the subtitle must append `· 缓存` rather than hide behind the plan name.
+        let cached = ProviderReport(platform: .commandcode, accountID: "fixture",
+                                    balances: [],
+                                    usage: ProviderUsage(windows: windows,
+                                                         summary: ProviderUsageSummary(totalTokens: 12_345,
+                                                                                       inputTokens: 8_000,
+                                                                                       outputTokens: 4_345,
+                                                                                       totalRuns: 42,
+                                                                                       completedRuns: 40,
+                                                                                       failedRuns: 2,
+                                                                                       successRate: dec("95.24"),
+                                                                                       totalCostUSD: dec("1.234"),
+                                                                                       periodBasis: .billingPeriod),
+                                                         planName: "individual-go",
+                                                         billingPeriodEnd: anchor.addingTimeInterval(12 * 86400),
+                                                         billingPeriodStart: anchor.addingTimeInterval(-18 * 86400)),
+                                    lastSuccessAt: anchor.addingTimeInterval(-3 * 3600),
+                                    connection: .stale, isLive: false,
+                                    error: .other, consoleURL: nil)
+        // Cached with an unusually long plan name and no last success time.
+        let cachedLongPlan = ProviderReport(platform: .commandcode, accountID: "fixture",
+                                            balances: [], usage: ProviderUsage(windows: windows, summary: nil,
+                                                                               planName: "individual-go-annual-team-seat"),
+                                            lastSuccessAt: nil, connection: .stale, isLive: false,
+                                            error: .other, consoleURL: nil)
+        // A summary whose cycle the service did not name keeps its numbers and says 未确认.
+        let unknownPeriod = ProviderReport(platform: .commandcode, accountID: "fixture",
+                                           balances: [],
+                                           usage: ProviderUsage(windows: windows,
+                                                                summary: ProviderUsageSummary(totalTokens: 999,
+                                                                                              inputTokens: 700,
+                                                                                              outputTokens: 299,
+                                                                                              totalRuns: 3,
+                                                                                              completedRuns: 3,
+                                                                                              failedRuns: 0,
+                                                                                              successRate: dec("100"),
+                                                                                              totalCostUSD: dec("0.12"),
+                                                                                              periodBasis: .unknown),
+                                                                planName: "individual-go"),
+                                           lastSuccessAt: anchor, connection: .connected,
+                                           isLive: true, error: nil, consoleURL: nil)
+
+        // No usage report at all: the settings entry is drawn in place of the statistics. The
+        // R1 fix keeps that button outside the combined logomark/title/subtitle element.
+        let noUsage = ProviderReport(platform: .commandcode, accountID: nil, balances: [],
+                                     usage: nil, lastSuccessAt: nil, connection: .notConfigured,
+                                     isLive: false, error: nil, consoleURL: nil)
+
+        let stem = VStack(alignment: .leading, spacing: 8) {
+            Text("已连接 + 套餐，summary 缺失：统计暂不可用").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: noSummary, openSettings: {}, now: anchor)
+            Text("缓存 + 套餐：副文案 `individual-go · 缓存`").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: cached, openSettings: {}, now: anchor)
+            Text("缓存 + 超长套餐名 + 成功时间未知：仍为单行省略").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: cachedLongPlan, openSettings: {}, now: anchor)
+            Text("统计周期未确认：保留真实数字").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: unknownPeriod, openSettings: {}, now: anchor)
+            Text("无用量报告：显示「前往设置」；该按钮位于组合辅助功能元素之外（R1）")
+                .font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: noUsage, openSettings: {}, now: anchor)
+        }
+        .padding(12)
+
+        try write(try render(stem, size: nil, background: .light, scale: 2),
+                  named: "06-commandcode-cache-light.png")
+        try write(try render(stem, size: nil, background: .dark, scale: 2),
+                  named: "07-commandcode-cache-dark.png")
+
+        // The cached subtitle stays one line at the card's real width.
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .stale, planName: "individual-go-annual-team-seat"),
+                       "individual-go-annual-team-seat · 缓存")
+    }
+
     // MARK: Rendering helpers
 
     private enum Background {

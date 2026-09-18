@@ -70,8 +70,9 @@ public final class UsageViewModel: ObservableObject {
     private let fireRetryDelay: TimeInterval
 
     /// A new 5-hour window counts as confirmed only when the service's reset time moved
-    /// forward by at least this much. `exit 0` alone proves nothing.
-    static let windowConfirmationThreshold: TimeInterval = 60
+    /// forward by at least this much. `exit 0` alone proves nothing. The number itself lives
+    /// with the confirmation rule in core, so the card and the classifier share one constant.
+    static let windowConfirmationThreshold: TimeInterval = FireWindowConfirmation.threshold
 
     private var timer: AnyCancellable?
     private var providerTimer: AnyCancellable?
@@ -418,23 +419,60 @@ public final class UsageViewModel: ObservableObject {
 
     /// Refreshes every profile in parallel inside one cycle. No request is stacked: a slow
     /// profile simply finishes later than the other.
+    ///
+    /// Each group task returns the profile's stable identifier, and the parent consumes the
+    /// group in completion order: the moment one profile finishes, its new state is published
+    /// on the main actor. Waiting for `waitForAll()` would hold a fast account's fresh numbers
+    /// behind a slow one's request, which is the 1.3.0 defect this cycle shape removes
+    /// (REQUIREMENTS.md §3.1).
     private func refresh(resetFailureBudget: Bool = false) {
         guard !isStopped, !isRefreshing else { return }
         isRefreshing = true
         let coordinator = self.coordinator
         let profileIDs = coordinator.profileIDs
         refreshTask = Task.detached(priority: .utility) { [weak self] in
-            await withTaskGroup(of: Void.self) { group in
+            await withTaskGroup(of: String.self) { group in
                 for profileID in profileIDs {
                     group.addTask {
                         _ = coordinator.fetch(profileID: profileID,
                                               resetFailureBudget: resetFailureBudget)
+                        return profileID
                     }
                 }
-                await group.waitForAll()
+                for await completedProfileID in group {
+                    await self?.publishCompletedProfile(completedProfileID)
+                }
             }
-            await self?.applyProfileStates()
+            await self?.finishProfileRefreshCycle()
         }
+    }
+
+    /// Publishes the state of one profile as soon as its fetch returns.
+    ///
+    /// The publication always reads every profile's full value snapshot, so the array order
+    /// stays account A, account B regardless of who finished first (REQUIREMENTS.md §3.1).
+    /// The cycle-wide `isRefreshing` deliberately stays true: other profiles are still in
+    /// flight, and the card for this one already shows its own new numbers.
+    private func publishCompletedProfile(_ profileID: String) {
+        guard !isStopped, !Task.isCancelled else { return }
+        publishProfileStates()
+        tick += 1
+    }
+
+    /// Ends the cycle once the last profile has returned, and only then clears the round-wide
+    /// refreshing flag so the next round can start.
+    private func finishProfileRefreshCycle() {
+        // A cancelled or stopped view model must not publish state after teardown. The flag is
+        // still cleared so a later cycle is not blocked by a stale `true`.
+        guard !isStopped, !Task.isCancelled else {
+            isRefreshing = false
+            refreshTask = nil
+            return
+        }
+        isRefreshing = false
+        refreshTask = nil
+        publishProfileStates()
+        tick += 1
     }
 
     /// Scheduled provider refresh. Platforms whose contract is unconfirmed are skipped by
@@ -512,17 +550,6 @@ public final class UsageViewModel: ObservableObject {
         profileStates = coordinator.runtimes.map { CodexProfileViewState(runtime: $0.state()) }
     }
 
-    private func applyProfileStates() {
-        // A cancelled or stopped view model must not publish state after teardown.
-        guard !isStopped, !Task.isCancelled else {
-            isRefreshing = false
-            return
-        }
-        isRefreshing = false
-        publishProfileStates()
-        tick += 1
-    }
-
     // MARK: - Fire
 
     /// Runs one manual 5-hour fire for the profile. The caller must already have shown the
@@ -568,43 +595,56 @@ public final class UsageViewModel: ObservableObject {
         // window was not touched by this request.
         try? await Task.sleep(nanoseconds: Self.nanoseconds(fireConfirmDelay))
         guard !isStopped else { return }
-        var newReset = await fetchFiveHourReset(profileID: profileID)
-        if newReset == nil {
-            try? await Task.sleep(nanoseconds: Self.nanoseconds(fireRetryDelay))
-            guard !isStopped else { return }
-            newReset = await fetchFiveHourReset(profileID: profileID)
+
+        // First confirmation read. When it is already conclusive the second read is skipped:
+        // there is nothing left to learn, and the extra read is pure load on the service.
+        var observations: [FireWindowConfirmation.Observation] = []
+        let first = await fetchFiveHourResetObservation(profileID: profileID)
+        observations.append(first)
+        if case .live(let resetsAt) = first,
+           FireWindowConfirmation.confirms(live: resetsAt, previous: previousFiveHourReset) {
+            finishFireCycle(profileID: profileID, result: .requestSucceededWindowConfirmed)
+            return
         }
 
-        let confirmed: Bool
-        if let newReset, let previousFiveHourReset {
-            confirmed = newReset.timeIntervalSince(previousFiveHourReset) >= Self.windowConfirmationThreshold
-        } else {
-            // Without a before/after pair there is no evidence a new window started, so the
-            // card reports the request alone rather than inferring success.
-            confirmed = false
-        }
+        // Every other case waits once more and reads again — including a first live read whose
+        // reset time has not moved yet, because the service may simply not have published the
+        // new window on the first read (REQUIREMENTS.md §4.2 steps 3–5).
+        try? await Task.sleep(nanoseconds: Self.nanoseconds(fireRetryDelay))
+        guard !isStopped else { return }
+        observations.append(await fetchFiveHourResetObservation(profileID: profileID))
 
-        coordinator.recordFireFinished(profileID: profileID,
-                                       result: confirmed ? .requestSucceededWindowConfirmed
-                                                         : .requestSucceededWindowUnchanged)
+        finishFireCycle(profileID: profileID,
+                        result: FireWindowConfirmation.classify(previousReset: previousFiveHourReset,
+                                                                observations: observations))
+    }
+
+    /// Records the final fire result and republishes, unless the app has stopped in the
+    /// meantime (in which case nothing may reach the UI).
+    private func finishFireCycle(profileID: String, result: ChatGPTFireResult) {
+        guard !isStopped else { return }
+        coordinator.recordFireFinished(profileID: profileID, result: result)
         fireTasks[profileID] = nil
         publishProfileStates()
         tick += 1
     }
 
-    /// One forced refresh of a single profile, returning its new 5-hour reset time.
+    /// One forced refresh of a single profile, reduced to the only thing the confirmation can
+    /// use: a live 5-hour reset time, or no evidence.
     ///
     /// Only a *live* result counts (REVISION_SPEC.md §9.2). `UsageService.fetch` returns
     /// `.success` for a cache-served snapshot too, and a cached `resetsAt` is last cycle's
     /// number: treating it as freshly observed would let the card claim a new window that was
-    /// never confirmed. A cached success therefore reports "no evidence" and the caller
-    /// retries once.
-    private func fetchFiveHourReset(profileID: String) async -> Date? {
+    /// never confirmed. A live read without a 5-hour reset time is equally meaningless here.
+    private func fetchFiveHourResetObservation(profileID: String) async -> FireWindowConfirmation.Observation {
         let coordinator = self.coordinator
         return await Task.detached(priority: .userInitiated) {
             let outcome = coordinator.fetch(profileID: profileID, resetFailureBudget: true)
-            guard case .success(let result) = outcome, result.isLive else { return nil }
-            return result.snapshot.fiveHour?.resetsAt
+            guard case .success(let result) = outcome, result.isLive,
+                  let resetsAt = result.snapshot.fiveHour?.resetsAt else {
+                return FireWindowConfirmation.Observation.noEvidence
+            }
+            return .live(resetsAt: resetsAt)
         }.value
     }
 

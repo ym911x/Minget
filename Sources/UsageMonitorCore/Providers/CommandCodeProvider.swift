@@ -28,17 +28,28 @@ public struct CommandCodeProvider: Sendable {
         async let creditsResponse = request(path: Self.creditsPath, headers: headers, timeout: timeout)
         async let summaryResponse = request(path: Self.summaryPath, headers: headers, timeout: timeout)
         async let subscriptionResponse = request(path: Self.subscriptionsPath, headers: headers, timeout: timeout)
+        // Credits is the only required source: its own error must surface, never be folded into
+        // a missing statistic (REQUIREMENTS.md §5.1).
         let credits = try await parseCredits(creditsResponse)
-        let summary = try await parseSummary(summaryResponse)
+        // Summary is enrichment. A network error, a 5xx, a 401/403, malformed JSON or a field
+        // change leaves `summary == nil` — the statistics area says so explicitly — while the
+        // credits-derived windows above stay live. The credential state is decided by credits
+        // alone, so an auxiliary 401/403 does not suspend the connection.
+        let summary = try? await parseSummary(summaryResponse)
         // Subscription is enrichment only. It must not hide valid credits and statistics.
         let subscription = try? await parseSubscription(subscriptionResponse)
         var windows = credits.windows
-        if summary.monthlyUsed != nil || credits.monthlyRemaining != nil {
-            let limit = summary.monthlyUsed.flatMap { used in credits.monthlyRemaining.map { used + $0 } }
-            windows.append(ProviderUsageWindow(kind: .billingPeriod, used: summary.monthlyUsed,
-                                               limit: limit, remaining: credits.monthlyRemaining, resetsAt: nil))
+        // The monthly row is composed only from fields that really arrived: with a credits
+        // balance but no summary, `remaining` is kept and `used`/`limit` stay absent rather
+        // than being back-filled with an assumed total (REQUIREMENTS.md §5.2).
+        let monthlyUsed = summary?.monthlyUsed
+        if monthlyUsed != nil || credits.monthlyRemaining != nil {
+            let limit = monthlyUsed.flatMap { used in credits.monthlyRemaining.map { used + $0 } }
+            windows.append(ProviderUsageWindow(kind: .billingPeriod, used: monthlyUsed,
+                                               limit: limit, remaining: credits.monthlyRemaining,
+                                               resetsAt: nil))
         }
-        return ProviderUsage(windows: windows, summary: summary.summary,
+        return ProviderUsage(windows: windows, summary: summary?.summary,
                              planName: subscription?.planName,
                              billingPeriodEnd: subscription?.periodEnd,
                              billingPeriodStart: subscription?.periodStart)

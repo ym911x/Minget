@@ -1,5 +1,62 @@
 # 变更记录
 
+## 1.3.1（2026-09-18）
+
+状态：稳定性修补已实现；Codex 复核发现的 R1 无障碍阻断已修复。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败；Release 构建和严格签名通过。跳过的 XCTest 进程没有可观测的辅助功能窗口；Codex 另用当前源码编译临时 GUI harness，真实读取系统 AX 树并确认设置入口为独立元素且可激活。真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍未执行，不随本次结论通过。
+
+本版本是稳定性修补版，窗口尺寸、卡片顺序、额度语义、菜单栏格式和凭证安全边界保持 1.3.0 不变。
+
+### 双 Profile 完成即发布
+
+- `UsageViewModel.refresh` 的 Task Group 元素从 `Void` 改为稳定 `profileID`，按完成顺序逐项消费：任一 Profile 一返回就立即在 MainActor 重新发布 `profileStates` 并递增 `tick`，不再等待另一个 Profile。
+- 发布始终读取全部运行态的完整值快照，因此数组顺序永远是账号 A、账号 B，不按完成顺序重排。
+- `isRefreshing` 仍是整轮状态：最后一个 Profile 完成或整轮取消后才恢复 `false`；`stop()`/取消后不再发布任何 UI 状态，迟到结果被丢弃。
+- 保留既有 `guard !isRefreshing`，普通刷新仍不叠加。失败或缓存状态同样立即发布，不等待另一个账号。
+
+### 点火确认三态与延迟重试
+
+- `ChatGPTFireResult` 新增 `.requestSucceededConfirmationUnavailable`，固定文案“请求成功，暂无法确认”，次要色，既不标成功也不标失败；`isSuccess` 仍只对“新窗口已确认”为真。
+- 新增纯分类类型 `FireWindowConfirmation`：输入点火前时间和最多两次实时观察，只输出三种请求成功结果，携带固定分类而不携带原始错误或响应。
+- 时序固定为：CLI 成功后等 2 秒做第一次只读强制刷新；第一次已是实时前移 ≥ 60 秒时立即确认并跳过第二次；其他情况（缓存、失败、实时缺重置时间、实时未变化）一律再等 5 秒做第二次只读刷新，按真值表产生唯一最终结果。
+- 第二次刷新只读取额度，不重复 Codex 模型请求。`fetchFiveHourReset` 的 live-only 规则保持不变。
+- 缓存和失败不再被当作“窗口未变化”。原“两次缓存得到未变化”的断言已按新语义改为“暂无法确认”。
+
+### Command Code 分层容错
+
+- `credits` 仍是唯一必须成功的来源，其自身错误继续抛出，不会被折叠成缺失的统计。
+- `summary` 改为可选解析：网络错误、5xx、401/403、畸形 JSON 或字段结构变化都只让 `summary == nil`，统计区明确显示不可用，已取得的 5 小时／周额度保持 live。
+- 辅助接口单独 401/403 不再暂停凭证，凭证状态由主数据 credits 决定；credits 的 401/403 仍暂停。
+- 月度行只组合实际取得的字段：有 credits 余额无 summary 时保留 `remaining`，`used` 和 `limit` 保持缺失，不推算总额或计费周期。
+- 不新增网络路径，不改变 Bearer、Accept、超时和跨域重定向防护，不修改 `ProviderModels` 持久化结构。
+
+### Command Code 缓存与统计文案
+
+- `CommandCodeCardPresentation` 集中生成标题副文案与缓存帮助文本，视图不再有第二套判断：connected 显示套餐名或“已连接”；stale 显示 `<套餐名> · 缓存` 或“缓存数据”；其他状态沿用既有固定连接／错误文案。
+- 缓存帮助文本固定为“缓存数据 · 上次成功 `<MM-dd HH:mm>`”，时间缺失时为“缓存数据 · 成功时间未知”；工具提示与辅助功能标签都表达同样的缓存语义，不显示底层错误原文。
+- `summary == nil` 的第一行改为“统计暂不可用 · Token — · 请求 —”；`summary` 存在但周期未知时继续显示“统计周期未确认”，两者不再共用一句话。
+- Command Code 卡片 416 × 162 pt、轨道宽度、字号、间距和三条额度行均未改动。
+
+### 测试与构建
+
+- 新增 `ProfileRefreshPublishingTests`：用可控阻塞点确定性地验证 A 先完成、B 先完成、A 失败、整轮关闭后可开始下一轮，以及 `stop()` 后迟到结果不发布。
+- 新增 `CommandCodeAccessibilityTests`：保留始终执行的控件存在性检查，并准备真实辅助功能树检查；当前 XCTest 进程没有可观测的 AX 窗口时明确跳过，不计为通过。Codex 使用单独的临时 GUI harness 完成了真实 AX 树验收。
+- `FireLifecycleTests` 扩充到覆盖真值表全部四行、第一次确认后跳过第二次、实时未变化仍执行第二次、两次实时都未达阈值、缺前值、以及在 2 秒和 5 秒等待期间停止。
+- `CommandCodeProviderTests` 新增 summary 失败／畸形／401／403、月度字段不伪造、credits 401／结构不支持仍关闭等用例。
+- 修正 `ChatGPTFireServiceTests.testTimeoutTerminatesTheChildAndReportsTimeout` 的既有计时竞态：0.5 秒超时可能早于 `python3` 写完 PID 文件，该用例改为 5 秒超时，使断言针对被测行为而不是解释器启动速度。
+- `swift test --scratch-path /tmp/minget-131-tests`：Core 331 + App 120，共 451 项执行，450 项通过、1 项跳过、0 项失败。
+- `./scripts/build.sh` 完成 Release 构建、staging 严格签名和固定运行路径严格签名安装；`CFBundleShortVersionString = 1.3.1`。
+
+### 无障碍修复（R1）
+
+- Command Code 卡片此前对整个 `header` 使用 `.accessibilityElement(children: .combine)`，把标题、状态文字和「前往设置／查看设置」按钮合并为一个元素。真实辅助功能树实测显示：合并后设置入口**不再作为独立元素存在，名称也一并消失**，VoiceOver 只会读出「Command Code，未连接，按钮」，用户无从知道它通向设置。
+- 现在只对 Logo、标题和副文案组成的非交互视图 `CommandCodeHeaderIdentity` 使用 `.combine`；设置按钮留在 `header` 中作为独立兄弟元素。修复后树中是 `AXStaticText desc=Command Code` 加上独立的入口元素 `desc=前往设置／查看设置`，可单独聚焦、激活，缓存副文案仍由身份元素读出。
+- 修复由代码结构、控件存在性测试和 Codex 的独立 GUI harness 共同复核。仓库内真实 AX 树用例在 XCTest 没有可观测窗口时跳过并明确标注为未执行，不计入通过项。
+
+### 版本与文档
+
+- `VERSION`、`README.md`、`ROADMAP.md` 与内嵌构建说明同步到 1.3.1。`scripts/build.sh` 内嵌 README 的“single app-server”旧描述改为两个 Profile 各有独立子进程，构建流程未改动。
+- 详情页 Header 与设置页的开发态版本 fallback 更新为 `1.3.1`，运行包版本仍直接读取 bundle。
+
 ## 1.3.0（2026-09-17）
 
 状态：双 ChatGPT 账号、菜单栏三来源与手动点火已实现；首轮 720 pt 双列布局和启动空窗口在真实界面验收中被否决，第三轮界面微调已完成。425 项自动化测试（Core 325、App 100）、Release 构建、严格签名和真实详情页验收通过，随 [Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0) 发布。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。
@@ -191,6 +248,17 @@
 ---
 
 ## English summary
+
+### 1.3.1 (2026-09-18)
+
+A stability patch; window sizes, card order, quota semantics, menu-bar formats, and credential boundaries are unchanged from 1.3.0. 451 automated tests ran (331 Core, 120 App): 450 passed, 1 was skipped, and 0 failed, plus a release build and strict signing. The skipped XCTest process exposed no observable accessibility windows; a separate GUI harness built from the current sources verified the real AX tree and activation. Real-interface, real DeepSeek menu-bar, real A/B fire, and post-reboot checks remain unverified.
+
+- One refresh round publishes each ChatGPT profile as soon as that profile returns, instead of waiting for the whole task group. The published array still reads account A then account B, `isRefreshing` still covers the round, and nothing is published after `stop()`.
+- Fires now distinguish three outcomes: a live before/after comparison that moved by at least 60 s confirms a new window, live reads that did not move report the window unchanged, and missing or cached evidence reports "request succeeded, confirmation unavailable" rather than claiming the window did not change. A conclusive first read skips the second; every other case retries once after 5 s.
+- Command Code `credits` stays the only required source. A failed summary leaves the quota windows live with `summary == nil`, an auxiliary 401/403 no longer suspends the credential, and the monthly row keeps only the fields that really arrived.
+- A cached Command Code card says `<plan> · 缓存` (or `缓存数据`) with a "缓存数据 · 上次成功 …" tooltip, and a missing summary reads `统计暂不可用 · Token — · 请求 —` instead of the unknown-period wording.
+- Accessibility fix: the card header no longer combines the whole row. Only the non-interactive logomark, title and subtitle are merged, so the settings button keeps its own `AXPress` action.
+- The pre-existing timing race in `ChatGPTFireServiceTests.testTimeoutTerminatesTheChildAndReportsTimeout` (a 0.5 s budget racing `python3` startup) is stabilised with a 5 s budget.
 
 ### 1.3.0 (2026-09-17)
 

@@ -9,6 +9,17 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.3.1 修订
+
+- 两个 ChatGPT 账号的刷新仍同时启动，但任一账号一返回就立即发布自己的新状态，不再等待另一个账号。卡片顺序仍固定为账号 A、账号 B；整轮刷新状态仍在最后一个账号完成后才结束。
+- 点火结果由两种细分为三种：`新窗口已确认`、`请求成功，窗口未变化`，以及证据不足时的`请求成功，暂无法确认`。只有点火前后都取得实时重置时间且前移 ≥ 60 秒才确认新窗口；缓存结果不再被当作“窗口未变化”。
+- 第一次确认刷新已是实时前移时立即结束；其他情况（含第一次实时时间尚未变化）会再等 5 秒做一次只读刷新。第二次刷新只读取额度，不重复模型请求。
+- Command Code 以 `credits` 为必须的主数据，`summary` 与 `subscriptions` 为可选辅助数据：辅助接口失败时，已取得的额度仍为实时，统计区显示`统计暂不可用 · Token — · 请求 —`，不推算总额或周期。
+- Command Code 显示缓存数据时给出明确文字：套餐名后追加`· 缓存`，帮助文本给出最后成功时间；无套餐名时显示`缓存数据`。
+- 修复 Command Code 卡片的辅助功能回归：卡片标题行不再整体合并，只合并 Logo、标题和状态文字，无数据时的「前往设置／查看设置」按钮保留为独立辅助功能按钮和 press 动作。
+
+本版本是稳定性修补版。窗口尺寸、卡片顺序、额度语义、菜单栏格式和凭证安全边界与 1.3.0 相同。
+
 ## v1.3.0 修订
 
 - 详情页同时显示两个 ChatGPT 账号卡片，各自绑定一个独立的 `CODEX_HOME` 与独立的 `codex app-server` 子进程，额度、套餐、账号和缓存互不串号。
@@ -68,8 +79,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## 当前版本
 
-- 当前版本：`1.3.0`
-- 状态：双 ChatGPT 账号额度、菜单栏三来源与手动点火已实现；425 项自动化测试、Release 构建、严格签名和真实详情页验收通过。源码发布页：[Minget v1.3.0](https://github.com/ym911x/Minget/releases/tag/v1.3.0)。真实 DeepSeek 菜单栏余额与 A/B 两次真实点火仍待后续验证。
+- 当前版本：`1.3.1`
+- 状态：双 Profile 完成即发布、点火确认三态、Command Code 辅助接口容错、缓存标识与辅助功能修复已实现；451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建和严格签名通过。跳过项为需要辅助功能授权的辅助功能树用例。真实界面、真实 DeepSeek 菜单栏余额、A/B 两次真实点火与机器重启复验仍待用户验收，详见 [1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -85,9 +96,9 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 - 应用以显式 AppKit 入口启动，不声明任何 SwiftUI Scene；冷启动只出现菜单栏图标，不会出现空的设置窗口。弹层在显示前先确定内容尺寸，屏幕容纳不下整页时改用普通详情窗口，不会留下越界且无法移回的弹层。
 - 详情页为 440 pt 宽的固定单列无滚动布局，一排一张卡片：ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张全开时 `440 × 552 pt`，两张服务卡都隐藏时收缩为 `440 × 330 pt`，普通详情窗口立即同步调整尺寸。
 - 每张 ChatGPT 卡片显示 Profile 名称、连接/缓存状态、套餐、实际账号邮箱、5 小时与周额度的**剩余额度轨道和各自的重置时间分段轨道**（5 小时 5 段、周 7 段）、可用重置次数、点火结果和“5 小时点火”按钮。
-- 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”与“请求成功，窗口未变化”。
+- 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”“请求成功，窗口未变化”和证据不足时的“请求成功，暂无法确认”。
 - DeepSeek 卡片把 Logo、wordmark、连接状态、服务状态和余额放在同一行，横向最多显示 3 个币种金额，超过 3 个时第三项显示“另有 N 个币种”；不换算、不合计、不伪造 0。
-- Command Code 卡片的三条额度轨道显示**剩余**（越用越短），右侧只显示“余额 / 总计”；每条下方各有一条重置时间轨道，5 小时与周只显示绝对重置时间，本月保留剩余天数。
+- Command Code 卡片的三条额度轨道显示**剩余**（越用越短），右侧只显示“余额 / 总计”；每条下方各有一条重置时间轨道，5 小时与周只显示绝对重置时间，本月保留剩余天数。`credits` 失败按缓存或错误处理，`summary`/`subscriptions` 失败只影响统计区，并在缓存时显示套餐名后的`· 缓存`。
 - 设置页固定 `520 × 600 pt`：菜单栏显示使用纵向 radio group，服务组列出两个只读 ChatGPT 行的 `CODEX_HOME` 尾段，DeepSeek 与 Command Code 管理表单单开 accordion。
 - OpenAI 详情卡显示账号可用重置次数，并在服务提供有效到期明细时显示最近到期时间；缓存或字段不可用时明确显示不可用。
 - 详情面板使用放大的 OpenAI Blossom 图标和 API 返回的 Codex 套餐类型；DeepSeek 可在设置中选择显示或隐藏，隐藏不会断开连接，也不会改变菜单栏来源。
@@ -150,6 +161,12 @@ swift test
 - [v1.3.0 实施报告](docs/versions/1.3.0/IMPLEMENTATION_REPORT.md)
 - [v1.3.0 审核状态](docs/versions/1.3.0/REVIEW.md)
 - [v1.3.0 验收台账](docs/versions/1.3.0/ACCEPTANCE.md)
+- [v1.3.1 稳定性修补需求](docs/versions/1.3.1/REQUIREMENTS.md)
+- [v1.3.1 实施任务](docs/versions/1.3.1/IMPLEMENTATION_TASKS.md)
+- [v1.3.1 实施报告](docs/versions/1.3.1/IMPLEMENTATION_REPORT.md)
+- [v1.3.1 审核状态](docs/versions/1.3.1/REVIEW.md)
+- [v1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)
+- [v1.3.1 发布说明](docs/versions/1.3.1/RELEASE_NOTES.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -164,7 +181,7 @@ swift test
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.0 adds a second Codex account, a selectable menu bar source, and a per-account manual fire button.
+**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.0 adds a second Codex account, a selectable menu bar source, and a per-account manual fire button; 1.3.1 publishes each account the moment it finishes, splits fire confirmation into three outcomes, and makes Command Code statistics optional so a failed summary cannot hide the credits.
 
 ### Features
 
@@ -178,7 +195,8 @@ swift test
 - Command Code's credit tracks show *remaining* (shrinking from the right as credit is used) and only `balance / total` at the right. Five-hour and weekly rows use absolute reset times; the monthly row retains relative days.
 - Starts as an explicit AppKit app with no SwiftUI scene, so a cold start shows only the menu-bar icon and never an empty settings window; the panel fixes its content size before it is shown and falls back to the detail window when the page cannot fit the screen.
 - Each ChatGPT card shows the profile name, connection or cache state, the plan returned by `account/read`, the real account email, both quota windows, reset times, available reset credits, the last fire result, and its own fire button.
-- Manual fire runs the official Codex CLI with a fixed argument list under that account's isolated `CODEX_HOME`, discards the child's output, and reports "request succeeded" separately from "new window confirmed".
+- Manual fire runs the official Codex CLI with a fixed argument list under that account's isolated `CODEX_HOME` and discards the child's output. It reports three separate outcomes: a confirmed new window, a request that succeeded while the window stayed put, and a request that succeeded with no live evidence to compare.
+- Publishes each ChatGPT account's state as soon as that account returns, rather than holding a fast account behind a slow one.
 - Places the DeepSeek logo, wordmark, connection state, service state, and balances on one line. It shows up to three currency amounts (currency code ascending, unnamed bucket last); beyond three the third slot becomes a fixed overflow line.
 - Uses a fixed 520 × 600 pt settings page with a vertical radio group for the menu bar source, two read-only ChatGPT rows showing only the `CODEX_HOME` suffix, and single-open accordions for the DeepSeek and Command Code forms.
 - Displays the read-only `rateLimitResetCredits.availableCount` value and, when supplied by the service, the nearest future expiry in the OpenAI detail card. Cached or missing fields remain explicitly unavailable.
