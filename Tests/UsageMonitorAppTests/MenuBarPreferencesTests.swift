@@ -185,11 +185,11 @@ final class MenuBarPreferencesTests: XCTestCase {
                              "a source change must reach the status item, not wait for the next fetch")
     }
 
-    // MARK: Slash-command style constraints
+    // MARK: Scope and cadence settings
 
     func testPreferenceObjectNeverCarriesCredentialsOrCaches() {
-        // The type has exactly two stored preferences; this pins the surface so a later
-        // version cannot quietly add a credential-shaped field here.
+        // Display/cadence settings may be persisted, but no credential-shaped or cache-shaped
+        // key may appear in this object.
         let defaults = makeDefaults()
         let preferences = MenuBarPreferences(defaults: defaults)
         preferences.selection = .profile("chatgpt-b")
@@ -197,5 +197,50 @@ final class MenuBarPreferencesTests: XCTestCase {
 
         let keys = defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("menubar.") }.sorted()
         XCTAssertEqual(keys, ["menubar.deepseekCurrency.v1", "menubar.source.v1"])
+    }
+
+    func testLowUsageSettingsPersistAndCanBeReset() {
+        let defaults = makeDefaults()
+        let preferences = MenuBarPreferences(defaults: defaults)
+
+        XCTAssertTrue(preferences.lowUsageRefreshEnabled)
+        XCTAssertEqual(preferences.lowUsageRefreshIntervalSeconds, 30)
+        XCTAssertEqual(preferences.chatGPTFiveHourThresholdPercent, 50)
+        XCTAssertEqual(preferences.chatGPTWeeklyThresholdPercent, 15)
+        XCTAssertEqual(preferences.deepSeekBalanceThresholdCNY, Decimal(string: "15.00"))
+
+        preferences.lowUsageRefreshEnabled = false
+        preferences.lowUsageRefreshIntervalSeconds = 15
+        preferences.chatGPTFiveHourThresholdPercent = 42
+        preferences.chatGPTWeeklyThresholdPercent = 12
+        preferences.deepSeekBalanceThresholdCNYText = "9.50"
+
+        let restored = MenuBarPreferences(defaults: defaults)
+        XCTAssertFalse(restored.lowUsageRefreshEnabled)
+        XCTAssertEqual(restored.lowUsageRefreshIntervalSeconds, 15)
+        XCTAssertEqual(restored.chatGPTFiveHourThresholdPercent, 42)
+        XCTAssertEqual(restored.chatGPTWeeklyThresholdPercent, 12)
+        XCTAssertEqual(restored.deepSeekBalanceThresholdCNY, Decimal(string: "9.50"))
+
+        restored.resetMenuBarRefreshSettings()
+        XCTAssertTrue(restored.lowUsageRefreshEnabled)
+        XCTAssertEqual(restored.lowUsageRefreshIntervalSeconds, 30)
+        XCTAssertEqual(restored.chatGPTFiveHourThresholdPercent, 50)
+        XCTAssertEqual(restored.chatGPTWeeklyThresholdPercent, 15)
+        XCTAssertEqual(restored.deepSeekBalanceThresholdCNYText, "15.00")
+    }
+
+    func testInvalidNumericSettingsFailClosedOrNormalise() {
+        let preferences = MenuBarPreferences(defaults: makeDefaults())
+        preferences.lowUsageRefreshIntervalSeconds = 999
+        XCTAssertEqual(preferences.lowUsageRefreshIntervalSeconds, 60)
+        preferences.lowUsageRefreshIntervalSeconds = -1
+        XCTAssertEqual(preferences.lowUsageRefreshIntervalSeconds, 15)
+        preferences.chatGPTFiveHourThresholdPercent = 120
+        XCTAssertEqual(preferences.chatGPTFiveHourThresholdPercent, 100)
+        preferences.chatGPTWeeklyThresholdPercent = -4
+        XCTAssertEqual(preferences.chatGPTWeeklyThresholdPercent, 0)
+        preferences.deepSeekBalanceThresholdCNYText = "not-a-number"
+        XCTAssertNil(preferences.deepSeekBalanceThresholdCNY)
     }
 }

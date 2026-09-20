@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// 1.3.2 settings surface. The daily fire list is user-extensible, so the content scrolls
+/// 1.4.0 settings surface. The daily fire list is user-extensible, so the content scrolls
 /// inside a bounded window while the title and footer remain reachable.
 ///
 /// Top to bottom: title, the "菜单栏显示" radio group, the service group, advanced
@@ -89,6 +89,7 @@ struct MingetSettingsView: View {
             .labelsHidden()
 
             deepSeekCurrencyRow
+            lowUsageRefreshSettings
 
             Text("菜单栏显示与详情页显示相互独立：隐藏详情卡不会停止该来源的刷新。")
                 .font(.system(size: 9))
@@ -119,6 +120,82 @@ struct MingetSettingsView: View {
                 Text("等待余额数据").font(.system(size: 11)).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var lowUsageRefreshSettings: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("低额度时提高菜单栏刷新频率",
+                   isOn: $menuBarPreferences.lowUsageRefreshEnabled)
+                .font(.system(size: 11))
+                .controlSize(.small)
+
+            Picker("加速周期", selection: $menuBarPreferences.lowUsageRefreshIntervalSeconds) {
+                ForEach(MenuBarPreferences.supportedRefreshIntervalSeconds, id: \.self) { seconds in
+                    Text("每 " + String(seconds) + " 秒").tag(seconds)
+                }
+            }
+            .font(.system(size: 11))
+            .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
+
+            HStack(spacing: 8) {
+                Text("5 小时阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Spacer()
+                Stepper(value: $menuBarPreferences.chatGPTFiveHourThresholdPercent,
+                        in: 0...100,
+                        step: 1) {
+                    Text("低于 " + String(menuBarPreferences.chatGPTFiveHourThresholdPercent) + "%")
+                        .monospacedDigit()
+                }
+                .controlSize(.small)
+                .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
+            }
+
+            HStack(spacing: 8) {
+                Text("周额度阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Spacer()
+                Stepper(value: $menuBarPreferences.chatGPTWeeklyThresholdPercent,
+                        in: 0...100,
+                        step: 1) {
+                    Text("低于 " + String(menuBarPreferences.chatGPTWeeklyThresholdPercent) + "%")
+                        .monospacedDigit()
+                }
+                .controlSize(.small)
+                .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
+            }
+
+            HStack(spacing: 8) {
+                Text("DeepSeek CNY 阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Spacer()
+                TextField("15.00", text: $menuBarPreferences.deepSeekBalanceThresholdCNYText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 78)
+                    .multilineTextAlignment(.trailing)
+                    .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
+                Text("元").font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            if menuBarPreferences.deepSeekBalanceThresholdCNY == nil {
+                Text("请输入大于等于 0 的数字；无效时 DeepSeek 加速会暂停。")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.red)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(model.menuBarRefreshStatusText)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button("恢复默认") {
+                    menuBarPreferences.resetMenuBarRefreshSettings()
+                }
+                .controlSize(.small)
+            }
+            Text("阈值采用“剩余量严格低于”判断；只加快当前菜单栏选中的账号或余额来源。")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 2)
     }
 
     private func profileName(_ profileID: String) -> String {
@@ -205,7 +282,7 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
     }
 }
 

@@ -32,7 +32,9 @@ public enum CommandCodeFireProcessOutcome: Error, Equatable, Sendable {
 /// - drains and discards stdout/stderr;
 /// - owns and terminates the exact child PID on timeout or app shutdown.
 public final class CommandCodeFireService: @unchecked Sendable {
-    public static let modelName = "deepseek/deepseek-v4-flash"
+    /// The single model used by the in-app manual/scheduled fire path. Keep this in one
+    /// place so the UI path and its tests cannot drift from the external launchd helper.
+    public static let modelName = "deepseek/deepseek-v4.1-flash"
     public static let prompt = "Reply exactly: OK"
     public static let targetID = "commandcode"
     public static let defaultTimeout: TimeInterval = 120

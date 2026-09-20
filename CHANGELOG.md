@@ -1,5 +1,25 @@
 # 变更记录
 
+## 1.4.0（2026-09-20）
+
+状态：发布验收通过，待创建 `v1.4.0` 标签与 GitHub Release。513 项自动测试执行（Core 360、App 153），512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。
+
+### 点火模型统一
+
+- 应用内 Command Code 手动点火与定时点火统一使用 `deepseek/deepseek-v4.1-flash`。
+- 外部 `minget-fire` 的 Command Code 路径已核对为同一模型标识；本版本不修改 LaunchAgent 时间表或触发编排。
+
+### 菜单栏低额度自适应刷新
+
+- 当前菜单栏选中的 ChatGPT Profile 在 5 小时剩余严格低于阈值，或周额度剩余严格低于阈值时，增加只针对该 Profile 的补充刷新。
+- 当前菜单栏显示 DeepSeek 且实际显示币种为 CNY、余额严格低于阈值时，增加 DeepSeek 补充刷新；显示 USD 等其他币种时不套用 CNY 阈值。
+- 设置页新增低额度加速开关、15/30/60 秒周期、5 小时阈值、周阈值和 DeepSeek CNY 金额阈值；默认值为启用、30 秒、50%、15%、15.00 元，并可恢复默认。
+- 当前来源切换、无效金额 fail-closed、既有请求合并和补充 timer 停止均有回归覆盖；详情页和其他账号的普通刷新规则保持不变。
+
+### 验证边界
+
+本版本自动测试使用 fake service/provider，不消耗真实额度。设置控件明暗布局、来源切换、timer 安装/取消与签名包启动已验收；真实低额度服务轮询没有通过人为制造额度条件触发，保留为发布后现场观察项，不提前写成通过。
+
 ## 1.3.2（2026-09-20）
 
 状态：点火确认、刷新功耗优化、每日多时点点火计划与 Command Code 手动点火已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项明确跳过、0 失败；Release arm64 构建与 staging/install/archive 严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 明确授权发布；发布提交 `c51791b`、annotated tag `v1.3.2` 和 [GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.3.2) 已完成。真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，不随发布改记为通过。

@@ -3,9 +3,9 @@ import AppKit
 import UsageMonitorCore
 @testable import UsageMonitorApp
 
-/// Cadence rules behind the 1.3.2 refresh savings: which interval the ChatGPT timer uses,
-/// how the wake refresh is throttled, and when the menu bar re-measures. Pure state and
-/// fake clocks only: no real sleep, no long waits.
+/// Cadence rules behind the 1.3.2 refresh savings and 1.4.0 menu-bar acceleration: which
+/// interval the ChatGPT timer uses, how the wake refresh is throttled, and when the menu bar
+/// re-measures. Pure state and fake clocks only: no real sleep, no long waits.
 @MainActor
 final class RefreshCadenceTests: XCTestCase {
 
@@ -82,6 +82,170 @@ final class RefreshCadenceTests: XCTestCase {
         let past = snapshot(fiveHourResetsAt: Self.now.addingTimeInterval(UsageViewModel.nearResetHorizon + 1))
         XCTAssertEqual(UsageViewModel.codexRefreshInterval(snapshots: [past], now: Self.now),
                        UsageViewModel.idleCodexRefreshInterval)
+    }
+
+    // MARK: Menu-bar low-usage acceleration
+
+    private func menuBarSettings(interval: Int = 30,
+                                 fiveHour: Int = 50,
+                                 weekly: Int = 15,
+                                 deepSeek: Decimal? = Decimal(string: "15.00"),
+                                 enabled: Bool = true) -> MenuBarRefreshSettings {
+        MenuBarRefreshSettings(isEnabled: enabled,
+                               intervalSeconds: interval,
+                               chatGPTFiveHourThresholdPercent: fiveHour,
+                               chatGPTWeeklyThresholdPercent: weekly,
+                               deepSeekBalanceThresholdCNY: deepSeek)
+    }
+
+    private func deepSeekReport(amount: Decimal,
+                                currency: String = "CNY",
+                                connection: ProviderConnectionState = .connected) -> ProviderReport {
+        ProviderReport(platform: .deepseek,
+                       accountID: "deepseek-test",
+                       balances: [ProviderBalance(currency: currency, total: amount)],
+                       lastSuccessAt: Self.now,
+                       connection: connection,
+                       isLive: connection == .connected,
+                       error: nil,
+                       consoleURL: nil)
+    }
+
+    func testMenuBarChatGPTThresholdsAreStrictAndUseEitherWindow() {
+        let exactSnapshot = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 50, remainingPercent: 50, resetsAt: nil),
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                    usedPercent: 85, remainingPercent: 15, resetsAt: nil),
+            fetchedAt: Self.now, source: .codexAppServer)
+        XCTAssertNil(MenuBarRefreshPolicy.chatGPTTrigger(snapshot: exactSnapshot,
+                                                         fiveHourThresholdPercent: 50,
+                                                         weeklyThresholdPercent: 15))
+
+        let lowFiveHour = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 50.01, remainingPercent: 49.99, resetsAt: nil),
+            weekly: exactSnapshot.weekly,
+            fetchedAt: Self.now, source: .codexAppServer)
+        XCTAssertEqual(MenuBarRefreshPolicy.chatGPTTrigger(snapshot: lowFiveHour,
+                                                           fiveHourThresholdPercent: 50,
+                                                           weeklyThresholdPercent: 15),
+                       .chatGPTFiveHour)
+
+        let lowWeekly = UsageSnapshot(
+            fiveHour: exactSnapshot.fiveHour,
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                    usedPercent: 85.01, remainingPercent: 14.99, resetsAt: nil),
+            fetchedAt: Self.now, source: .codexAppServer)
+        XCTAssertEqual(MenuBarRefreshPolicy.chatGPTTrigger(snapshot: lowWeekly,
+                                                           fiveHourThresholdPercent: 50,
+                                                           weeklyThresholdPercent: 15),
+                       .chatGPTWeekly)
+    }
+
+    func testMenuBarDecisionOnlyUsesTheSelectedSourceAndNeverSlowsNormalCadence() {
+        let low = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 60, remainingPercent: 40, resetsAt: nil),
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                    usedPercent: 20, remainingPercent: 80, resetsAt: nil),
+            fetchedAt: Self.now, source: .codexAppServer)
+        let high = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 10, remainingPercent: 90, resetsAt: nil),
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                    usedPercent: 20, remainingPercent: 80, resetsAt: nil),
+            fetchedAt: Self.now, source: .codexAppServer)
+        let settings = menuBarSettings(interval: 60)
+
+        let selectedLow = MenuBarRefreshPolicy.decision(
+            selection: .profile("chatgpt-a"), profileSnapshot: low, deepSeekReport: nil,
+            deepSeekCurrency: nil, settings: settings, normalInterval: 30)
+        XCTAssertEqual(selectedLow.interval, 30)
+        XCTAssertEqual(selectedLow.trigger, .chatGPTFiveHour)
+
+        let selectedHigh = MenuBarRefreshPolicy.decision(
+            selection: .profile("chatgpt-b"), profileSnapshot: high, deepSeekReport: nil,
+            deepSeekCurrency: nil, settings: settings, normalInterval: 120)
+        XCTAssertFalse(selectedHigh.isAccelerated)
+    }
+
+    func testMenuBarDeepSeekUsesDisplayedCNYOnlyAndStrictBoundary() {
+        let exact = deepSeekReport(amount: Decimal(string: "15.00")!)
+        XCTAssertNil(MenuBarRefreshPolicy.deepSeekTrigger(report: exact,
+                                                          savedCurrency: nil,
+                                                          thresholdCNY: Decimal(string: "15.00")))
+
+        let low = deepSeekReport(amount: Decimal(string: "14.99")!)
+        XCTAssertEqual(MenuBarRefreshPolicy.deepSeekTrigger(report: low,
+                                                            savedCurrency: nil,
+                                                            thresholdCNY: Decimal(string: "15.00")),
+                       .deepSeekBalance)
+
+        let usd = deepSeekReport(amount: Decimal(string: "1.00")!, currency: "USD")
+        XCTAssertNil(MenuBarRefreshPolicy.deepSeekTrigger(report: usd,
+                                                          savedCurrency: "USD",
+                                                          thresholdCNY: Decimal(string: "15.00")))
+    }
+
+    func testMenuBarAccelerationCanBeDisabledOrFailClosed() {
+        let low = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 60, remainingPercent: 40, resetsAt: nil),
+            weekly: nil, fetchedAt: Self.now, source: .codexAppServer)
+        let disabled = MenuBarRefreshPolicy.decision(
+            selection: .profile("chatgpt-a"), profileSnapshot: low, deepSeekReport: nil,
+            deepSeekCurrency: nil, settings: menuBarSettings(enabled: false), normalInterval: 120)
+        XCTAssertFalse(disabled.isAccelerated)
+
+        let invalidDeepSeek = MenuBarRefreshPolicy.decision(
+            selection: .deepSeek,
+            profileSnapshot: nil,
+            deepSeekReport: deepSeekReport(amount: Decimal(string: "1.00")!),
+            deepSeekCurrency: nil,
+            settings: menuBarSettings(deepSeek: nil),
+            normalInterval: 300)
+        XCTAssertFalse(invalidDeepSeek.isAccelerated)
+    }
+
+    func testMenuBarTimerFollowsSelectionDisableAndStopLifecycle() throws {
+        let defaults = makeDefaults("menu-bar-timer")
+        let preferences = MenuBarPreferences(defaults: defaults)
+        let low = UsageSnapshot(
+            fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                                      usedPercent: 60, remainingPercent: 40, resetsAt: nil),
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                    usedPercent: 20, remainingPercent: 80, resetsAt: nil),
+            fetchedAt: Self.now, source: .codexAppServer)
+        let client = WakeClient(snapshot: low)
+        let service = UsageService(factory: { client },
+                                   cache: UsageCache(userDefaults: defaults))
+        let coordinator = CodexProfilesCoordinator(profiles: [.chatGPTA]) { _ in service }
+        _ = coordinator.fetch(profileID: "chatgpt-a")
+        let engine = ProviderRefreshEngine(readers: [], cache: ProviderCache(userDefaults: defaults))
+        let model = UsageViewModel(coordinator: coordinator,
+                                   providerEngine: engine,
+                                   menuBarPreferences: preferences,
+                                   refreshInterval: 120)
+
+        model.start()
+        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 30)
+
+        preferences.selection = .deepSeek
+        waitForPreferencePropagation()
+        XCTAssertNil(model.configuredMenuBarRefreshInterval,
+                     "a source without a matching low-usage trigger must cancel the old timer")
+
+        preferences.selection = .profile("chatgpt-a")
+        waitForPreferencePropagation()
+        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 30)
+
+        preferences.lowUsageRefreshEnabled = false
+        waitForPreferencePropagation()
+        XCTAssertNil(model.configuredMenuBarRefreshInterval)
+
+        model.stop()
+        XCTAssertNil(model.configuredMenuBarRefreshInterval)
     }
 
     // MARK: Wake throttling
@@ -173,6 +337,10 @@ final class RefreshCadenceTests: XCTestCase {
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTAssertFalse(model.isRefreshing, "wake refresh should finish within the test bound")
+    }
+
+    private func waitForPreferencePropagation() {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
     }
 
     // MARK: Width remeasure rule

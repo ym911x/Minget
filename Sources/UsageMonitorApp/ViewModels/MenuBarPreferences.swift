@@ -8,8 +8,8 @@ import UsageMonitorCore
 /// profile id or the explicit DeepSeek marker — never an array index, so reordering or
 /// extending the profile list cannot silently change what the user sees.
 ///
-/// This object owns display choices only. It never reads credentials, never touches a
-/// provider cache and never drives a refresh.
+/// This object owns menu bar display and cadence choices only. It never reads credentials,
+/// never touches a provider cache and never drives a refresh.
 public final class MenuBarPreferences: ObservableObject {
 
     public static let shared = MenuBarPreferences()
@@ -42,7 +42,19 @@ public final class MenuBarPreferences: ObservableObject {
     private enum Key {
         static let selection = "menubar.source.v1"
         static let deepSeekCurrency = "menubar.deepseekCurrency.v1"
+        static let refreshEnabled = "menubar.refresh.enabled.v1"
+        static let refreshIntervalSeconds = "menubar.refresh.intervalSeconds.v1"
+        static let chatGPTFiveHourThresholdPercent = "menubar.refresh.chatGPTFiveHourThresholdPercent.v1"
+        static let chatGPTWeeklyThresholdPercent = "menubar.refresh.chatGPTWeeklyThresholdPercent.v1"
+        static let deepSeekBalanceThresholdCNY = "menubar.refresh.deepSeekBalanceThresholdCNY.v1"
     }
+
+    public static let defaultRefreshEnabled = true
+    public static let defaultRefreshIntervalSeconds = 30
+    public static let defaultChatGPTFiveHourThresholdPercent = 50
+    public static let defaultChatGPTWeeklyThresholdPercent = 15
+    public static let defaultDeepSeekBalanceThresholdCNYText = "15.00"
+    public static let supportedRefreshIntervalSeconds = [15, 30, 60]
 
     private let defaults: UserDefaults
     public let knownProfileIDs: [String]
@@ -65,6 +77,56 @@ public final class MenuBarPreferences: ObservableObject {
         }
     }
 
+    /// When enabled, only the source currently selected in the menu bar gets an additional
+    /// low-usage refresh loop. The ordinary detail-page loops remain unchanged.
+    @Published public var lowUsageRefreshEnabled: Bool {
+        didSet { defaults.set(lowUsageRefreshEnabled, forKey: Key.refreshEnabled) }
+    }
+
+    /// Extra menu-bar polling interval. The picker only offers the documented values; the
+    /// setter also normalises hand-edited defaults so an invalid value cannot create a busy
+    /// loop or a zero-duration timer.
+    @Published public var lowUsageRefreshIntervalSeconds: Int {
+        didSet {
+            let normalised = Self.normaliseRefreshInterval(lowUsageRefreshIntervalSeconds)
+            if normalised != lowUsageRefreshIntervalSeconds {
+                lowUsageRefreshIntervalSeconds = normalised
+                return
+            }
+            defaults.set(lowUsageRefreshIntervalSeconds, forKey: Key.refreshIntervalSeconds)
+        }
+    }
+
+    /// Remaining 5-hour percentage below which the selected ChatGPT profile is accelerated.
+    @Published public var chatGPTFiveHourThresholdPercent: Int {
+        didSet {
+            let normalised = Self.normalisePercent(chatGPTFiveHourThresholdPercent)
+            if normalised != chatGPTFiveHourThresholdPercent {
+                chatGPTFiveHourThresholdPercent = normalised
+                return
+            }
+            defaults.set(chatGPTFiveHourThresholdPercent, forKey: Key.chatGPTFiveHourThresholdPercent)
+        }
+    }
+
+    /// Remaining weekly percentage below which the selected ChatGPT profile is accelerated.
+    @Published public var chatGPTWeeklyThresholdPercent: Int {
+        didSet {
+            let normalised = Self.normalisePercent(chatGPTWeeklyThresholdPercent)
+            if normalised != chatGPTWeeklyThresholdPercent {
+                chatGPTWeeklyThresholdPercent = normalised
+                return
+            }
+            defaults.set(chatGPTWeeklyThresholdPercent, forKey: Key.chatGPTWeeklyThresholdPercent)
+        }
+    }
+
+    /// Text binding for the settings field. Invalid or negative text is retained for the user
+    /// to correct, while the policy treats it as unavailable and therefore fails closed.
+    @Published public var deepSeekBalanceThresholdCNYText: String {
+        didSet { defaults.set(deepSeekBalanceThresholdCNYText, forKey: Key.deepSeekBalanceThresholdCNY) }
+    }
+
     public init(defaults: UserDefaults = .standard,
                 knownProfileIDs: [String] = ChatGPTAccountProfile.defaults.map(\.id)) {
         self.defaults = defaults
@@ -77,6 +139,54 @@ public final class MenuBarPreferences: ObservableObject {
                                    knownProfileIDs: knownProfileIDs) ?? fallback
         let storedCurrency = defaults.string(forKey: Key.deepSeekCurrency)
         self.deepSeekCurrency = (storedCurrency?.isEmpty == false) ? storedCurrency : nil
+        self.lowUsageRefreshEnabled = defaults.object(forKey: Key.refreshEnabled) as? Bool
+            ?? Self.defaultRefreshEnabled
+        self.lowUsageRefreshIntervalSeconds = Self.normaliseRefreshInterval(
+            defaults.object(forKey: Key.refreshIntervalSeconds) as? Int
+                ?? Self.defaultRefreshIntervalSeconds)
+        self.chatGPTFiveHourThresholdPercent = Self.normalisePercent(
+            defaults.object(forKey: Key.chatGPTFiveHourThresholdPercent) as? Int
+                ?? Self.defaultChatGPTFiveHourThresholdPercent)
+        self.chatGPTWeeklyThresholdPercent = Self.normalisePercent(
+            defaults.object(forKey: Key.chatGPTWeeklyThresholdPercent) as? Int
+                ?? Self.defaultChatGPTWeeklyThresholdPercent)
+        self.deepSeekBalanceThresholdCNYText = defaults.string(forKey: Key.deepSeekBalanceThresholdCNY)
+            ?? Self.defaultDeepSeekBalanceThresholdCNYText
+    }
+
+    /// Parsed CNY threshold, or nil while the settings field contains invalid input.
+    public var deepSeekBalanceThresholdCNY: Decimal? {
+        let trimmed = deepSeekBalanceThresholdCNYText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let value = Decimal(string: trimmed, locale: Locale(identifier: "en_US_POSIX")),
+              value >= 0 else { return nil }
+        return value
+    }
+
+    public var menuBarRefreshSettings: MenuBarRefreshSettings {
+        MenuBarRefreshSettings(
+            isEnabled: lowUsageRefreshEnabled,
+            intervalSeconds: lowUsageRefreshIntervalSeconds,
+            chatGPTFiveHourThresholdPercent: chatGPTFiveHourThresholdPercent,
+            chatGPTWeeklyThresholdPercent: chatGPTWeeklyThresholdPercent,
+            deepSeekBalanceThresholdCNY: deepSeekBalanceThresholdCNY)
+    }
+
+    /// Restores the documented defaults without touching source or currency selection.
+    public func resetMenuBarRefreshSettings() {
+        lowUsageRefreshEnabled = Self.defaultRefreshEnabled
+        lowUsageRefreshIntervalSeconds = Self.defaultRefreshIntervalSeconds
+        chatGPTFiveHourThresholdPercent = Self.defaultChatGPTFiveHourThresholdPercent
+        chatGPTWeeklyThresholdPercent = Self.defaultChatGPTWeeklyThresholdPercent
+        deepSeekBalanceThresholdCNYText = Self.defaultDeepSeekBalanceThresholdCNYText
+    }
+
+    private static func normaliseRefreshInterval(_ value: Int) -> Int {
+        supportedRefreshIntervalSeconds.min { abs($0 - value) < abs($1 - value) } ?? defaultRefreshIntervalSeconds
+    }
+
+    private static func normalisePercent(_ value: Int) -> Int {
+        min(max(value, 0), 100)
     }
 
     /// The profile the menu bar shows, or nil when DeepSeek is selected.

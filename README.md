@@ -9,6 +9,15 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.4.0 更新
+
+- 应用内 Command Code 手动点火与定时点火统一使用 `deepseek/deepseek-v4.1-flash`；外部 `minget-fire` 已核对为同一模型，LaunchAgent 时间表本版本不改。
+- 菜单栏当前选中的 ChatGPT 账号在 5 小时剩余低于阈值或周额度低于阈值时，增加只针对该账号的补充刷新；当前显示 DeepSeek 且 CNY 余额低于阈值时同样增加补充刷新。
+- 设置页可调整低额度加速开关、15/30/60 秒周期、5 小时阈值、周阈值和 DeepSeek CNY 金额阈值；默认值为启用、30 秒、50%、15%、15.00 元。
+- 当前来源切换、阈值严格小于边界、无效输入 fail-closed 和补充 timer 停止均有回归测试。
+
+本版本已通过发布验收：513 项自动测试执行，512 通过、1 项既有 AX 环境跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。真实低额度服务轮询未通过人为制造额度条件触发，保留为发布后现场观察项。详见 [1.4.0 需求](docs/versions/1.4.0/REQUIREMENTS.md)与[验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
+
 ## v1.3.2 修订
 
 - 点火确认只读取额度（`handshake + rateLimits/read`），不再附带账号身份请求；失败熔断语义不变。
@@ -94,8 +103,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## 当前版本
 
-- 当前版本：`1.3.2`
-- 状态：点火轻量确认、差值与历史、30/60/120 秒刷新、Command Code 辅助缓存、唤醒探活、每日多时点点火计划和 Command Code 卡片点火均已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项 AX XCTest 明确跳过、0 失败；测试使用 fake CLI/Keychain/transport，不消耗额度。Command Code 真实手动点火已由用户在 PATH 修复签名包中确认成功。用户于 2026-09-20 接受 1.3.2 发布，真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，详见 [1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)和 [GitHub Release v1.3.2](https://github.com/ym911x/Minget/releases/tag/v1.3.2)。
+- 当前版本：`1.4.0`
+- 状态：1.4.0 已实现 Command Code 模型统一和菜单栏当前来源低额度自适应刷新；默认补充周期 30 秒，周期与阈值可在设置中调整。最终自动测试 513 项执行，512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。真实低额度服务轮询保留为发布后现场观察项。资料见 [1.4.0 验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -125,6 +134,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 - 启动时清理旧版智谱 GLM 的应用内凭据、缓存与显示偏好；失败会在下次启动重试。
 - 连接状态和数据缓存保存在本机，不上传到第三方服务。
 - 支持手动刷新和按重置时间退避的自动刷新机制；详情页时钟 30 秒一 tick，菜单栏倒计时按需计算。
+- 菜单栏低额度自适应刷新只作用于当前选中的来源；ChatGPT 使用 5 小时/周剩余阈值，DeepSeek 使用当前显示 CNY 余额阈值，周期和阈值可配置。
 
 ## 运行
 
@@ -189,6 +199,11 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 - [v1.3.2 审核状态](docs/versions/1.3.2/REVIEW.md)
 - [v1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)
 - [v1.3.2 发布说明](docs/versions/1.3.2/RELEASE_NOTES.md)
+- [v1.4.0 需求](docs/versions/1.4.0/REQUIREMENTS.md)
+- [v1.4.0 实施任务](docs/versions/1.4.0/IMPLEMENTATION_TASKS.md)
+- [v1.4.0 审核状态](docs/versions/1.4.0/REVIEW.md)
+- [v1.4.0 验收台账](docs/versions/1.4.0/ACCEPTANCE.md)
+- [v1.4.0 发布说明](docs/versions/1.4.0/RELEASE_NOTES.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -203,7 +218,7 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.2 adds user-enabled daily multi-time firing for both ChatGPT accounts and Command Code, plus a Command Code fire button backed by the official CLI.
+**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.4.0 unifies Command Code firing on `deepseek/deepseek-v4.1-flash` and adds configurable low-usage refresh for the currently selected menu-bar source.
 
 ### Features
 

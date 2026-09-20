@@ -49,7 +49,8 @@ public final class UsageViewModel: ObservableObject {
 
     /// Owns the per-profile runtimes and their services.
     let coordinator: CodexProfilesCoordinator
-    /// Menu bar source and DeepSeek currency choice. Display preferences only.
+    /// Menu bar source, currency and menu-bar-only cadence preferences. No credentials or
+    /// provider caches are stored here.
     let menuBarPreferences: MenuBarPreferences
     private let fireService: ChatGPTFireService
     private let commandCodeFireService: CommandCodeFireService
@@ -115,6 +116,7 @@ public final class UsageViewModel: ObservableObject {
 
     private var timer: AnyCancellable?
     private var providerTimer: AnyCancellable?
+    private var menuBarRefreshTimer: AnyCancellable?
     private var clockTimer: AnyCancellable?
     /// Re-publishes when the menu bar source or the DeepSeek currency changes, so the status
     /// item re-measures its width immediately instead of waiting for the next data change.
@@ -122,6 +124,7 @@ public final class UsageViewModel: ObservableObject {
     private var clockObservers: [(NotificationCenter, NSObjectProtocol)] = []
     private var refreshTask: Task<Void, Never>?
     private var providerRefreshTask: Task<Void, Never>?
+    private var menuBarRefreshTask: Task<Void, Never>?
     private var deepSeekStatusTask: Task<Void, Never>?
     private var fireTasks: [String: Task<Void, Never>] = [:]
     private var deepSeekStatusCheckedAt: Date?
@@ -238,6 +241,43 @@ public final class UsageViewModel: ObservableObject {
             .joined(separator: "|")
     }
 
+    /// Current adaptive decision for the source shown in the menu bar. A nil interval means
+    /// the ordinary detail/provider timer is sufficient and no extra request is scheduled.
+    public var currentMenuBarRefreshDecision: MenuBarRefreshDecision {
+        let selectedSnapshot: UsageSnapshot?
+        let normalInterval: TimeInterval
+        switch menuBarPreferences.selection {
+        case .profile(let profileID):
+            selectedSnapshot = profileState(profileID)?.snapshot
+            normalInterval = currentCodexInterval
+        case .deepSeek:
+            selectedSnapshot = nil
+            normalInterval = providerRefreshInterval
+        }
+        return MenuBarRefreshPolicy.decision(
+            selection: menuBarPreferences.selection,
+            profileSnapshot: selectedSnapshot,
+            deepSeekReport: deepSeekReport,
+            deepSeekCurrency: menuBarPreferences.deepSeekCurrency,
+            settings: menuBarPreferences.menuBarRefreshSettings,
+            normalInterval: normalInterval)
+    }
+
+    /// Compact status text used in settings to make the active source and trigger visible.
+    public var menuBarRefreshStatusText: String {
+        let settings = menuBarPreferences.menuBarRefreshSettings
+        guard settings.isEnabled else { return "低额度加速已关闭" }
+        let decision = currentMenuBarRefreshDecision
+        guard let interval = decision.interval, let trigger = decision.trigger else {
+            if menuBarPreferences.selection == .deepSeek,
+               settings.deepSeekBalanceThresholdCNY == nil {
+                return "DeepSeek 阈值无效，已暂停加速"
+            }
+            return "当前来源正常，按常规频率刷新"
+        }
+        return "当前来源每 " + String(Int(interval)) + " 秒刷新 · " + trigger.displayText
+    }
+
     /// Cached data is always shown with a warning; it must never read as live data.
     public var isStale: Bool { profileStates.contains { $0.isStale } }
 
@@ -310,7 +350,10 @@ public final class UsageViewModel: ObservableObject {
         menuBarPreferenceObserver = menuBarPreferences.objectWillChange
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.tick += 1 }
+                    MainActor.assumeIsolated {
+                        self?.tick += 1
+                        self?.rescheduleMenuBarRefreshTimer()
+                    }
                 }
             }
     }
@@ -394,15 +437,19 @@ public final class UsageViewModel: ObservableObject {
         isDeepSeekStatusRefreshing = false
         timer?.cancel()
         providerTimer?.cancel()
+        menuBarRefreshTimer?.cancel()
         clockTimer?.cancel()
         menuBarPreferenceObserver?.cancel()
         timer = nil
         providerTimer = nil
+        menuBarRefreshTimer = nil
         clockTimer = nil
         menuBarPreferenceObserver = nil
         stopObservingClockChanges()
         providerRefreshTask?.cancel()
         providerRefreshTask = nil
+        menuBarRefreshTask?.cancel()
+        menuBarRefreshTask = nil
         deepSeekStatusTask?.cancel()
         deepSeekStatusTask = nil
         for task in fireTasks.values { task.cancel() }
@@ -437,6 +484,7 @@ public final class UsageViewModel: ObservableObject {
                 self?.refreshProviders(force: false)
                 self?.refreshDeepSeekStatus(force: false)
             }
+        rescheduleMenuBarRefreshTimer()
     }
 
     /// Current cadence for the ChatGPT timer, from the snapshots on hand.
@@ -448,6 +496,13 @@ public final class UsageViewModel: ObservableObject {
     /// Exposes the configured detail-page clock cadence to deterministic wiring tests.
     /// The timer itself remains private and is still created only by `start()`.
     var configuredClockInterval: TimeInterval { clockInterval }
+
+    /// Exposes whether the menu-bar-only timer is currently installed, without exposing the
+    /// timer itself or allowing tests to fire it. This keeps source-switch and teardown
+    /// lifecycle checks deterministic instead of waiting 15 real seconds for a tick.
+    var configuredMenuBarRefreshInterval: TimeInterval? {
+        menuBarRefreshTimer == nil ? nil : lastMenuBarRefreshTimerInterval
+    }
 
     /// Rebuilds the ChatGPT timer only when the cadence actually changed, so a steady
     /// state keeps one subscription instead of churning one per round.
@@ -462,6 +517,75 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private var lastCodexTimerInterval: TimeInterval = 0
+
+    /// Creates an additional timer only while the currently selected source is below its
+    /// configured threshold. The ordinary ChatGPT/provider timers remain responsible for all
+    /// other accounts and providers.
+    private func rescheduleMenuBarRefreshTimer() {
+        guard !isStopped else { return }
+        guard let interval = currentMenuBarRefreshDecision.interval else {
+            menuBarRefreshTimer?.cancel()
+            menuBarRefreshTimer = nil
+            lastMenuBarRefreshTimerInterval = 0
+            return
+        }
+        if menuBarRefreshTimer != nil,
+           abs(interval - lastMenuBarRefreshTimerInterval) < 0.001 {
+            return
+        }
+        menuBarRefreshTimer?.cancel()
+        lastMenuBarRefreshTimerInterval = interval
+        menuBarRefreshTimer = Timer.publish(every: interval, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.refreshSelectedMenuBarSource() }
+    }
+
+    private var lastMenuBarRefreshTimerInterval: TimeInterval = 0
+
+    private func refreshSelectedMenuBarSource() {
+        guard !isStopped, menuBarRefreshTask == nil,
+              currentMenuBarRefreshDecision.isAccelerated else { return }
+
+        switch menuBarPreferences.selection {
+        case .profile(let profileID):
+            guard let runtime = coordinator.runtime(for: profileID),
+                  !runtime.state().isFetching else { return }
+            let coordinator = self.coordinator
+            menuBarRefreshTask = Task.detached(priority: .utility) { [weak self] in
+                _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
+                await self?.finishMenuBarProfileRefresh()
+            }
+        case .deepSeek:
+            let engine = providerEngine
+            menuBarRefreshTask = Task { [weak self] in
+                await engine.refresh(platform: .deepseek, force: false)
+                guard let self, !self.isStopped else { return }
+                self.finishMenuBarProviderRefresh()
+            }
+        }
+    }
+
+    private func finishMenuBarProfileRefresh() {
+        guard !isStopped, !Task.isCancelled else {
+            menuBarRefreshTask = nil
+            return
+        }
+        menuBarRefreshTask = nil
+        publishProfileStates()
+        tick += 1
+        rescheduleMenuBarRefreshTimer()
+    }
+
+    private func finishMenuBarProviderRefresh() {
+        guard !isStopped, !Task.isCancelled else {
+            menuBarRefreshTask = nil
+            return
+        }
+        menuBarRefreshTask = nil
+        publishProviderReports()
+        tick += 1
+        rescheduleMenuBarRefreshTimer()
+    }
 
     /// One scheduled round, then a cadence re-check: near a reset the next round comes
     /// sooner, far from any reset it backs off.
@@ -624,6 +748,7 @@ public final class UsageViewModel: ObservableObject {
         publishProfileStates()
         tick += 1
         rescheduleCodexTimer()
+        rescheduleMenuBarRefreshTimer()
     }
 
     /// Scheduled provider refresh. Platforms whose contract is unconfirmed are skipped by
@@ -686,6 +811,7 @@ public final class UsageViewModel: ObservableObject {
         isProviderRefreshing = engineHasWork()
         publishProviderReports()
         tick += 1
+        rescheduleMenuBarRefreshTimer()
     }
 
     private func engineHasWork() -> Bool {

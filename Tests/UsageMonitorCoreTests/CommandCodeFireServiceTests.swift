@@ -27,7 +27,7 @@ final class CommandCodeFireServiceTests: XCTestCase {
         XCTAssertEqual(CommandCodeFireService.arguments(),
                        ["--no-auto-update", "--no-session", "--no-skills", "--skip-onboarding",
                         "--permission-mode", "plan", "--max-turns", "1",
-                        "--model", "deepseek/deepseek-v4-flash",
+                        "--model", "deepseek/deepseek-v4.1-flash",
                         "--print", "Reply exactly: OK"])
         let joined = CommandCodeFireService.arguments().joined(separator: " ")
         XCTAssertFalse(joined.contains("/bin/sh"))
