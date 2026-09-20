@@ -2,14 +2,15 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// 1.3.0 settings surface: fixed 520 × 600 pt, no scroll container (UI_SPEC.md §7).
+/// 1.3.2 settings surface. The daily fire list is user-extensible, so the content scrolls
+/// inside a bounded window while the title and footer remain reachable.
 ///
 /// Top to bottom: title, the "菜单栏显示" radio group, the service group, advanced
 /// diagnostics, footer. The service group lists both ChatGPT profiles read-only plus the two
 /// credential-backed providers, whose connection forms open one at a time.
 struct MingetSettingsView: View {
 
-    static let pageSize = CGSize(width: 520, height: 600)
+    static let pageSize = CGSize(width: 520, height: 700)
     static let margin: CGFloat = 18
 
     @ObservedObject var model: UsageViewModel
@@ -40,24 +41,30 @@ struct MingetSettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("设置").font(.system(size: 20, weight: .bold))
 
-            menuBarGroup
-            serviceGroup
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    menuBarGroup
+                    FireScheduleSettingsView(preferences: model.fireSchedules)
+                    serviceGroup
 
-            DisclosureGroup("高级诊断") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle(isOn: Binding(get: { model.isCredentialDiagnosticOn },
-                                         set: { model.setCredentialDiagnostics($0) })) {
-                        Text("记录钥匙串访问诊断").font(.system(size: 11))
+                    DisclosureGroup("高级诊断") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle(isOn: Binding(get: { model.isCredentialDiagnosticOn },
+                                                 set: { model.setCredentialDiagnostics($0) })) {
+                                Text("记录钥匙串访问诊断").font(.system(size: 11))
+                            }
+                            .controlSize(.small)
+                            if model.isCredentialDiagnosticOn, let path = model.credentialDiagnosticPath {
+                                Text(path).font(.system(size: 9, design: .monospaced))
+                                    .foregroundStyle(.secondary).textSelection(.enabled).lineLimit(2)
+                            }
+                        }.padding(.top, 7)
                     }
-                    .controlSize(.small)
-                    if model.isCredentialDiagnosticOn, let path = model.credentialDiagnosticPath {
-                        Text(path).font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(.secondary).textSelection(.enabled).lineLimit(2)
-                    }
-                }.padding(.top, 7)
-            }.font(.system(size: 11))
+                    .font(.system(size: 11))
+                }
+                .padding(.trailing, 4)
+            }
 
-            Spacer(minLength: 2)
             footer
         }
         .padding(Self.margin)
@@ -198,7 +205,99 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.2"
+    }
+}
+
+private struct FireScheduleSettingsView: View {
+    @ObservedObject var preferences: FireSchedulePreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("5 小时点火计划").font(.system(size: 13, weight: .semibold))
+            Text("每日本地时间，勾选后生效；睡眠或启动错过时最多补跑 10 分钟。")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+
+            ForEach(FireScheduleTarget.allCases) { target in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(target.displayName).font(.system(size: 11, weight: .medium))
+                        Spacer()
+                        Button {
+                            preferences.add(target: target)
+                        } label: {
+                            Label("添加时间", systemImage: "plus")
+                        }
+                        .controlSize(.small)
+                    }
+
+                    if preferences.entries(for: target).isEmpty {
+                        Text("尚未添加").font(.system(size: 9)).foregroundStyle(.tertiary)
+                    } else {
+                        ForEach(preferences.entries(for: target)) { entry in
+                            HStack(spacing: 8) {
+                                Toggle("", isOn: Binding(
+                                    get: { entry.isEnabled },
+                                    set: { preferences.setEnabled($0, for: entry.id) }
+                                ))
+                                .labelsHidden()
+                                .controlSize(.small)
+
+                                DatePicker("", selection: dateBinding(entry), displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .datePickerStyle(.field)
+                                    .frame(width: 92)
+
+                                Text(entry.isEnabled ? "已启用" : "未启用")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(entry.isEnabled ? Color.green : Color.secondary)
+                                Spacer()
+                                Button(role: .destructive) {
+                                    preferences.remove(entry.id)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("删除 \(target.displayName) \(timeText(entry.minuteOfDay))")
+                            }
+                        }
+                    }
+
+                    if preferences.hasSubFiveHourGap(for: target) {
+                        Text("相邻已启用时间小于 5 小时：仍会发起请求，但通常不会开启新窗口。")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.orange)
+                    }
+                }
+                if target != FireScheduleTarget.allCases.last { Divider() }
+            }
+
+            Text("Command Code 使用钥匙串中的 Key 调用官方 CLI 最小请求，会消耗少量额度。")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .settingsGroupBackground()
+    }
+
+    private func dateBinding(_ entry: FireScheduleEntry) -> Binding<Date> {
+        Binding(get: {
+            var components = DateComponents()
+            components.calendar = Calendar.current
+            components.year = 2001
+            components.month = 1
+            components.day = 1
+            components.hour = entry.minuteOfDay / 60
+            components.minute = entry.minuteOfDay % 60
+            return components.date ?? Date(timeIntervalSinceReferenceDate: 0)
+        }, set: { date in
+            let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+            preferences.setMinute((components.hour ?? 0) * 60 + (components.minute ?? 0), for: entry.id)
+        })
+    }
+
+    private func timeText(_ minute: Int) -> String {
+        String(format: "%02d:%02d", minute / 60, minute % 60)
     }
 }
 

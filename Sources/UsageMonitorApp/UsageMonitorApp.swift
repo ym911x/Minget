@@ -37,6 +37,7 @@ final class AppContainer {
         model = UsageViewModel(coordinator: codexProfiles,
                                providerEngine: providerEngine,
                                menuBarPreferences: menuBarPreferences,
+                               fireSchedules: .shared,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
         statusItem = StatusItemController()
     }

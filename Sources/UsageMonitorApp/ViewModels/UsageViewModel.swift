@@ -30,6 +30,7 @@ public final class UsageViewModel: ObservableObject {
 
     /// One report per detail-panel platform, in display order.
     @Published public private(set) var providerReports: [ProviderReport] = []
+    @Published private(set) var commandCodeFireState = CommandCodeFireViewState()
     /// The latest unauthenticated observation from DeepSeek's public status page. A failed
     /// page read remains visibly unavailable; it is never converted into a healthy state.
     @Published public private(set) var deepSeekStatus = DeepSeekStatusSnapshot.unavailable()
@@ -51,17 +52,55 @@ public final class UsageViewModel: ObservableObject {
     /// Menu bar source and DeepSeek currency choice. Display preferences only.
     let menuBarPreferences: MenuBarPreferences
     private let fireService: ChatGPTFireService
+    private let commandCodeFireService: CommandCodeFireService
+    let fireSchedules: FireSchedulePreferences
 
     /// Non-optional by design (Round 6): a view model without an engine has no save path
     /// at all. Internal (not private) so the wiring tests can read engine state directly.
     let providerEngine: ProviderRefreshEngine
 
-    private let refreshInterval: TimeInterval
+    private let baseRefreshInterval: TimeInterval
     private let panelOpenRefreshAge: TimeInterval
     private let providerRefreshInterval: TimeInterval
     private let providerPanelOpenRefreshAge: TimeInterval
     private let deepSeekStatusReader: DeepSeekStatusReading?
     private let deepSeekStatusRefreshInterval: TimeInterval = 5 * 60
+    /// How often the detail page re-evaluates relative timestamps. 30 seconds by default:
+    /// the per-second countdown is drawn from `Date()` on demand, so a 1-second tick only
+    /// paid for a full page recompute (REQUIREMENTS.md §4.1).
+    private let clockInterval: TimeInterval
+    private var lastScheduledCodexRefreshAt: Date?
+    private var lastWakeRefreshAt: Date?
+
+    /// Refresh cadence for the ChatGPT timer, chosen from the known reset times.
+    ///
+    /// Near a reset the windows move fast and deserve a 30-second poll; far from any
+    /// reset the numbers barely change and 120 seconds is enough; with nothing known
+    /// yet the 1.3.1 behaviour of 60 seconds is kept so the first screen is not delayed.
+    public static let baseCodexRefreshInterval: TimeInterval = 60
+    public static let nearResetCodexRefreshInterval: TimeInterval = 30
+    public static let idleCodexRefreshInterval: TimeInterval = 120
+    public static let nearResetHorizon: TimeInterval = 10 * 60
+    /// Minimum gap between a wake-triggered refresh and the next scheduled one, so the
+    /// two cannot stack the same request twice.
+    public static let wakeRefreshCooldown: TimeInterval = 30
+
+    public static func codexRefreshInterval(snapshots: [UsageSnapshot?], now: Date = Date(),
+                                            baseInterval: TimeInterval = 60) -> TimeInterval {
+        var hasData = false
+        for snapshot in snapshots {
+            for resetsAt in [snapshot?.fiveHour?.resetsAt, snapshot?.weekly?.resetsAt] {
+                guard let resetsAt else { continue }
+                hasData = true
+                let delta = resetsAt.timeIntervalSince(now)
+                if delta.isFinite, delta >= 0, delta <= nearResetHorizon {
+                    return nearResetCodexRefreshInterval
+                }
+            }
+            if snapshot != nil { hasData = true }
+        }
+        return hasData ? idleCodexRefreshInterval : baseInterval
+    }
 
     /// How long to wait after a successful request before the confirming refresh, and how
     /// long to wait before the single retry. Fixed by REQUIREMENTS.md §7.2; injectable so
@@ -93,24 +132,30 @@ public final class UsageViewModel: ObservableObject {
                 providerEngine: ProviderRefreshEngine,
                 menuBarPreferences: MenuBarPreferences = .shared,
                 fireService: ChatGPTFireService = ChatGPTFireService(),
+                commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
+                fireSchedules: FireSchedulePreferences? = nil,
                 refreshInterval: TimeInterval = 60,
                 panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                 providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
                 providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
                 deepSeekStatusReader: DeepSeekStatusReading? = nil,
                 fireConfirmDelay: TimeInterval = 2,
-                fireRetryDelay: TimeInterval = 5) {
+                fireRetryDelay: TimeInterval = 5,
+                clockInterval: TimeInterval = 30) {
         self.coordinator = coordinator
         self.providerEngine = providerEngine
         self.menuBarPreferences = menuBarPreferences
         self.fireService = fireService
-        self.refreshInterval = refreshInterval
+        self.commandCodeFireService = commandCodeFireService
+        self.fireSchedules = fireSchedules ?? FireSchedulePreferences()
+        self.baseRefreshInterval = refreshInterval
         self.panelOpenRefreshAge = panelOpenRefreshAge
         self.providerRefreshInterval = providerRefreshInterval
         self.providerPanelOpenRefreshAge = providerPanelOpenRefreshAge
         self.deepSeekStatusReader = deepSeekStatusReader
         self.fireConfirmDelay = fireConfirmDelay
         self.fireRetryDelay = fireRetryDelay
+        self.clockInterval = clockInterval
         publishProfileStates()
         publishProviderReports()
     }
@@ -120,25 +165,31 @@ public final class UsageViewModel: ObservableObject {
                             providerEngine: ProviderRefreshEngine,
                             menuBarPreferences: MenuBarPreferences = .shared,
                             fireService: ChatGPTFireService = ChatGPTFireService(),
+                            commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
+                            fireSchedules: FireSchedulePreferences? = nil,
                             refreshInterval: TimeInterval = 60,
                             panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                             providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
                             providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
                             deepSeekStatusReader: DeepSeekStatusReading? = nil,
                             fireConfirmDelay: TimeInterval = 2,
-                            fireRetryDelay: TimeInterval = 5) {
+                            fireRetryDelay: TimeInterval = 5,
+                            clockInterval: TimeInterval = 30) {
         self.init(coordinator: CodexProfilesCoordinator(profiles: [ChatGPTAccountProfile.chatGPTA],
                                                           makeService: { _ in service }),
                   providerEngine: providerEngine,
                   menuBarPreferences: menuBarPreferences,
                   fireService: fireService,
+                  commandCodeFireService: commandCodeFireService,
+                  fireSchedules: fireSchedules,
                   refreshInterval: refreshInterval,
                   panelOpenRefreshAge: panelOpenRefreshAge,
                   providerRefreshInterval: providerRefreshInterval,
                   providerPanelOpenRefreshAge: providerPanelOpenRefreshAge,
                   deepSeekStatusReader: deepSeekStatusReader,
                   fireConfirmDelay: fireConfirmDelay,
-                  fireRetryDelay: fireRetryDelay)
+                  fireRetryDelay: fireRetryDelay,
+                  clockInterval: clockInterval)
     }
 
     // MARK: - Derived values
@@ -242,9 +293,9 @@ public final class UsageViewModel: ObservableObject {
         scheduleTimers()
         observeClockChanges()
         observeMenuBarPreferences()
-        clockTimer = Timer.publish(every: 1, on: .main, in: .common)
+        clockTimer = Timer.publish(every: clockInterval, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in self?.tick += 1 }
+            .sink { [weak self] date in self?.handleClockTick(date) }
         refresh()
         refreshProviders(force: false)
         refreshDeepSeekStatus(force: false)
@@ -273,6 +324,10 @@ public final class UsageViewModel: ObservableObject {
             await self.providerEngine.primeCredentials()
             self.publishProviderReports()
             self.refreshProviders(force: false)
+            // Scheduled Command Code fire is intentionally evaluated only after the
+            // non-interactive Keychain priming pass has settled. Otherwise launch and
+            // credential loading can race, causing a due row to miss its catch-up window.
+            self.evaluateFireSchedules(at: Date())
         }
     }
 
@@ -292,16 +347,25 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Recomputes the displayed countdowns immediately when the machine wakes or the system
-    /// clock is changed, instead of waiting for the next one-second tick.
+    /// clock is changed, instead of waiting for the next clock tick. A wake additionally
+    /// triggers one throttled refresh so a child that died in sleep is noticed without
+    /// waiting for the next scheduled round.
     private func observeClockChanges() {
         guard clockObservers.isEmpty else { return }
         let wake = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick += 1 }
+            MainActor.assumeIsolated {
+                self?.tick += 1
+                self?.refreshAfterWake()
+                self?.evaluateFireSchedules(at: Date())
+            }
         }
         let clockChanged = NotificationCenter.default.addObserver(
             forName: .NSSystemClockDidChange, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick += 1 }
+            MainActor.assumeIsolated {
+                self?.tick += 1
+                self?.evaluateFireSchedules(at: Date())
+            }
         }
         clockObservers = [(NSWorkspace.shared.notificationCenter, wake),
                           (NotificationCenter.default, clockChanged)]
@@ -348,12 +412,14 @@ public final class UsageViewModel: ObservableObject {
         refreshTask = nil
         let coordinator = self.coordinator
         let fireService = self.fireService
+        let commandCodeFireService = self.commandCodeFireService
         joinQueue.async {
             task?.cancel()
             // `fire()` blocks in `Process.waitUntilExit()`, so cancelling the task above does
             // not reach the child. Terminating it explicitly is what keeps a `codex exec`
             // from outliving the app (REVISION_SPEC.md §9.1).
             fireService.stopAll()
+            commandCodeFireService.stop()
             coordinator.stop()
             Diagnostics.log("viewmodel stopped")
             completion?()
@@ -364,15 +430,99 @@ public final class UsageViewModel: ObservableObject {
     private let joinQueue = DispatchQueue(label: "usagemonitor.viewmodel.join")
 
     private func scheduleTimers() {
-        timer = Timer.publish(every: refreshInterval, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in self?.refresh() }
+        rescheduleCodexTimer()
         providerTimer = Timer.publish(every: providerRefreshInterval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 self?.refreshProviders(force: false)
                 self?.refreshDeepSeekStatus(force: false)
             }
+    }
+
+    /// Current cadence for the ChatGPT timer, from the snapshots on hand.
+    var currentCodexInterval: TimeInterval {
+        Self.codexRefreshInterval(snapshots: coordinator.runtimes.map { $0.state().snapshot },
+                                  baseInterval: baseRefreshInterval)
+    }
+
+    /// Exposes the configured detail-page clock cadence to deterministic wiring tests.
+    /// The timer itself remains private and is still created only by `start()`.
+    var configuredClockInterval: TimeInterval { clockInterval }
+
+    /// Rebuilds the ChatGPT timer only when the cadence actually changed, so a steady
+    /// state keeps one subscription instead of churning one per round.
+    private func rescheduleCodexTimer() {
+        let interval = currentCodexInterval
+        if timer != nil, abs(interval - lastCodexTimerInterval) < 0.001 { return }
+        timer?.cancel()
+        lastCodexTimerInterval = interval
+        timer = Timer.publish(every: interval, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.scheduledCodexRefresh() }
+    }
+
+    private var lastCodexTimerInterval: TimeInterval = 0
+
+    /// One scheduled round, then a cadence re-check: near a reset the next round comes
+    /// sooner, far from any reset it backs off.
+    private func scheduledCodexRefresh() {
+        guard !isStopped else { return }
+        if let lastWake = lastWakeRefreshAt,
+           Self.isInsideWakeCooldown(now: Date(), previous: lastWake) {
+            return
+        }
+        lastScheduledCodexRefreshAt = Date()
+        refresh()
+        rescheduleCodexTimer()
+    }
+
+    /// One throttled refresh after sleep: healthy profiles use their existing app-server and
+    /// read only rate limits; only an unhealthy client falls back to the ordinary full read.
+    /// Neither route re-opens the failure budget.
+    func refreshAfterWake(now: Date = Date()) {
+        guard !isStopped, !isRefreshing else { return }
+        if let lastScheduled = lastScheduledCodexRefreshAt,
+           Self.isInsideWakeCooldown(now: now, previous: lastScheduled) {
+            return
+        }
+        if let lastWake = lastWakeRefreshAt,
+           Self.isInsideWakeCooldown(now: now, previous: lastWake) {
+            return
+        }
+        lastWakeRefreshAt = now
+        isRefreshing = true
+        let coordinator = self.coordinator
+        let profileIDs = coordinator.profileIDs
+        refreshTask = Task.detached(priority: .utility) { [weak self] in
+            await withTaskGroup(of: String?.self) { group in
+                for profileID in profileIDs {
+                    group.addTask {
+                        switch coordinator.probeAfterWake(profileID: profileID) {
+                        case .refreshed:
+                            return profileID
+                        case .needsFullRefresh:
+                            _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
+                            return profileID
+                        case .suppressed:
+                            return nil
+                        }
+                    }
+                }
+                for await completedProfileID in group {
+                    if let completedProfileID {
+                        await self?.publishCompletedProfile(completedProfileID)
+                    }
+                }
+            }
+            await self?.finishProfileRefreshCycle()
+        }
+    }
+
+    /// Wall-clock corrections must not extend the throttle indefinitely. Only a previous
+    /// event in the real non-negative cooldown window suppresses new work.
+    static func isInsideWakeCooldown(now: Date, previous: Date) -> Bool {
+        let elapsed = now.timeIntervalSince(previous)
+        return elapsed >= 0 && elapsed < wakeRefreshCooldown
     }
 
     // MARK: - Panel
@@ -473,6 +623,7 @@ public final class UsageViewModel: ObservableObject {
         refreshTask = nil
         publishProfileStates()
         tick += 1
+        rescheduleCodexTimer()
     }
 
     /// Scheduled provider refresh. Platforms whose contract is unconfirmed are skipped by
@@ -558,12 +709,18 @@ public final class UsageViewModel: ObservableObject {
     /// The result the card shows separates "the request ran" from "a new window was
     /// confirmed": only a refresh that moves the service's 5-hour `resetsAt` forward by at
     /// least `windowConfirmationThreshold` produces the confirmed text.
-    public func fire(profileID: String) {
-        guard !isStopped, let runtime = coordinator.runtime(for: profileID) else { return }
+    @discardableResult
+    public func fire(profileID: String) -> Bool {
+        guard !isStopped, let runtime = coordinator.runtime(for: profileID) else { return false }
         let current = runtime.state()
-        guard !current.isFiring else { return }
+        guard !current.isFiring else { return false }
 
         let previousFiveHourReset = current.display.snapshot?.fiveHour?.resetsAt
+        let previousWasLive: Bool
+        switch current.display {
+        case .live: previousWasLive = true
+        case .stale, .unavailable: previousWasLive = false
+        }
         coordinator.recordFireStart(profileID: profileID)
         publishProfileStates()
         tick += 1
@@ -574,13 +731,16 @@ public final class UsageViewModel: ObservableObject {
             let outcome = service.fire(profile: profile)
             await self?.finishFire(profileID: profileID,
                                    outcome: outcome,
-                                   previousFiveHourReset: previousFiveHourReset)
+                                   previousFiveHourReset: previousFiveHourReset,
+                                   previousWasLive: previousWasLive)
         }
+        return true
     }
 
     private func finishFire(profileID: String,
                             outcome: ChatGPTFireProcessOutcome,
-                            previousFiveHourReset: Date?) async {
+                            previousFiveHourReset: Date?,
+                            previousWasLive: Bool) async {
         guard !isStopped else { return }
 
         if let immediate = outcome.immediateResult {
@@ -601,9 +761,13 @@ public final class UsageViewModel: ObservableObject {
         var observations: [FireWindowConfirmation.Observation] = []
         let first = await fetchFiveHourResetObservation(profileID: profileID)
         observations.append(first)
-        if case .live(let resetsAt) = first,
+        if previousWasLive,
+           case .live(let resetsAt) = first,
            FireWindowConfirmation.confirms(live: resetsAt, previous: previousFiveHourReset) {
-            finishFireCycle(profileID: profileID, result: .requestSucceededWindowConfirmed)
+            finishFireCycle(profileID: profileID,
+                            result: .requestSucceededWindowConfirmed,
+                            previousFiveHourReset: previousFiveHourReset,
+                            observations: observations)
             return
         }
 
@@ -616,30 +780,180 @@ public final class UsageViewModel: ObservableObject {
 
         finishFireCycle(profileID: profileID,
                         result: FireWindowConfirmation.classify(previousReset: previousFiveHourReset,
-                                                                observations: observations))
+                                                                previousWasLive: previousWasLive,
+                                                                observations: observations),
+                        previousFiveHourReset: previousFiveHourReset,
+                        observations: observations)
     }
 
     /// Records the final fire result and republishes, unless the app has stopped in the
     /// meantime (in which case nothing may reach the UI).
-    private func finishFireCycle(profileID: String, result: ChatGPTFireResult) {
+    ///
+    private func finishFireCycle(profileID: String,
+                                 result: ChatGPTFireResult,
+                                 previousFiveHourReset: Date? = nil,
+                                 observations: [FireWindowConfirmation.Observation] = []) {
         guard !isStopped else { return }
-        coordinator.recordFireFinished(profileID: profileID, result: result)
+        coordinator.recordFireFinished(profileID: profileID,
+                                       result: result,
+                                       driftSeconds: Self.fireDrift(result: result,
+                                                                    previous: previousFiveHourReset,
+                                                                    observations: observations))
         fireTasks[profileID] = nil
         publishProfileStates()
         tick += 1
     }
 
-    /// One forced refresh of a single profile, reduced to the only thing the confirmation can
-    /// use: a live 5-hour reset time, or no evidence.
+    /// The measured forward movement behind a finished fire, for the card suffix. Only the
+    /// two measured outcomes carry one; anything unconfirmed shows the request alone.
+    static func fireDrift(result: ChatGPTFireResult,
+                          previous: Date?,
+                          observations: [FireWindowConfirmation.Observation]) -> TimeInterval? {
+        switch result {
+        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged:
+            let latest = observations.compactMap { observation -> Date? in
+                if case .live(let resetsAt) = observation { return resetsAt }
+                return nil
+            }.last
+            return FireWindowDrift.shift(from: previous, to: latest)
+        case .requestSucceededConfirmationUnavailable, .codexCLINotFound,
+             .commandCodeCLINotFound, .credentialUnavailable, .launchFailed,
+             .nonZeroExit, .timedOut, .alreadyRunning:
+            return nil
+        }
+    }
+
+    /// Runs a Command Code fire through the official CLI. Manual calls may request Keychain
+    /// access; scheduled calls are background-only and fail visibly instead of showing UI.
+    @discardableResult
+    public func fireCommandCode(userInitiated: Bool = true) -> Bool {
+        guard !isStopped, !commandCodeFireState.isFiring,
+              let reading = engineReading(.commandcode) as? CommandCodeReading else { return false }
+
+        let report = providerReports.first { $0.platform == .commandcode }
+        let previousReset = report?.usage?.windows.first { $0.kind == .fiveHour }?.resetsAt
+        let previousWasLive = report?.connection == .connected && previousReset != nil
+        commandCodeFireState.start()
+        tick += 1
+
+        let service = commandCodeFireService
+        fireTasks[CommandCodeFireService.targetID] = Task { [weak self] in
+            let credential = await reading.fireCredential(userInitiated: userInitiated)
+            guard let key = credential.secret, !key.isEmpty else {
+                self?.finishCommandCodeFire(result: .credentialUnavailable)
+                return
+            }
+            let outcome = await Task.detached(priority: .userInitiated) {
+                service.fire(apiKey: key)
+            }.value
+            await self?.finishCommandCodeFire(outcome: outcome,
+                                              previousReset: previousReset,
+                                              previousWasLive: previousWasLive,
+                                              userInitiated: userInitiated,
+                                              reading: reading)
+        }
+        return true
+    }
+
+    private func finishCommandCodeFire(outcome: CommandCodeFireProcessOutcome,
+                                       previousReset: Date?,
+                                       previousWasLive: Bool,
+                                       userInitiated: Bool,
+                                       reading: CommandCodeReading) async {
+        guard !isStopped else { return }
+        if let immediate = outcome.immediateResult {
+            finishCommandCodeFire(result: immediate)
+            return
+        }
+
+        try? await Task.sleep(nanoseconds: Self.nanoseconds(fireConfirmDelay))
+        guard !isStopped else { return }
+        var observations: [FireWindowConfirmation.Observation] = []
+        let first = await commandCodeObservation(reading: reading, userInitiated: userInitiated)
+        observations.append(first)
+        if previousWasLive,
+           case .live(let resetsAt) = first,
+           FireWindowConfirmation.confirms(live: resetsAt, previous: previousReset) {
+            finishCommandCodeFire(result: .requestSucceededWindowConfirmed,
+                                  previousReset: previousReset,
+                                  observations: observations)
+            refreshProvider(.commandcode, force: false)
+            return
+        }
+
+        try? await Task.sleep(nanoseconds: Self.nanoseconds(fireRetryDelay))
+        guard !isStopped else { return }
+        observations.append(await commandCodeObservation(reading: reading,
+                                                         userInitiated: userInitiated))
+        let result = FireWindowConfirmation.classify(previousReset: previousReset,
+                                                     previousWasLive: previousWasLive,
+                                                     observations: observations)
+        finishCommandCodeFire(result: result,
+                              previousReset: previousReset,
+                              observations: observations)
+        refreshProvider(.commandcode, force: false)
+    }
+
+    private func commandCodeObservation(reading: CommandCodeReading,
+                                        userInitiated: Bool) async -> FireWindowConfirmation.Observation {
+        do {
+            guard let reset = try await reading.fiveHourResetForFire(userInitiated: userInitiated) else {
+                return .noEvidence
+            }
+            return .live(resetsAt: reset)
+        } catch {
+            return .noEvidence
+        }
+    }
+
+    private func finishCommandCodeFire(result: ChatGPTFireResult,
+                                       previousReset: Date? = nil,
+                                       observations: [FireWindowConfirmation.Observation] = []) {
+        guard !isStopped else { return }
+        commandCodeFireState.finish(result,
+                                    driftSeconds: Self.fireDrift(result: result,
+                                                                 previous: previousReset,
+                                                                 observations: observations))
+        fireTasks[CommandCodeFireService.targetID] = nil
+        tick += 1
+    }
+
+    private func handleClockTick(_ date: Date) {
+        tick += 1
+        evaluateFireSchedules(at: date)
+    }
+
+    /// Executes each due row at most once. A row is claimed only after its target accepted
+    /// the work, so a temporarily busy target may still run on the next tick inside the
+    /// ten-minute catch-up window.
+    func evaluateFireSchedules(at date: Date, calendar: Calendar = .current) {
+        guard !isStopped else { return }
+        for occurrence in fireSchedules.dueOccurrences(at: date, calendar: calendar) {
+            let accepted: Bool
+            switch occurrence.entry.target {
+            case .chatGPTA, .chatGPTB:
+                accepted = occurrence.entry.target.profileID.map { fire(profileID: $0) } ?? false
+            case .commandCode:
+                accepted = fireCommandCode(userInitiated: false)
+            }
+            if accepted { fireSchedules.markFired(occurrence) }
+        }
+    }
+
+    /// One confirmation-only read of a single profile, reduced to the only thing the
+    /// confirmation can use: a live 5-hour reset time, or no evidence.
     ///
     /// Only a *live* result counts (REVISION_SPEC.md §9.2). `UsageService.fetch` returns
     /// `.success` for a cache-served snapshot too, and a cached `resetsAt` is last cycle's
     /// number: treating it as freshly observed would let the card claim a new window that was
     /// never confirmed. A live read without a 5-hour reset time is equally meaningless here.
+    ///
+    /// The confirmation path deliberately skips `account/read`: it resolves no identity,
+    /// touches no attribution and triggers no cache migration.
     private func fetchFiveHourResetObservation(profileID: String) async -> FireWindowConfirmation.Observation {
         let coordinator = self.coordinator
         return await Task.detached(priority: .userInitiated) {
-            let outcome = coordinator.fetch(profileID: profileID, resetFailureBudget: true)
+            let outcome = coordinator.fetchRateLimitsOnly(profileID: profileID)
             guard case .success(let result) = outcome, result.isLive,
                   let resetsAt = result.snapshot.fiveHour?.resetsAt else {
                 return FireWindowConfirmation.Observation.noEvidence

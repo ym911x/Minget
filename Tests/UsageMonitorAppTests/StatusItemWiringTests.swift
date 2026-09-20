@@ -123,10 +123,10 @@ final class StatusItemWiringTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: "UsageMonitorAppTests.PanelSize") }
         let preferences = DetailPreferences(defaults: defaults)
 
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 552))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 566))
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 498))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 512))
 
         preferences.showCommandCode = false
         XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 330))
@@ -176,7 +176,7 @@ final class StatusItemWiringTests: XCTestCase {
     }
 
     func testThePanelOnlyShowsWhenTheWholePageFitsOnScreen() {
-        let size = NSSize(width: 440, height: 552)
+        let size = NSSize(width: 440, height: 566)
 
         // A normal laptop screen: the panel fits with room to spare.
         XCTAssertTrue(StatusItemController.panelFits(
@@ -251,7 +251,7 @@ final class StatusItemWiringTests: XCTestCase {
 
         let size = first.first?.contentView?.fittingSize
         XCTAssertEqual(size?.width, 520)
-        XCTAssertEqual(size?.height, 600)
+        XCTAssertEqual(size?.height, 700)
 
         controller.showSettingsWindow()
         controller.showSettingsWindow()

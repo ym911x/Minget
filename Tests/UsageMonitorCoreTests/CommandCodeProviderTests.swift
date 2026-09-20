@@ -291,6 +291,267 @@ final class CommandCodeProviderTests: XCTestCase {
         XCTAssertNil(parsed.billingPeriodStart)
         XCTAssertNil(parsed.billingPeriodEnd)
     }
+
+    // MARK: - Auxiliary throttling (REQUIREMENTS.md §4.3)
+
+    private func throttledHandler(summaryBody: String = #"{"totalTokens":"1000","totalCount":10}"#) -> FakeTransport {
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(summaryBody)
+            case CommandCodeProvider.subscriptionsPath:
+                return response(#"{"success":true,"data":{"planId":"individual-go"}}"#)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        return transport
+    }
+
+    private func paths(of transport: FakeTransport) -> [String] {
+        transport.recordedRequests.compactMap { $0.url?.path }
+    }
+
+    /// The second automatic refresh inside the reuse window only re-reads credits; the
+    /// summary and subscription come from memory rather than the network.
+    func testAutomaticRefreshReusesAuxiliaryPayloadsInsideFifteenMinutes() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = throttledHandler()
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        let first = try await provider.fetchUsage(apiKey: "key")
+        XCTAssertNotNil(first.summary)
+        XCTAssertEqual(first.planName, "individual-go")
+        XCTAssertEqual(first.summaryFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now, isLive: true))
+        XCTAssertEqual(first.subscriptionFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now, isLive: true))
+        let firstPaths = Set(paths(of: transport))
+        XCTAssertEqual(firstPaths, CommandCodeProvider.allowedPaths)
+
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        let second = try await provider.fetchUsage(apiKey: "key")
+        XCTAssertEqual(second.summary, first.summary)
+        XCTAssertEqual(second.planName, first.planName)
+        XCTAssertEqual(second.summaryFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now, isLive: false))
+        XCTAssertEqual(second.subscriptionFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now, isLive: false))
+        let secondRound = paths(of: transport).dropFirst(firstPaths.count)
+        XCTAssertEqual(Array(secondRound), [CommandCodeProvider.creditsPath],
+                       "the throttled round must not touch summary or subscriptions")
+    }
+
+    /// A forced read (manual refresh, reconnect) bypasses the reuse window entirely.
+    func testForcedReadBypassesTheAuxiliaryReuseWindow() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = throttledHandler()
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        _ = try await provider.fetchUsage(apiKey: "key")
+        let before = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key", auxiliaryPolicy: .force)
+        let forced = Set(paths(of: transport).dropFirst(before))
+        XCTAssertEqual(forced, CommandCodeProvider.allowedPaths,
+                       "a forced read must hit all three endpoints")
+    }
+
+    /// A failed auxiliary read does not start the reuse window: the next automatic
+    /// refresh still retries the auxiliary endpoints.
+    func testFailedAuxiliaryReadDoesNotStartTheReuseWindow() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            default:
+                return ProviderHTTPResponse(status: 503, body: Data())
+            }
+        }
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        let first = try await provider.fetchUsage(apiKey: "key")
+        XCTAssertNil(first.summary)
+        let before = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+        let retried = Set(paths(of: transport).dropFirst(before))
+        XCTAssertTrue(retried.contains(CommandCodeProvider.summaryPath),
+                      "without a successful auxiliary read there is nothing to reuse")
+    }
+
+    func testPartialAuxiliaryFailureRetriesOnlyTheMissingComponent() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = FakeTransport()
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(#"{"totalTokens":1000,"totalCount":10}"#)
+            case CommandCodeProvider.subscriptionsPath:
+                return ProviderHTTPResponse(status: 503, body: Data())
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        _ = try await provider.fetchUsage(apiKey: "key")
+        let before = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+        let secondRound = Set(paths(of: transport).dropFirst(before))
+
+        XCTAssertEqual(secondRound,
+                       [CommandCodeProvider.creditsPath, CommandCodeProvider.subscriptionsPath],
+                       "the successful summary is reused while the failed subscription retries")
+    }
+
+    func testAuxiliaryComponentsExpireIndependently() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = FakeTransport()
+        let lock = NSLock()
+        var subscriptionShouldFail = true
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(#"{"totalTokens":1000,"totalCount":10}"#)
+            case CommandCodeProvider.subscriptionsPath:
+                let shouldFail = lock.withLock { subscriptionShouldFail }
+                return shouldFail
+                    ? ProviderHTTPResponse(status: 503, body: Data())
+                    : response(#"{"success":true,"data":{"planId":"individual-go"}}"#)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        _ = try await provider.fetchUsage(apiKey: "key")
+        lock.withLock { subscriptionShouldFail = false }
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+
+        let beforeExpiryRound = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(16 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+        XCTAssertEqual(Set(paths(of: transport).dropFirst(beforeExpiryRound)),
+                       [CommandCodeProvider.creditsPath, CommandCodeProvider.summaryPath],
+                       "summary is 16 minutes old while the subscription is only 11 minutes old")
+    }
+
+    func testClockRollbackDoesNotTreatFutureAuxiliaryTimestampsAsReusable() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = throttledHandler()
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        _ = try await provider.fetchUsage(apiKey: "key")
+        let beforeRollbackRound = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(-60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+
+        XCTAssertEqual(Set(paths(of: transport).dropFirst(beforeRollbackRound)),
+                       CommandCodeProvider.allowedPaths,
+                       "a clock rollback must refresh rather than extend the cache window")
+    }
+
+    func testAuxiliaryCacheNeverCrossesCredentialBoundaries() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = FakeTransport()
+        transport.handler = { request in
+            let authorization = request.value(forHTTPHeaderField: "Authorization") ?? ""
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return response(authorization.contains("key-a")
+                    ? #"{"totalTokens":111,"totalCount":1}"#
+                    : #"{"totalTokens":222,"totalCount":2}"#)
+            case CommandCodeProvider.subscriptionsPath:
+                return response(authorization.contains("key-a")
+                    ? #"{"success":true,"data":{"planId":"plan-a"}}"#
+                    : #"{"success":true,"data":{"planId":"plan-b"}}"#)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+
+        _ = try await provider.fetchUsage(apiKey: "key-a", auxiliaryPolicy: .force)
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        let accountB = try await provider.fetchUsage(apiKey: "key-b")
+
+        XCTAssertEqual(accountB.planName, "plan-b")
+        XCTAssertEqual(accountB.summary?.totalTokens, 222)
+        XCTAssertEqual(Set(paths(of: transport).suffix(3)), CommandCodeProvider.allowedPaths)
+    }
+
+    func testFailedForcedComponentKeepsOldValueAndDoesNotAdvanceSuccessTime() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let now = Date()
+        cache.now = { now }
+        let transport = throttledHandler()
+        let provider = CommandCodeProvider(transport: transport, auxiliaryCache: cache)
+        let first = try await provider.fetchUsage(apiKey: "key")
+
+        transport.handler = { request in
+            switch request.url?.path {
+            case CommandCodeProvider.creditsPath:
+                return response(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#)
+            case CommandCodeProvider.summaryPath:
+                return ProviderHTTPResponse(status: 503, body: Data())
+            case CommandCodeProvider.subscriptionsPath:
+                return response(#"{"success":true,"data":{"planId":"individual-pro"}}"#)
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        cache.now = { now.addingTimeInterval(5 * 60) }
+        let second = try await provider.fetchUsage(apiKey: "key", auxiliaryPolicy: .force)
+
+        XCTAssertEqual(second.summary, first.summary)
+        XCTAssertEqual(second.summaryFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now, isLive: false))
+        XCTAssertEqual(second.planName, "individual-pro")
+        XCTAssertEqual(second.subscriptionFreshness,
+                       ProviderUsageComponentFreshness(lastSuccessfulAt: now.addingTimeInterval(5 * 60), isLive: true))
+
+        let beforeRetry = transport.recordedRequests.count
+        cache.now = { now.addingTimeInterval(6 * 60) }
+        _ = try await provider.fetchUsage(apiKey: "key")
+        XCTAssertEqual(Set(paths(of: transport).dropFirst(beforeRetry)),
+                       [CommandCodeProvider.creditsPath, CommandCodeProvider.summaryPath])
+    }
+
+    func testProviderUsageDecodesCacheWrittenBeforeComponentFreshness() throws {
+        let legacy = Data(#"{"windows":[],"summary":null,"planName":"legacy","billingPeriodEnd":null,"billingPeriodStart":null}"#.utf8)
+        let usage = try JSONDecoder().decode(ProviderUsage.self, from: legacy)
+        XCTAssertEqual(usage.planName, "legacy")
+        XCTAssertNil(usage.summaryFreshness)
+        XCTAssertNil(usage.subscriptionFreshness)
+    }
 }
 
 private func response(_ json: String) -> ProviderHTTPResponse {

@@ -6,6 +6,7 @@ final class StubClient: CodexAppServerProviding {
     var startCalls = 0
     var stopCalls = 0
     var handshakeCalls = 0
+    var accountReadCalls = 0
     var startError: UsageError?
     var readErrors: [UsageError] = []
     var readResults: [UsageSnapshot] = []
@@ -27,6 +28,11 @@ final class StubClient: CodexAppServerProviding {
         if !readErrors.isEmpty { throw readErrors.removeFirst() }
         if let result = readResults.first { return result }
         throw UsageError.rpcFailed(.other)
+    }
+
+    func readAccount(timeout: TimeInterval) throws -> CodexAccount? {
+        accountReadCalls += 1
+        return nil
     }
 
     func stop() {
@@ -71,6 +77,67 @@ final class UsageServiceTests: XCTestCase {
         XCTAssertEqual(cached?.fiveHour?.usedPercent, 25)
         XCTAssertEqual(cached?.source, .cached)
         XCTAssertEqual(stub.startCalls, 1, "the same client must be reused across fetches")
+    }
+
+    // MARK: 1.3.2 wake probe
+
+    func testWakeProbeUsesOnlyTheExistingClientAndSkipsIdentity() throws {
+        let stub = StubClient()
+        stub.readResults = [snapshot()]
+        let service = UsageService(factory: { stub },
+                                   cache: UsageCache(userDefaults: makeUserDefaults()))
+        _ = try service.fetch()
+        let accountReadsBefore = stub.accountReadCalls
+        let startsBefore = stub.startCalls
+
+        switch service.probeRateLimitsAfterWake() {
+        case .refreshed(let result):
+            XCTAssertTrue(result.isLive)
+            XCTAssertEqual(result.snapshot.fiveHour?.remainingPercent, 75)
+        default:
+            XCTFail("a healthy running client should satisfy the wake probe")
+        }
+        XCTAssertEqual(stub.startCalls, startsBefore, "the probe must not start a child")
+        XCTAssertEqual(stub.accountReadCalls, accountReadsBefore, "the probe must not read identity")
+        XCTAssertEqual(stub.handshakeCalls, 2)
+    }
+
+    func testFailedWakeProbeClosesClientWithoutOpeningFailureEpisode() throws {
+        let stub = StubClient()
+        stub.readResults = [snapshot()]
+        let service = UsageService(factory: { stub },
+                                   cache: UsageCache(userDefaults: makeUserDefaults()))
+        _ = try service.fetch()
+        stub.persistentError = .rpcFailed(.timedOut(method: "account/rateLimits/read"))
+
+        if case .needsFullRefresh = service.probeRateLimitsAfterWake() {
+            // expected
+        } else {
+            XCTFail("a failed probe must request an ordinary full refresh")
+        }
+        XCTAssertEqual(stub.startCalls, 1, "the probe itself cannot relaunch")
+        XCTAssertEqual(stub.stopCalls, 1)
+        XCTAssertFalse(service.isFailureEpisodeActive, "the full refresh still owns the original restart budget")
+    }
+
+    func testWakeProbeIsSuppressedByFailureEpisodeAndStop() {
+        let failing = StubClient()
+        failing.persistentError = .rpcFailed(.other)
+        let service = UsageService(factory: { failing },
+                                   cache: UsageCache(userDefaults: makeUserDefaults()),
+                                   restartDelay: 0)
+        _ = try? service.fetch()
+        let starts = failing.startCalls
+        if case .suppressed = service.probeRateLimitsAfterWake() {} else {
+            XCTFail("an open failure episode must suppress wake work")
+        }
+        XCTAssertEqual(failing.startCalls, starts)
+
+        service.stop()
+        if case .suppressed = service.probeRateLimitsAfterWake() {} else {
+            XCTFail("a stopped service must suppress wake work")
+        }
+        XCTAssertEqual(failing.startCalls, starts)
     }
 
     // MARK: Test 9 — RPC timeout keeps the cache

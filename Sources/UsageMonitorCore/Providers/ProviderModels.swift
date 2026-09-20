@@ -51,6 +51,21 @@ public struct ProviderUsageSummary: Equatable, Sendable, Codable {
     }
 }
 
+/// Freshness of one optional provider component. The required quota source has its own
+/// report-level state; this metadata prevents a reused enrichment payload from being
+/// presented as if it arrived with the current credits request.
+public struct ProviderUsageComponentFreshness: Equatable, Sendable, Codable {
+    public let lastSuccessfulAt: Date
+    public let isLive: Bool
+
+    public init(lastSuccessfulAt: Date, isLive: Bool) {
+        self.lastSuccessfulAt = lastSuccessfulAt
+        self.isLive = isLive
+    }
+
+    public var isCached: Bool { !isLive }
+}
+
 public struct ProviderUsage: Equatable, Sendable, Codable {
     public let windows: [ProviderUsageWindow]
     public let summary: ProviderUsageSummary?
@@ -60,10 +75,18 @@ public struct ProviderUsage: Equatable, Sendable, Codable {
     /// monthly progress line can refuse to draw instead of assuming a 30-day month
     /// (REVISION_SPEC.md §7.3).
     public let billingPeriodStart: Date?
+    /// Optional for backward-compatible decoding of provider cache entries written before
+    /// 1.3.2 component-level freshness existed.
+    public let summaryFreshness: ProviderUsageComponentFreshness?
+    public let subscriptionFreshness: ProviderUsageComponentFreshness?
     public init(windows: [ProviderUsageWindow], summary: ProviderUsageSummary?, planName: String? = nil,
-                billingPeriodEnd: Date? = nil, billingPeriodStart: Date? = nil) {
+                billingPeriodEnd: Date? = nil, billingPeriodStart: Date? = nil,
+                summaryFreshness: ProviderUsageComponentFreshness? = nil,
+                subscriptionFreshness: ProviderUsageComponentFreshness? = nil) {
         self.windows = windows; self.summary = summary; self.planName = planName
         self.billingPeriodEnd = billingPeriodEnd; self.billingPeriodStart = billingPeriodStart
+        self.summaryFreshness = summaryFreshness
+        self.subscriptionFreshness = subscriptionFreshness
     }
 }
 

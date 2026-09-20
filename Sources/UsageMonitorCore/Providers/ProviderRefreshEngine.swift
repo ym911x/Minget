@@ -103,6 +103,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         let task: Task<ProviderReport, Never>
         let id: Int
         let generation: Int
+        let forced: Bool
     }
 
     private let lock = NSRecursiveLock()
@@ -255,27 +256,36 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         // (reconnect) clears it, so a revoked key is not retried forever.
         if !force && isAuthSuspended(platform) { return report(for: platform) }
         if let reader = readers[platform], !reader.credentialState.isConfigured { return report(for: platform) }
-
-        // Reserve the in-flight slot atomically, so two callers cannot both start a read.
-        // Reads from different credential generations never coalesce: a credential change
-        // must start its own read instead of awaiting the superseded one (REVIEW round 8).
-        let handle: InFlight = locked {
-            if let existing = inFlight[platform], existing.generation == (generations[platform] ?? 0) {
-                return existing
+        var requireForcedFollowUp = force
+        while true {
+            // Reserve the in-flight slot atomically, so two callers cannot both start a read.
+            // A manual force may share an already-forced task, but it must follow an automatic
+            // task with its own full auxiliary read rather than silently accepting reused data.
+            let reservation: (handle: InFlight, followUp: Bool) = locked {
+                let generation = generations[platform] ?? 0
+                if let existing = inFlight[platform], existing.generation == generation {
+                    return (existing, requireForcedFollowUp && !existing.forced)
+                }
+                nextInFlightID += 1
+                let forced = requireForcedFollowUp
+                let created = InFlight(task: Task<ProviderReport, Never> { [weak self] in
+                    await self?.performRead(platform: platform, generation: generation, force: forced)
+                        ?? Self.emptyReport(platform: platform)
+                }, id: nextInFlightID, generation: generation, forced: forced)
+                inFlight[platform] = created
+                return (created, false)
             }
-            nextInFlightID += 1
-            let generation = generations[platform] ?? 0
-            let created = InFlight(task: Task<ProviderReport, Never> { [weak self] in
-                await self?.performRead(platform: platform, generation: generation)
-                    ?? Self.emptyReport(platform: platform)
-            }, id: nextInFlightID, generation: generation)
-            inFlight[platform] = created
-            return created
-        }
-        let result = await handle.task.value
-        return locked {
-            if inFlight[platform]?.id == handle.id { inFlight[platform] = nil }
-            return handle.generation == (generations[platform] ?? 0) ? result : report(for: platform)
+            let result = await reservation.handle.task.value
+            let generationStillCurrent = locked { () -> Bool in
+                if inFlight[platform]?.id == reservation.handle.id { inFlight[platform] = nil }
+                return reservation.handle.generation == (generations[platform] ?? 0)
+            }
+            guard generationStillCurrent else { return report(for: platform) }
+            if reservation.followUp {
+                requireForcedFollowUp = true
+                continue
+            }
+            return result
         }
     }
 
@@ -376,12 +386,17 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
 
     // MARK: - Internals
 
-    private func performRead(platform: ProviderPlatform, generation: Int) async -> ProviderReport {
+    private func performRead(platform: ProviderPlatform, generation: Int, force: Bool) async -> ProviderReport {
         guard let reader = readers[platform] else { return Self.emptyReport(platform: platform) }
         let consoleURL: URL? = nil
 
         do {
-            let result = try await reader.read()
+            let result: ProviderReadResult
+            if let commandCode = reader as? CommandCodeReading {
+                result = try await commandCode.read(auxiliaryPolicy: force ? .force : .automatic)
+            } else {
+                result = try await reader.read()
+            }
             return commit(result, platform: platform, generation: generation, consoleURL: consoleURL)
         } catch let failure as ProviderFailure {
             return commitFailure(failure, platform: platform, generation: generation, consoleURL: consoleURL)

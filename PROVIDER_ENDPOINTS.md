@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-17
-适用版本：1.3.1
+更新日期：2026-09-19
+适用版本：1.3.2
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -43,8 +43,9 @@
 - 参数固定为：`exec --ephemeral --sandbox read-only --skip-git-repo-check -C <临时工作目录> -m gpt-5.6-luna -c model_reasoning_effort="none" "Reply exactly: OK"`；临时工作目录固定为系统临时目录下的 `minget-fire`。
 - 子进程环境为当前环境的副本并只覆盖当前 Profile 的 `CODEX_HOME`；不读取该目录内容。
 - 验证：命令形态和进程生命周期由自动化测试以 fake executable 固定（C）。真实点火请求待用户按验收台账执行。
-- 这是本应用唯一的模型请求路径，只能由用户点击卡片上的“5 小时点火”按钮并经固定确认对话框触发；不参与任何定时刷新。定时点火继续由现有外部 LaunchAgent 和 `minget-fire` 承担，与本应用无关。
+- 这是 OpenAI 的模型请求路径：由用户在卡片确认，或由用户在 Minget 设置中明确勾选的每日计划触发。Minget 不调用、不修改旧的外部 LaunchAgent 或 `minget-fire`。
 - 子进程 stdout/stderr 持续 drain 后丢弃，不写入日志、UserDefaults、测试快照或文档；不记录 session id、prompt、token 或退出输出。单次超时 120 秒，terminate 后等待 3 秒，仍未退出时只对本次 PID 发送 `SIGKILL` 并回收。
+- 确认读取（1.3.2）：点火成功后的两次只读确认只做 `handshake + account/rateLimits/read`，不调用 `account/read`，不更新账号归属，不触发缓存迁移；失败熔断语义与完整读取一致。
 - 诊断只记录 Profile ID、固定结果分类和自有子进程生命周期。
 
 菜单栏安全区域检查只读取本机屏幕和状态项几何位置，不调用网络或模型。
@@ -75,6 +76,7 @@
 - 用途：读取当前服务端统计周期的 token、请求结果、成功率、成本，以及可能存在的月度已用信用额。
 - 验证：请求有效性为 A，字段语义为 C。用户截图确认真实 token、请求和成本摘要能够返回；统计周期和字段口径尚未与 Studio 同刻确认。
 - 层级：1.3.1 起为可选辅助数据。网络错误、5xx、401/403、JSON 错误或字段结构变化都只让统计区显示「统计暂不可用」，已由 credits 取得的额度保持实时，凭证状态不因该接口单独暂停。
+- 节流（1.3.2）：summary 与 subscriptions 按 API Key 的完整 SHA-256 摘要隔离，分别记录成功时间并独立判断 15 分钟复用窗口；复用或单路失败时明确标记组件缓存，失败不推进时间戳并在下一轮重试。credits 每轮必读，手动刷新与重连强制全量三路。
 
 ### `GET https://api.commandcode.ai/alpha/billing/subscriptions`
 
@@ -82,7 +84,18 @@
 - 验证：C。仅无凭证 401 与合成 fixture 测试。
 - 层级：可选辅助数据。缺少有效起止时间时月度时间轨道继续显示不可用，不假定 30 天。
 
-Command Code Studio 公开说明确认其展示成本、token 和运行分析，Provider API 说明确认 API Key 为正式认证方式；官方资料未公开上述账户用量读取接口。本版本不会读取 Command Code CLI、本地认证文件、既有浏览器 Cookie 或会话。没有真实响应时不显示数字；未知统计周期会保留服务端数值并标记“统计周期未确认”。
+Command Code Studio 公开说明确认其展示成本、token 和运行分析，Provider API 说明确认 API Key 为正式认证方式；官方资料未公开上述账户用量读取接口。本版本不会读取 Command Code 本地认证或设置文件、既有浏览器 Cookie 或会话。没有真实响应时不显示数字；未知统计周期会保留服务端数值并标记“统计周期未确认”。
+
+### 5 小时点火（官方 `command-code` CLI，模型请求例外）
+
+- 依据：Command Code 官方 [Usage Limits](https://commandcode.ai/docs/resources/usage-limits) 说明滚动 5 小时窗口由第一个请求开启；只读 `credits` 查询不能代替点火。
+- 触发：用户在详情卡确认手动点火，或在设置中明确勾选某条每日计划。未勾选条目永不执行。
+- 凭证：只使用 Minget Keychain 中的 Command Code API Key，以 `COMMAND_CODE_API_KEY` 传给官方 CLI。官方 [Settings](https://commandcode.ai/docs/settings) 说明该环境变量优先于本地 `auth.json`；Minget 另使用隔离临时 `HOME`，不读取用户级认证或设置。
+- 启动：定位官方 `command-code` 后由 `Process.executableURL` 直启，不经 shell。参数固定为 `--no-auto-update --no-session --no-skills --skip-onboarding --permission-mode plan --max-turns 1 --model deepseek/deepseek-v4-flash --print "Reply exactly: OK"`，命令形态来自官方 [CLI Reference](https://commandcode.ai/docs/reference/cli)。
+- 隔离：子进程仅保留执行所需的最小环境变量，显式禁用自动更新、session 和 skills；stdout/stderr 持续 drain 后丢弃，不进日志、缓存、UserDefaults 或界面。
+- 确认：CLI 零退出后最多两次读取既有 `credits` 端点的 5 小时 `resetsAt`，不读 summary/subscriptions，不直接调用模型 HTTP 端点。
+- 限制：同时只有一个 Command Code 点火子进程。手动路径可允许 Keychain 交互，定时路径必须禁止弹窗。退出应用或超时只终止并回收自有 PID。
+- 验证：官方行为依据为 B；fake CLI、fake Keychain 和 fake transport 的参数、隔离、超时、credits-only 确认为 C。真实手动和定时点火待用户在签名包内验收。
 
 1.2.1 只调整显示：Command Code 美元金额固定显示两位小数，底层 `Decimal` 和接口原值不变；卡片内不再重复显示相对更新时间，全局刷新状态仍保留。
 
@@ -102,18 +115,18 @@ Command Code Studio 公开说明确认其展示成本、token 和运行分析，
 ## 通用安全规则
 
 - 所有带认证请求拒绝跨域重定向。
-- 请求路径使用白名单，模型推理端点被显式拒绝。
+- 应用 HTTP 请求路径使用白名单，模型推理端点被显式拒绝；经用户授权的 Command Code 点火只能经官方 CLI 进行。
 - 日志和诊断仅记录固定错误类别及脱敏结构，不记录凭据、Cookie 值、账号原始响应或上游错误正文。
 - 余额缺失、字段不合法或接口口径不明时显示不可用，不伪造为零。
 - 测试使用合成凭据，不包含真实 API Key。
 - Command Code 只允许上述三个精确 GET 路径；`/alpha/generate`、`/provider/v1/chat/completions`、`/provider/v1/messages` 和其他模型路径均拒绝。
-- 唯一的窄例外：允许把用户配置的隔离目录作为 `CODEX_HOME` 传给官方 Codex CLI 子进程（`codex app-server` 与手动 `codex exec`）。Minget 自身仍禁止打开、解析、复制、显示或上传任何 Codex 配置或认证文件；应用不读取这两个目录中的任何文件。
+- 窄例外只有两类：将用户配置的隔离目录作为 `CODEX_HOME` 传给官方 Codex CLI；将 Minget Keychain 中的 Command Code Key 传给隔离 `HOME` 的官方 Command Code CLI 用于已确认点火。Minget 自身仍禁止打开、解析、复制、显示或上传任何全局配置或认证文件。
 
 ---
 
 ## English summary
 
-This document records the data sources, evidence level, and security boundaries used by Minget 1.3.0.
+This document records the data sources, evidence level, and security boundaries used by Minget 1.3.2.
 
 ### Codex
 
@@ -121,7 +134,7 @@ This document records the data sources, evidence level, and security boundaries 
 - `account/rateLimits/read` and `account/read` are called through that local stdio JSON-RPC connection.
 - `account/rateLimits/read` may return `rateLimitResetCredits.availableCount` and optional credit expiry details; Minget displays only the normalized count and nearest future expiry and never calls the consume method.
 - `account/read` uses `{"refreshToken": false}` and does not read `~/.codex/auth.json`. The profile's cache namespace is keyed by `profileID + accountID`, and the 1.2.1 account-scoped cache is retired by a one-time migration.
-- Manual fire is the single model-request path. It runs the official Codex CLI directly with a fixed argument list, drains and discards the child's output, and is only reachable through the user's confirmation dialog. Scheduled firing stays with the external LaunchAgent and `minget-fire`, which Minget neither calls nor modifies.
+- OpenAI fire runs the official Codex CLI directly with a fixed argument list and discards output. It is reachable through a confirmation dialog or a daily schedule row the user explicitly enabled; Minget does not call or modify the legacy external LaunchAgent or `minget-fire`.
 - Menu bar geometry checks are local and do not use network requests or model tokens.
 
 ### DeepSeek

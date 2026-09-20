@@ -155,7 +155,7 @@ public final class UsageService: @unchecked Sendable {
     }
 
     /// Result of a refresh attempt: a (possibly cached) snapshot plus whether it is live.
-    public struct FetchResult {
+    public struct FetchResult: Sendable {
         public let snapshot: UsageSnapshot
         public let isLive: Bool
         public let error: UsageError?
@@ -168,6 +168,70 @@ public final class UsageService: @unchecked Sendable {
             self.isLive = isLive
             self.error = error
             self.account = account
+        }
+    }
+
+    /// Outcome of the wake-only health check. The probe never creates or restarts a child:
+    /// a missing or unhealthy existing client is handed back to the ordinary refresh path,
+    /// which remains the sole owner of the bounded restart budget.
+    public enum WakeProbeResult: Sendable {
+        case refreshed(FetchResult)
+        case needsFullRefresh
+        case suppressed
+    }
+
+    /// Checks the already-running app-server after wake with `handshake + rateLimits/read`.
+    /// Identity is deliberately not read and the factory is deliberately unreachable here.
+    /// A failed probe retires the dead client but does not open or consume a failure episode;
+    /// the caller may then perform one ordinary refresh with the existing budget.
+    @discardableResult
+    public func probeRateLimitsAfterWake(
+        fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout
+    ) -> WakeProbeResult {
+        lock.lock()
+        guard !stopped, !fetchInFlight, !failureEpisodeActive else {
+            lock.unlock()
+            return .suppressed
+        }
+        guard let existing = client, existing.isTransportRunning else {
+            let defunct = client
+            client = nil
+            lock.unlock()
+            defunct?.stop()
+            return .needsFullRefresh
+        }
+        fetchInFlight = true
+        fetchThread = Thread.current
+        let generationAtStart = generation
+        lock.unlock()
+        defer {
+            lock.lock()
+            fetchInFlight = false
+            fetchThread = nil
+            lock.unlock()
+            fetchFinished.signal()
+        }
+
+        do {
+            try existing.handshake(timeout: fetchTimeout)
+            guard !isStale(generationAtStart) else { return .suppressed }
+            let snapshot = try existing.readRateLimits(timeout: fetchTimeout)
+            guard !isStale(generationAtStart) else { return .suppressed }
+            persistConfirmationSnapshot(snapshot)
+            lock.lock()
+            state = .connected
+            lastError = nil
+            lock.unlock()
+            return .refreshed(FetchResult(snapshot: snapshot, isLive: true,
+                                         error: nil, account: nil))
+        } catch {
+            if isStale(generationAtStart) { return .suppressed }
+            lock.lock()
+            if client === existing { client = nil }
+            state = .disconnected
+            lock.unlock()
+            existing.stop()
+            return .needsFullRefresh
         }
     }
 
@@ -239,6 +303,124 @@ public final class UsageService: @unchecked Sendable {
                 return FetchResult(snapshot: cached, isLive: false, error: error, account: nil)
             }
             throw error
+        }
+    }
+
+    /// Confirmation-only read for the fire sequence: handshake plus rate limits, without
+    /// the account identity read. The confirmation only needs the 5-hour `resetsAt`, so
+    /// the identity request is pure load on the service (REQUIREMENTS.md §3.1).
+    ///
+    /// Shares the failure-episode and shutdown semantics with `fetch`: an open episode
+    /// stays closed unless the caller passes `resetFailureBudget: true`, and the
+    /// confirmation path never does. Nothing about the account is touched: no
+    /// `lastAccount` update, no last-known attribution write, no legacy migration.
+    @discardableResult
+    public func fetchRateLimitsOnly(resetFailureBudget: Bool = false,
+                                    fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout) throws -> FetchResult {
+        lock.lock()
+        if stopped {
+            lock.unlock()
+            throw UsageError.rpcFailed(.shutdown)
+        }
+        if fetchInFlight {
+            let deferredError = lastError
+            lock.unlock()
+            if let cached = servedCachedSnapshot() {
+                return FetchResult(snapshot: cached, isLive: false, error: deferredError, account: nil)
+            }
+            throw deferredError ?? UsageError.rpcFailed(.other)
+        }
+        if !resetFailureBudget && failureEpisodeActive {
+            let recordedError = lastError
+            lock.unlock()
+            if let cached = servedCachedSnapshot() {
+                return FetchResult(snapshot: cached, isLive: false, error: recordedError, account: nil)
+            }
+            throw recordedError ?? UsageError.rpcFailed(.other)
+        }
+        fetchInFlight = true
+        fetchThread = Thread.current
+        let generationAtStart = generation
+        if resetFailureBudget {
+            failureEpisodeActive = false
+            restartsUsedInEpisode = 0
+            failureEpisodeOpenedAt = nil
+        }
+        lock.unlock()
+        defer {
+            lock.lock()
+            fetchInFlight = false
+            fetchThread = nil
+            lock.unlock()
+            fetchFinished.signal()
+        }
+
+        do {
+            let snapshot = try performRateLimitsFetch(fetchTimeout: fetchTimeout,
+                                                      generationAtStart: generationAtStart)
+            Diagnostics.log("fetch ok windows=5h:\(snapshot.fiveHour != nil)/weekly:\(snapshot.weekly != nil) account:unavailable")
+            persistConfirmationSnapshot(snapshot)
+            lock.lock()
+            lastError = nil
+            failureEpisodeActive = false
+            restartsUsedInEpisode = 0
+            failureEpisodeOpenedAt = nil
+            lock.unlock()
+            return FetchResult(snapshot: snapshot, isLive: true, error: nil, account: nil)
+        } catch let error as UsageError {
+            Diagnostics.log("fetch failed: \(error.debugSummary)")
+            lock.lock(); lastError = error; lock.unlock()
+            if error.isShutdown { throw error }
+            if let cached = servedCachedSnapshot() {
+                return FetchResult(snapshot: cached, isLive: false, error: error, account: nil)
+            }
+            throw error
+        }
+    }
+
+    /// One launch attempt plus at most one automatic restart, for the rate-limits read
+    /// only. Mirrors `performFetch` minus the identity read, so a confirmation read can
+    /// never attribute cache entries to an account it never resolved.
+    private func performRateLimitsFetch(fetchTimeout: TimeInterval, generationAtStart: Int) throws -> UsageSnapshot {
+        while true {
+            if isStale(generationAtStart) { throw UsageError.rpcFailed(.shutdown) }
+            lock.lock(); state = .connecting; lock.unlock()
+
+            let client: CodexAppServerProviding
+            do {
+                client = try acquireClient(generationAtStart: generationAtStart)
+            } catch {
+                if isStale(generationAtStart) { throw UsageError.rpcFailed(.shutdown) }
+                let usageError = Self.asUsageError(error)
+                lock.lock(); state = .disconnected; lastError = usageError; lock.unlock()
+                closeClient()
+                if mayRetryAfter(usageError) {
+                    pauseBeforeRestart()
+                    continue
+                }
+                throw usageError
+            }
+
+            do {
+                try client.handshake(timeout: fetchTimeout)
+                if isStale(generationAtStart) { throw UsageError.rpcFailed(.shutdown) }
+                let snapshot = try client.readRateLimits(timeout: fetchTimeout)
+                if isStale(generationAtStart) { throw UsageError.rpcFailed(.shutdown) }
+                lock.lock()
+                state = .connected
+                lock.unlock()
+                return snapshot
+            } catch {
+                let usageError = Self.asUsageError(error)
+                if isStale(generationAtStart) { throw UsageError.rpcFailed(.shutdown) }
+                lock.lock(); state = .disconnected; lastError = usageError; lock.unlock()
+                closeClient()
+                if mayRetryAfter(usageError) {
+                    pauseBeforeRestart()
+                    continue
+                }
+                throw usageError
+            }
         }
     }
 
@@ -323,6 +505,22 @@ public final class UsageService: @unchecked Sendable {
     /// account can be identified, and the legacy store only in the no-account case.
     private func persistSnapshot(_ snapshot: UsageSnapshot, account: CodexAccount?) {
         let accountID = account?.cacheAccountID ?? currentAccountID
+        if let profileID {
+            cache.save(snapshot, profileID: profileID, accountID: accountID)
+            return
+        }
+        if let accountID, !accountID.isEmpty {
+            cache.save(snapshot, accountID: accountID)
+        } else {
+            cache.save(snapshot)
+        }
+    }
+
+    /// Persists a confirmation-only snapshot under the already-known attribution, so the
+    /// card can show the newly observed window. Never touches `lastAccount` and never
+    /// migrates: with no identity resolved, a new attribution bucket must not be created.
+    private func persistConfirmationSnapshot(_ snapshot: UsageSnapshot) {
+        let accountID = currentAccountID
         if let profileID {
             cache.save(snapshot, profileID: profileID, accountID: accountID)
             return

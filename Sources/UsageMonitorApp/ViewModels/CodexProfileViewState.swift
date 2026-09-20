@@ -18,6 +18,11 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     public let isFiring: Bool
     /// The last fire result, or nil when this profile has not been fired in this session.
     public let fireResult: ChatGPTFireResult?
+    /// Forward movement measured by the last finished fire, for the card suffix.
+    /// Nil when unconfirmed, unmeasured, or never fired.
+    public let fireDriftSeconds: TimeInterval?
+    /// Recent finishes, newest first. Memory only, never persisted.
+    public let fireHistory: [FireHistoryEntry]
 
     public init(profile: ChatGPTAccountProfile,
                 display: UsageDisplay,
@@ -25,7 +30,9 @@ public struct CodexProfileViewState: Identifiable, Equatable {
                 account: CodexAccount?,
                 isRefreshing: Bool,
                 isFiring: Bool,
-                fireResult: ChatGPTFireResult?) {
+                fireResult: ChatGPTFireResult?,
+                fireDriftSeconds: TimeInterval? = nil,
+                fireHistory: [FireHistoryEntry] = []) {
         self.profile = profile
         self.display = display
         self.connectionState = connectionState
@@ -33,6 +40,8 @@ public struct CodexProfileViewState: Identifiable, Equatable {
         self.isRefreshing = isRefreshing
         self.isFiring = isFiring
         self.fireResult = fireResult
+        self.fireDriftSeconds = fireDriftSeconds
+        self.fireHistory = fireHistory
     }
 
     /// Builds the card state from a runtime value snapshot. One place maps runtime -> view.
@@ -43,7 +52,9 @@ public struct CodexProfileViewState: Identifiable, Equatable {
                   account: runtime.account,
                   isRefreshing: runtime.isFetching,
                   isFiring: runtime.isFiring,
-                  fireResult: runtime.fireResult)
+                  fireResult: runtime.fireResult,
+                  fireDriftSeconds: runtime.fireDriftSeconds,
+                  fireHistory: runtime.fireHistory)
     }
 
     public var id: String { profile.id }
@@ -55,6 +66,33 @@ public struct CodexProfileViewState: Identifiable, Equatable {
 
     /// Package label from the service, preserved verbatim.
     public var displayPlanType: String? { account?.displayPlanType }
+
+    /// Fixed result text and optional drift are separate so the card can protect the result
+    /// while truncating the diagnostic suffix first.
+    public var fireResultText: String { fireResult?.displayText ?? "" }
+
+    public var fireDriftText: String? {
+        guard let fireResult else { return nil }
+        switch fireResult {
+        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged:
+            guard let fireDriftSeconds else { return nil }
+            return FireWindowDrift.displayText(fireDriftSeconds)
+        case .requestSucceededConfirmationUnavailable, .codexCLINotFound,
+             .commandCodeCLINotFound, .credentialUnavailable, .launchFailed,
+             .nonZeroExit, .timedOut, .alreadyRunning:
+            return nil
+        }
+    }
+
+    /// Combined wording remains the single accessibility and tooltip value.
+    public var fireStatusText: String {
+        guard !fireResultText.isEmpty else { return "" }
+        guard let fireDriftText else { return fireResultText }
+        return "\(fireResultText) · \(fireDriftText)"
+    }
+
+    /// Tooltip lines for the recent history, newest first. Empty when never fired.
+    public var fireHistoryLines: [String] { fireHistory.map(\.displayLine) }
 
     /// Fixed connection/cache label (UI_SPEC.md §4.3).
     public var connectionText: String {

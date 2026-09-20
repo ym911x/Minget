@@ -54,6 +54,15 @@ final class ProviderRefreshEngineTests: XCTestCase {
         }
     }
 
+    final class CommandCredentialStore: ProviderCredentialStoring, @unchecked Sendable {
+        var secret = "command-key"
+        func save(_ secret: String, for key: ProviderCredentialKey) throws { self.secret = secret }
+        func load(_ key: ProviderCredentialKey, interaction: CredentialInteraction) -> CredentialAccessOutcome {
+            .available(secret)
+        }
+        func delete(_ key: ProviderCredentialKey) throws { secret = "" }
+    }
+
     private func balance(_ currency: String, _ amount: String) -> ProviderBalance {
         return ProviderBalance(currency: currency, total: dec(amount), granted: nil, toppedUp: nil)
     }
@@ -113,6 +122,64 @@ final class ProviderRefreshEngineTests: XCTestCase {
         XCTAssertEqual(reader.readCount, 1, "two concurrent refreshes must produce one read")
         XCTAssertEqual(a.balances, b.balances)
         XCTAssertEqual(a.connection, .connected)
+    }
+
+    func testManualForceArrivingDuringAutomaticReadGetsAFullFollowUp() async throws {
+        let cache = CommandCodeProvider.AuxiliaryCache()
+        let transport = FakeTransport()
+        let stateLock = NSLock()
+        let automaticStarted = DispatchSemaphore(value: 0)
+        let releaseAutomatic = DispatchSemaphore(value: 0)
+        var blockNextCredits = false
+        transport.handler = { request in
+            let path = request.url?.path
+            var shouldBlock = false
+            if path == CommandCodeProvider.creditsPath {
+                stateLock.lock()
+                shouldBlock = blockNextCredits
+                blockNextCredits = false
+                stateLock.unlock()
+            }
+            if shouldBlock {
+                automaticStarted.signal()
+                _ = releaseAutomatic.wait(timeout: .now() + 3)
+            }
+            switch path {
+            case CommandCodeProvider.creditsPath:
+                return ProviderHTTPResponse(status: 200, body: Data(#"{"credits":{},"windowLimits":{"fiveHour":{"cap":4,"used":1}}}"#.utf8))
+            case CommandCodeProvider.summaryPath:
+                return ProviderHTTPResponse(status: 200, body: Data(#"{"totalTokens":1000,"totalCount":10}"#.utf8))
+            case CommandCodeProvider.subscriptionsPath:
+                return ProviderHTTPResponse(status: 200, body: Data(#"{"success":true,"data":{"planId":"individual-go"}}"#.utf8))
+            default:
+                throw ProviderTransportError.pathNotAllowed
+            }
+        }
+        let reading = CommandCodeReading(provider: CommandCodeProvider(transport: transport,
+                                                                       auxiliaryCache: cache),
+                                         credentials: CommandCredentialStore())
+        await reading.primeCredentialState()
+        let engine = ProviderRefreshEngine(readers: [reading],
+                                           cache: ProviderCache(userDefaults: makeDefaults()))
+
+        _ = await engine.refresh(platform: .commandcode, force: true)
+        let before = transport.recordedRequests.count
+        stateLock.withLock { blockNextCredits = true }
+        let automatic = Task { await engine.refresh(platform: .commandcode, force: false) }
+        XCTAssertEqual(automaticStarted.wait(timeout: .now() + 2), .success)
+        let manual = Task { await engine.refresh(platform: .commandcode, force: true) }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        releaseAutomatic.signal()
+        _ = await automatic.value
+        _ = await manual.value
+
+        let paths = transport.recordedRequests.dropFirst(before).compactMap { $0.url?.path }
+        XCTAssertEqual(paths.filter { $0 == CommandCodeProvider.creditsPath }.count, 2,
+                       "automatic and forced rounds each read credits")
+        XCTAssertEqual(paths.filter { $0 == CommandCodeProvider.summaryPath }.count, 1,
+                       "the forced follow-up must read summary")
+        XCTAssertEqual(paths.filter { $0 == CommandCodeProvider.subscriptionsPath }.count, 1,
+                       "the forced follow-up must read subscription")
     }
 
     func testRefreshIsSkippedWhenNotConfigured() async {

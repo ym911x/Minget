@@ -240,20 +240,32 @@ struct CodexProfileCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .layoutPriority(0)
+                .layoutPriority(1)
                 .accessibilityLabel("可用重置")
 
             Spacer(minLength: 4)
 
-            // The fire result keeps its full text; the credits line gives up room first.
-            Text(state.fireResult?.displayText ?? "")
+            Text(state.fireResultText)
                 .font(.system(size: 9))
                 .foregroundStyle(fireResultColor)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-                .layoutPriority(1)
+                .layoutPriority(2)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel("点火状态")
-                .accessibilityValue(state.fireResult?.displayText ?? "未点火")
+                .accessibilityValue(state.fireResult == nil ? "未点火" : state.fireStatusText)
+                .help(state.fireHistoryLines.isEmpty
+                      ? state.fireStatusText
+                      : state.fireHistoryLines.joined(separator: "\n"))
+            if let drift = state.fireDriftText {
+                Text("· \(drift)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(fireResultColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(0)
+                    .accessibilityHidden(true)
+            }
         }
     }
 

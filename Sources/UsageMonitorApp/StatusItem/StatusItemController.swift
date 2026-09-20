@@ -185,16 +185,22 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         monitor?.requestCheck()
     }
 
-    /// Called after any model change, including the once-a-second clock tick. The item is
+    /// Called after any model change, including the clock tick. The item is
     /// re-measured only when the text or the warning marker actually changed, so a pure time
     /// update costs one string comparison and no layout work (v1.0.2 §4.4).
     func noteContentMayHaveChanged() {
         guard let model, statusItem != nil else { return }
         let signature = model.menuBarSizeSignature
-        guard signature != labelSignature else { return }
+        guard Self.shouldRemeasure(cachedSignature: labelSignature, newSignature: signature) else { return }
         labelSignature = signature
         measureWidths(for: model)
         apply(mode: stateMachine.mode)
+    }
+
+    /// Pure remeasure rule, testable without AppKit: only a changed size signature — the
+    /// mode, the quota text or the warning marker — justifies rebuilding the hosting views.
+    static func shouldRemeasure(cachedSignature: String?, newSignature: String) -> Bool {
+        cachedSignature != newSignature
     }
 
     /// Measures the natural width of every mode from the real label content.
@@ -215,7 +221,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         let signature = model.menuBarSizeSignature
         let previousWidths = widths
-        if signature != labelSignature {
+        if Self.shouldRemeasure(cachedSignature: labelSignature, newSignature: signature) {
             labelSignature = signature
             measureWidths(for: model)
         }
@@ -545,7 +551,8 @@ final class DetailWindowController: NSWindowController {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }
 
-/// Regular settings window. Fixed 520 × 600 pt with no scroll container (UI_SPEC.md §7).
+/// Regular settings window. Daily schedules are user-extensible, so the bounded window owns
+/// a scrolling content region while keeping a fixed desktop footprint.
 final class SettingsWindowController: NSWindowController {
 
     init(model: UsageViewModel,

@@ -1,5 +1,46 @@
 # 变更记录
 
+## 1.3.2（2026-09-20）
+
+状态：点火确认、刷新功耗优化、每日多时点点火计划与 Command Code 手动点火已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项明确跳过、0 失败；Release arm64 构建与 staging/install/archive 严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 明确授权发布；真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，不随发布改记为通过。
+
+### 点火确认
+
+- 确认读取只做 `handshake + rateLimits/read`，不调用 `account/read`，不更新归属，不触发缓存迁移；失败熔断语义与完整读取一致。
+- 点火记录前值是否为实时；分类仍按 1.3.1 真值表，不新增分支。
+- 卡片展示实测差值：确认态 `新窗口已确认 · +6小时12分`，未变化态如 `请求成功，窗口未变化 · +32秒`，暂无法确认态无后缀；辅助功能值同步。
+- 每个 Profile 内存保留最近 3 次点火（结果、时间、差值），tooltip 多行展示；重启即清空，不持久化、不进日志。
+- 实现中修复两个真实缺陷：轻量读取成功后未落盘导致卡片不展示新窗口；缓存回退覆盖显示导致重试 live 值被吞掉。
+
+### 每日点火计划
+
+- 设置页为 OpenAI 账号 A、账号 B 和 Command Code 分别提供多个每日本地时间；每条新建默认不启用，勾选后才生效。
+- 计划支持 10 分钟启动/唤醒补跑、跨重启去重和系统时钟改变重算；相邻已启用时间小于 5 小时时给出橙色提示。
+- 停止应用时取消计划触发任务并终止自有点火子进程，不使用 LaunchAgent 或外部 `minget-fire`。
+
+### Command Code 点火
+
+- Command Code 卡片新增「5 小时点火」按钮与固定确认文案；结果使用与 OpenAI 一致的三态、差值和最近 3 条历史。
+- 用户授权 Minget 将 Keychain 中的 Command Code Key 仅传给官方 CLI。CLI 直启不经 shell，固定最小参数，禁用自动更新、session 和 skills，使用隔离 `HOME`，输出持续 drain 后丢弃。
+- CLI 成功后仅通过既有 `credits` GET 端点确认 5 小时窗口；应用 HTTP 客户端的模型端点阻断保持不变。手动点火可请求 Keychain 交互，定时点火禁止弹窗。
+- Command Code 卡片增至 416 × 176 pt，四卡详情页增至 440 × 566 pt；设置页为 520 × 700 pt 并使用一个有界滚动区承载可增长的计划。
+
+### 刷新与功耗
+
+- 详情页时钟从每 1 秒降为每 30 秒；菜单栏仍按 `Date()` 逐帧计算倒计时。
+- ChatGPT 定时按重置时间退避：10 分钟 horizon 内 30 秒，无数据 60 秒，否则 120 秒；定时器幂等重排。
+- Command Code 辅助接口 15 分钟复用窗口：自动刷新只重读 credits，手动刷新与重连强制全量；辅助失败不刷新复用时间戳。
+- 菜单栏宽度按尺寸签名缓存，签名不变时跳过 `NSHostingView` 实测。
+- 睡眠唤醒后一次节流刷新，30 秒内不与定时轮询叠加；不绕开失败熔断。
+
+### 测试维护（R2）
+
+- 辅助功能测试循环内重取当前窗口并关闭旧窗口；`UsagePanelView` 注释与实施报告措辞按 1.3.1 harness 实测对齐。
+
+### English summary
+
+Fire confirmation now reads rate limits only, shows measured drift, and keeps the last 3 finishes in memory. Settings adds opt-in daily multi-time fire schedules for ChatGPT A, ChatGPT B and Command Code. The Command Code card can fire through the official CLI using the app-owned Keychain key in an isolated HOME, then confirms through credits only. Its child PATH now resolves the CLI's Node shebang from Finder-launched builds. Refresh cadence, auxiliary caching, width caching and wake probes are also improved. 506 tests ran (360 Core, 146 App): 505 passed, 1 skipped, 0 failed. The user confirmed a real Command Code manual fire in the signed PATH-fix build and authorised release on 2026-09-20. Signed-app UI, real sleep/wake and real Command Code scheduled fire remain post-release checks and are not recorded as passed.
+
 ## 1.3.1（2026-09-18）
 
 状态：稳定性修补已实现；Codex 复核发现的 R1 无障碍阻断已修复。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败；Release 构建和严格签名通过。跳过的 XCTest 进程没有可观测的辅助功能窗口；Codex 另用当前源码编译临时 GUI harness，真实读取系统 AX 树并确认设置入口为独立元素且可激活。用户于 2026-09-18 明确授权发布，`main`、标签 `v1.3.1`、[GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.3.1) 与发布提交 CI 均已完成。真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍未执行，不随发布改记为通过。

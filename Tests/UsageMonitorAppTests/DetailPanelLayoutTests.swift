@@ -6,8 +6,8 @@ import UsageMonitorCore
 
 /// Detail-page geometry, structure and card semantics under REVISION_SPEC.md §4–§7.
 ///
-/// The page is a fixed, non-scrolling 440 pt single column, so its size, the row order and the
-/// absence of any scroll container are acceptance conditions rather than layout preferences.
+/// The detail page is a fixed, non-scrolling 440 pt single column, so its size, row order and
+/// absence of a scroll container are acceptance conditions rather than layout preferences.
 @MainActor
 final class DetailPanelLayoutTests: XCTestCase {
 
@@ -47,10 +47,10 @@ final class DetailPanelLayoutTests: XCTestCase {
 
     func testTheFourFixedPageHeights() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout"))
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 552)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 566)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 498, "only Command Code")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 512, "only Command Code")
 
         preferences.showCommandCode = false
         XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 330, "neither service card")
@@ -60,8 +60,8 @@ final class DetailPanelLayoutTests: XCTestCase {
     }
 
     func testTheFourFixedPageHeightsMatchTheRowArithmetic() {
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 552)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 498)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 566)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 512)
         XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 384)
         XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 330)
     }
@@ -95,7 +95,7 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(heights[.chatGPTA], 129)
         XCTAssertEqual(heights[.chatGPTB], 129)
         XCTAssertEqual(heights[.deepSeek], 48)
-        XCTAssertEqual(heights[.commandCode], 162)
+        XCTAssertEqual(heights[.commandCode], 176)
     }
 
     private func expectedCardOrder(showDeepSeek: Bool, showCommandCode: Bool) -> [DetailPageLayout.Kind] {
@@ -121,9 +121,11 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(ProviderTimeBar.height, 3)
         XCTAssertEqual(ProviderTimeBar.segmentGap, 2)
         XCTAssertEqual(DeepSeekOverviewCard.size, CGSize(width: 416, height: 48))
-        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 416, height: 162))
+        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 416, height: 176))
         XCTAssertEqual(CommandCodeOverviewCard.windowGroupSpacing, 4)
         XCTAssertEqual(CommandCodeOverviewCard.valueWidth, 116)
+        XCTAssertEqual(CommandCodeOverviewCard.footerHeight, 13)
+        XCTAssertEqual(CommandCodeOverviewCard.fireButtonWidth, 76)
     }
 
     func testFireDialogCopyIsTheFixedWording() {
@@ -134,6 +136,13 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(CodexProfileCard.cancelButtonTitle, "取消")
         XCTAssertEqual(CodexProfileCard.fireButtonTitle, "5 小时点火")
         XCTAssertEqual(CodexProfileCard.fireButtonRunningTitle, "点火中…")
+        XCTAssertEqual(CommandCodeOverviewCard.confirmationTitle, "启动 Command Code 5 小时额度窗口？")
+        XCTAssertEqual(CommandCodeOverviewCard.confirmationMessage,
+                       "将把钥匙串中的 Command Code Key 交给官方 CLI 执行一次最小模型请求，会消耗少量额度。输出不会保存。")
+        XCTAssertEqual(CommandCodeOverviewCard.confirmButtonTitle, "确认点火")
+        XCTAssertEqual(CommandCodeOverviewCard.cancelButtonTitle, "取消")
+        XCTAssertEqual(CommandCodeOverviewCard.fireButtonTitle, "5 小时点火")
+        XCTAssertEqual(CommandCodeOverviewCard.fireButtonRunningTitle, "点火中…")
     }
 
     // MARK: §4.2 No scroll container
@@ -174,7 +183,7 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertFalse(containsScrollContainer(hosting))
     }
 
-    func testSettingsPageDoesNotEmbedAScrollView() {
+    func testSettingsPageUsesOneBoundedScrollRegionForExtensibleSchedules() {
         let model = makeModel()
         let view = MingetSettingsView(model: model,
                                       preferences: DetailPreferences(defaults: makeDefaults("Settings.NoScroll")),
@@ -184,8 +193,8 @@ final class DetailPanelLayoutTests: XCTestCase {
         hosting.frame = NSRect(origin: .zero, size: MingetSettingsView.pageSize)
         hosting.layoutSubtreeIfNeeded()
 
-        XCTAssertFalse(containsScrollContainer(hosting))
-        XCTAssertEqual(MingetSettingsView.pageSize, CGSize(width: 520, height: 600))
+        XCTAssertTrue(containsScrollContainer(hosting))
+        XCTAssertEqual(MingetSettingsView.pageSize, CGSize(width: 520, height: 700))
     }
 
     // MARK: §11.3 ChatGPT cards
@@ -502,6 +511,31 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .unverified, planName: nil), "暂不可用")
         XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connected, planName: ""), "已连接",
                        "an empty plan name is not a plan name")
+        XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .connected,
+                                                            planName: "individual-go",
+                                                            planIsCached: true),
+                       "individual-go · 缓存",
+                       "a reused plan stays visibly cached even while credits are live")
+    }
+
+    func testComponentCacheWordingCarriesItsOwnSuccessTime() {
+        let lastSuccess = Date(timeIntervalSince1970: 1_800_000_000)
+        let cached = ProviderUsageComponentFreshness(lastSuccessfulAt: lastSuccess, isLive: false)
+        XCTAssertTrue(CommandCodeCardPresentation.summaryLines(nil, isCached: true)[0]
+            .hasPrefix("缓存 · 统计暂不可用"))
+        XCTAssertEqual(CommandCodeCardPresentation.componentCacheHelpText(name: "统计",
+                                                                          freshness: cached,
+                                                                          fallback: nil),
+                       "统计缓存 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
+        XCTAssertEqual(CommandCodeCardPresentation.helpText(connection: .connected,
+                                                            lastSuccessAt: nil,
+                                                            planFreshness: cached),
+                       "套餐缓存 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
+        XCTAssertEqual(CommandCodeCardPresentation.accessibilitySubtitle(connection: .connected,
+                                                                        planName: "individual-go",
+                                                                        lastSuccessAt: nil,
+                                                                        planFreshness: cached),
+                       "individual-go · 缓存，套餐缓存 · 上次成功 \(UsageFormatting.shortDateTime(lastSuccess))")
     }
 
     func testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown() {

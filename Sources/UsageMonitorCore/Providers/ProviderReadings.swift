@@ -49,6 +49,10 @@ public final class DeepSeekReading: ProviderReading, @unchecked Sendable {
 
 /// Command Code reader. It owns only an app-provided API key and never reads browser
 /// cookies or Command Code CLI configuration.
+///
+/// The auxiliary enrichment (summary, subscriptions) is throttled inside the provider:
+/// automatic refreshes reuse the last auxiliary payloads for 15 minutes and only
+/// re-read credits, while explicit user actions force a full read.
 public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
     public let platform: ProviderPlatform = .commandcode
     public var isAutomaticRefreshEnabled: Bool { true }
@@ -73,10 +77,32 @@ public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
         await access.value(for: .commandCodeAPIKey, purpose: .userRequestedRead, interaction: .allowed).isAvailable
     }
     public func read() async throws -> ProviderReadResult {
+        try await read(auxiliaryPolicy: .automatic)
+    }
+
+    /// The policy belongs to this exact read. Keeping it out of mutable one-shot state stops
+    /// an older credential generation from consuming a newer reconnect's forced refresh.
+    public func read(auxiliaryPolicy: CommandCodeProvider.AuxiliaryPolicy) async throws -> ProviderReadResult {
         let outcome = await access.value(for: .commandCodeAPIKey, purpose: .providerRead, interaction: .allowed)
         guard let key = outcome.secret, !key.isEmpty else { throw DeepSeekReading.failure(for: outcome) }
-        let usage = try await provider.fetchUsage(apiKey: key)
+        let usage = try await provider.fetchUsage(apiKey: key, auxiliaryPolicy: auxiliaryPolicy)
         return ProviderReadResult(accountID: CommandCodeProvider.accountFingerprint(forAPIKey: key), balances: [], usage: usage, consoleURL: URL(string: "https://commandcode.ai/studio/"))
+    }
+
+    /// Returns the already app-owned Key for an explicitly authorised fire. Scheduled work
+    /// is background-only and can never open a Keychain prompt; a manual button may ask once.
+    public func fireCredential(userInitiated: Bool) async -> CredentialAccessOutcome {
+        await access.value(for: .commandCodeAPIKey,
+                           purpose: userInitiated ? .manualFire : .scheduledFire,
+                           interaction: userInitiated ? .allowed : .disallowed)
+    }
+
+    /// One live credits-only observation after a fire. It shares the same interaction rule
+    /// as the request that caused it and never touches summary/subscription.
+    public func fiveHourResetForFire(userInitiated: Bool) async throws -> Date? {
+        let outcome = await fireCredential(userInitiated: userInitiated)
+        guard let key = outcome.secret, !key.isEmpty else { throw DeepSeekReading.failure(for: outcome) }
+        return try await provider.fetchFiveHourReset(apiKey: key)
     }
     public func storeAPIKey(_ key: String) throws { try access.store(key, for: .commandCodeAPIKey) }
     public func disconnect() throws { try access.remove(.commandCodeAPIKey) }

@@ -92,14 +92,60 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
         return outcome
     }
 
+    /// Confirmation-only read of one profile: rate limits without the identity read.
+    /// The fire sequence only needs the 5-hour `resetsAt`; the account fields stay
+    /// untouched so a confirmation can never re-attribute the runtime.
+    @discardableResult
+    public func fetchRateLimitsOnly(profileID: String,
+                                    fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout) -> Result<UsageService.FetchResult, Error> {
+        guard let runtime = byID[profileID] else {
+            return .failure(UsageError.rpcFailed(.other))
+        }
+        runtime.recordFetchStart()
+        let outcome = Result {
+            try runtime.service.fetchRateLimitsOnly(fetchTimeout: fetchTimeout)
+        }
+        switch outcome {
+        case .success(let result):
+            // A cached fallback carries last cycle's number, not a fresh observation. The
+            // runtime keeps the previous display and only clears the fetching flag, so a
+            // stale read can never move the card's window.
+            if result.isLive {
+                runtime.recordConfirmationSuccess(result)
+            } else {
+                runtime.recordConfirmationStale()
+            }
+        case .failure(let error):
+            runtime.recordFetchFailure((error as? UsageError) ?? .rpcFailed(.other))
+        }
+        return outcome
+    }
+
+    /// Wake-only probe for one profile. A healthy existing child updates only the quota
+    /// display; an unhealthy child is reported to the caller for an ordinary full refresh.
+    /// Suppressed probes do not touch runtime state, so an open breaker or an in-flight read
+    /// cannot flicker the card or be mistaken for a failure.
+    @discardableResult
+    public func probeAfterWake(
+        profileID: String,
+        fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout
+    ) -> UsageService.WakeProbeResult {
+        guard let runtime = byID[profileID] else { return .suppressed }
+        let outcome = runtime.service.probeRateLimitsAfterWake(fetchTimeout: fetchTimeout)
+        if case .refreshed(let result) = outcome {
+            runtime.recordConfirmationSuccess(result)
+        }
+        return outcome
+    }
+
     // MARK: - Fire state (owned by the view model, stored per runtime)
 
     public func recordFireStart(profileID: String) {
         byID[profileID]?.recordFireStart()
     }
 
-    public func recordFireFinished(profileID: String, result: ChatGPTFireResult) {
-        byID[profileID]?.recordFireFinished(result)
+    public func recordFireFinished(profileID: String, result: ChatGPTFireResult, driftSeconds: TimeInterval? = nil) {
+        byID[profileID]?.recordFireFinished(result, driftSeconds: driftSeconds)
     }
 
     // MARK: - Shutdown

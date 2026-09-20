@@ -61,7 +61,7 @@ struct CommandCodeSettingsView: View {
                 Button("打开 Studio") { NSWorkspace.shared.open(URL(string: "https://commandcode.ai/studio/")!) }
                 Button("关闭") { form.collapse() }
             }.controlSize(.small)
-            Text("Key 保存在 macOS 钥匙串，仅用于读取额度和用量，不用于模型调用，也不读取浏览器 Cookie。")
+            Text("Key 保存在 macOS 钥匙串，用于读取额度；仅在手动或已启用的定时点火时交给官方 CLI 发起最小模型请求。不读取浏览器 Cookie。")
                 .font(.system(size: 9)).foregroundStyle(.secondary)
         }.padding(8).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }

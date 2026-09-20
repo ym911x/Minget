@@ -38,6 +38,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
     private func snapshot(fiveHourPercent: Double, weeklyPercent: Double,
                           fiveHourRemaining: TimeInterval = 4 * 3600,
                           weeklyRemaining: TimeInterval = 3 * 86400,
+                          resetCredits: Int = 2,
                           source: UsageSource = .codexAppServer) -> UsageSnapshot {
         UsageSnapshot(fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
                                                 usedPercent: 100 - fiveHourPercent,
@@ -47,7 +48,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
                                               usedPercent: 100 - weeklyPercent,
                                               remainingPercent: weeklyPercent,
                                               resetsAt: anchor.addingTimeInterval(weeklyRemaining)),
-                      rateLimitResetCredits: RateLimitResetCredits(availableCount: 2,
+                      rateLimitResetCredits: RateLimitResetCredits(availableCount: resetCredits,
                                                                    nearestExpiresAt: anchor.addingTimeInterval(5 * 86400)),
                       fetchedAt: anchor,
                       source: source)
@@ -152,34 +153,38 @@ final class DetailEvidenceRenderTests: XCTestCase {
     private func state(_ profile: ChatGPTAccountProfile,
                        display: UsageDisplay,
                        email: String,
-                       fireResult: ChatGPTFireResult? = nil) -> CodexProfileViewState {
+                       fireResult: ChatGPTFireResult? = nil,
+                       fireDriftSeconds: TimeInterval? = nil,
+                       fireHistory: [FireHistoryEntry] = []) -> CodexProfileViewState {
         CodexProfileViewState(profile: profile,
                               display: display,
                               connectionState: .connected,
                               account: account(email),
                               isRefreshing: false,
                               isFiring: false,
-                              fireResult: fireResult)
+                              fireResult: fireResult,
+                              fireDriftSeconds: fireDriftSeconds,
+                              fireHistory: fireHistory)
     }
 
     // MARK: §12 Evidence
 
     func testRenderFullPageLightAndDark() async throws {
-        // 1. 440 × 552, light, four cards, account A and B with clearly different quotas.
+        // 1. 440 × 566, light, four cards, account A and B with clearly different quotas.
         let (live, livePreferences) = await makeModel("live")
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: livePreferences)),
                              background: .light),
-                  named: "01-detail-440x552-light.png")
+                  named: "01-detail-440x566-light.png")
 
-        // 2. 440 × 552, dark, account A cached and account B live.
+        // 2. 440 × 566, dark, account A cached and account B live.
         let (cached, cachedPreferences) = await makeModel("cached", aStale: true)
         try write(try render(UsagePanelView(model: cached, preferences: cachedPreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: cachedPreferences)),
                              background: .dark),
-                  named: "02-detail-440x552-dark-a-cached.png")
+                  named: "02-detail-440x566-dark-a-cached.png")
 
         // 3. 440 × 330, light, only the two ChatGPT cards.
         livePreferences.showDeepSeek = false
@@ -228,6 +233,42 @@ final class DetailEvidenceRenderTests: XCTestCase {
                   named: "04-chatgpt-card-states-light.png")
     }
 
+    func testRenderFireFooterStatesLightAndDark() throws {
+        let longReset = snapshot(fiveHourPercent: 78, weeklyPercent: 42, resetCredits: 123)
+        let finished = anchor.addingTimeInterval(-120)
+        let confirmed = state(.chatGPTA, display: .live(longReset), email: "demo@example.com",
+                              fireResult: .requestSucceededWindowConfirmed,
+                              fireDriftSeconds: 6 * 3600 + 12 * 60,
+                              fireHistory: [FireHistoryEntry(result: .requestSucceededWindowConfirmed,
+                                                             finishedAt: finished,
+                                                             driftSeconds: 6 * 3600 + 12 * 60)])
+        let unchanged = state(.chatGPTB, display: .live(longReset), email: "demo-b@example.com",
+                              fireResult: .requestSucceededWindowUnchanged,
+                              fireDriftSeconds: 32,
+                              fireHistory: [FireHistoryEntry(result: .requestSucceededWindowUnchanged,
+                                                             finishedAt: finished,
+                                                             driftSeconds: 32)])
+        let unavailable = state(.chatGPTA, display: .live(longReset), email: "demo@example.com",
+                                fireResult: .requestSucceededConfirmationUnavailable,
+                                fireDriftSeconds: nil,
+                                fireHistory: [FireHistoryEntry(result: .requestSucceededConfirmationUnavailable,
+                                                               finishedAt: finished)])
+        let stem = VStack(alignment: .leading, spacing: 8) {
+            Text("确认：长重置文案 + 长差值，结果优先").font(.system(size: 9)).foregroundStyle(.secondary)
+            CodexProfileCard(state: confirmed)
+            Text("未变化：长结果 + 短差值").font(.system(size: 9)).foregroundStyle(.secondary)
+            CodexProfileCard(state: unchanged)
+            Text("暂无法确认：不显示差值").font(.system(size: 9)).foregroundStyle(.secondary)
+            CodexProfileCard(state: unavailable)
+        }
+        .padding(12)
+
+        try write(try render(stem, size: nil, background: .light, scale: 2),
+                  named: "08-chatgpt-fire-footer-light.png")
+        try write(try render(stem, size: nil, background: .dark, scale: 2),
+                  named: "08-chatgpt-fire-footer-dark.png")
+    }
+
     func testRenderCommandCodeCard() throws {
         func dec(_ raw: String) -> Decimal { Decimal(string: raw, locale: Locale(identifier: "en_US_POSIX"))! }
 
@@ -272,12 +313,18 @@ final class DetailEvidenceRenderTests: XCTestCase {
                                      balances: [], usage: ProviderUsage(windows: [], summary: nil),
                                      lastSuccessAt: nil, connection: .unavailable,
                                      isLive: false, error: .other, consoleURL: nil)
+        var fired = CommandCodeFireViewState()
+        fired.finish(.requestSucceededWindowConfirmed,
+                     driftSeconds: 5 * 3600,
+                     finishedAt: anchor)
 
         let stem = VStack(alignment: .leading, spacing: 8) {
             Text("剩余 3.00 / 4.00（亮色长）").font(.system(size: 9)).foregroundStyle(.secondary)
             CommandCodeOverviewCard(report: full, openSettings: {}, now: anchor)
             Text("剩余 1.00 / 4.00（亮色从右向左收缩）").font(.system(size: 9)).foregroundStyle(.secondary)
             CommandCodeOverviewCard(report: consumed, openSettings: {}, now: anchor)
+            Text("Command Code 点火确认 + 差值 footer").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: full, fireState: fired, openSettings: {}, now: anchor)
             Text("缺少计费周期开始时间（月度轨道中性，不猜进度）").font(.system(size: 9)).foregroundStyle(.secondary)
             CommandCodeOverviewCard(report: noStart, openSettings: {}, now: anchor)
             Text("缺少窗口（保留块 + — + 灰色空轨道）").font(.system(size: 9)).foregroundStyle(.secondary)
@@ -286,6 +333,8 @@ final class DetailEvidenceRenderTests: XCTestCase {
         .padding(12)
         try write(try render(stem, size: nil, background: .light, scale: 2),
                   named: "05-commandcode-cards-light.png")
+        try write(try render(stem, size: nil, background: .dark, scale: 2),
+                  named: "05-commandcode-cards-dark.png")
     }
 
     /// 1.3.1: the cached subtitle, the missing statistics row and the unnamed period, in both
@@ -353,6 +402,27 @@ final class DetailEvidenceRenderTests: XCTestCase {
                                                                 planName: "individual-go"),
                                            lastSuccessAt: anchor, connection: .connected,
                                            isLive: true, error: nil, consoleURL: nil)
+        // Credits are live, while both optional components are being reused from their last
+        // successful reads. This pins the 1.3.2 partial-cache wording and orange semantics.
+        let componentCachedAt = anchor.addingTimeInterval(-8 * 60)
+        let componentCached = ProviderReport(
+            platform: .commandcode, accountID: "fixture", balances: [],
+            usage: ProviderUsage(
+                windows: windows,
+                summary: ProviderUsageSummary(totalTokens: 12_345, inputTokens: 8_000,
+                                              outputTokens: 4_345, totalRuns: 42,
+                                              completedRuns: 40, failedRuns: 2,
+                                              successRate: dec("95.24"), totalCostUSD: dec("1.234"),
+                                              periodBasis: .billingPeriod),
+                planName: "individual-go",
+                billingPeriodEnd: anchor.addingTimeInterval(12 * 86400),
+                billingPeriodStart: anchor.addingTimeInterval(-18 * 86400),
+                summaryFreshness: ProviderUsageComponentFreshness(lastSuccessfulAt: componentCachedAt,
+                                                                   isLive: false),
+                subscriptionFreshness: ProviderUsageComponentFreshness(lastSuccessfulAt: componentCachedAt,
+                                                                        isLive: false)),
+            lastSuccessAt: anchor, connection: .connected, isLive: true,
+            error: nil, consoleURL: nil)
 
         // No usage report at all: the settings entry is drawn in place of the statistics. The
         // R1 fix keeps that button outside the combined logomark/title/subtitle element.
@@ -369,6 +439,8 @@ final class DetailEvidenceRenderTests: XCTestCase {
             CommandCodeOverviewCard(report: cachedLongPlan, openSettings: {}, now: anchor)
             Text("统计周期未确认：保留真实数字").font(.system(size: 9)).foregroundStyle(.secondary)
             CommandCodeOverviewCard(report: unknownPeriod, openSettings: {}, now: anchor)
+            Text("额度实时 + 套餐/统计缓存：组件单独标橙并显示缓存").font(.system(size: 9)).foregroundStyle(.secondary)
+            CommandCodeOverviewCard(report: componentCached, openSettings: {}, now: anchor)
             Text("无用量报告：显示「前往设置」；该按钮位于组合辅助功能元素之外（R1）")
                 .font(.system(size: 9)).foregroundStyle(.secondary)
             CommandCodeOverviewCard(report: noUsage, openSettings: {}, now: anchor)
@@ -383,6 +455,28 @@ final class DetailEvidenceRenderTests: XCTestCase {
         // The cached subtitle stays one line at the card's real width.
         XCTAssertEqual(CommandCodeCardPresentation.subtitle(connection: .stale, planName: "individual-go-annual-team-seat"),
                        "individual-go-annual-team-seat · 缓存")
+    }
+
+    func testRenderSettingsWithMultipleFireSchedules() async throws {
+        let (model, detailPreferences) = await makeModel("fire-schedule-settings")
+        let schedules = model.fireSchedules
+        let aMorning = schedules.add(target: .chatGPTA, preferredMinute: 8 * 60)
+        let aNoon = schedules.add(target: .chatGPTA, preferredMinute: 12 * 60)
+        let bMorning = schedules.add(target: .chatGPTB, preferredMinute: 9 * 60 + 30)
+        let commandCode = schedules.add(target: .commandCode, preferredMinute: 7 * 60 + 45)
+        for id in [aMorning, aNoon, bMorning, commandCode] {
+            schedules.setEnabled(true, for: id)
+        }
+        let settings = MingetSettingsView(model: model,
+                                          preferences: detailPreferences,
+                                          menuBarPreferences: model.menuBarPreferences,
+                                          onQuit: {})
+        try write(try render(settings, size: MingetSettingsView.pageSize,
+                             background: .light, scale: 2),
+                  named: "11-settings-fire-schedules-light.png")
+        try write(try render(settings, size: MingetSettingsView.pageSize,
+                             background: .dark, scale: 2),
+                  named: "12-settings-fire-schedules-dark.png")
     }
 
     // MARK: Rendering helpers

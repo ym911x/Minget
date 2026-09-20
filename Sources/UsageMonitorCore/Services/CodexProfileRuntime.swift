@@ -24,6 +24,13 @@ public final class CodexProfileRuntime: @unchecked Sendable {
     private var lastError: UsageError?
     private var isFiring = false
     private var fireResult: ChatGPTFireResult?
+    /// Forward movement measured by the last finished fire, for the card suffix.
+    private var fireDriftSeconds: TimeInterval?
+    /// Recent finishes, newest first, at most `maxFireHistory`. Memory only.
+    private var fireHistory: [FireHistoryEntry] = []
+
+    /// How many finishes one profile remembers. Fixed so the tooltip cannot grow.
+    public static let maxFireHistory = 3
 
     public init(profile: ChatGPTAccountProfile, service: UsageService) {
         self.profile = profile
@@ -42,7 +49,9 @@ public final class CodexProfileRuntime: @unchecked Sendable {
                                         isFetching: isFetching,
                                         lastError: lastError,
                                         isFiring: isFiring,
-                                        fireResult: fireResult)
+                                        fireResult: fireResult,
+                                        fireDriftSeconds: fireDriftSeconds,
+                                        fireHistory: fireHistory)
     }
 
     // MARK: - Fetch lifecycle (coordinator)
@@ -76,19 +85,46 @@ public final class CodexProfileRuntime: @unchecked Sendable {
         lock.unlock()
     }
 
+    /// Records a confirmation-only read: the quota display moves, the account identity
+    /// stays exactly as it was, because no identity was resolved on this path.
+    func recordConfirmationSuccess(_ result: UsageService.FetchResult) {
+        let mapped = UsageDisplay(fetchResult: result)
+        lock.lock()
+        isFetching = false
+        display = mapped
+        connection = service.connectionState
+        lastError = nil
+        lock.unlock()
+    }
+
+    /// A confirmation read that fell back to cache: the display stays where it was, so
+    /// the stale number is never mistaken for a fresh observation.
+    func recordConfirmationStale() {
+        lock.lock()
+        isFetching = false
+        connection = service.connectionState
+        lock.unlock()
+    }
+
     // MARK: - Fire lifecycle (view model)
 
     func recordFireStart() {
         lock.lock()
         isFiring = true
         fireResult = nil
+        fireDriftSeconds = nil
         lock.unlock()
     }
 
-    func recordFireFinished(_ result: ChatGPTFireResult) {
+    func recordFireFinished(_ result: ChatGPTFireResult, driftSeconds: TimeInterval? = nil) {
         lock.lock()
         isFiring = false
         fireResult = result
+        fireDriftSeconds = driftSeconds
+        fireHistory.insert(FireHistoryEntry(result: result, finishedAt: Date(), driftSeconds: driftSeconds), at: 0)
+        if fireHistory.count > Self.maxFireHistory {
+            fireHistory = Array(fireHistory.prefix(Self.maxFireHistory))
+        }
         lock.unlock()
     }
 }
@@ -103,6 +139,10 @@ public struct CodexProfileRuntimeState: Equatable, Sendable {
     public let lastError: UsageError?
     public let isFiring: Bool
     public let fireResult: ChatGPTFireResult?
+    /// Forward movement measured by the last finished fire, for the card suffix.
+    public let fireDriftSeconds: TimeInterval?
+    /// Recent finishes, newest first. Memory only, never persisted.
+    public let fireHistory: [FireHistoryEntry]
 
     public init(profile: ChatGPTAccountProfile,
                 display: UsageDisplay,
@@ -111,7 +151,9 @@ public struct CodexProfileRuntimeState: Equatable, Sendable {
                 isFetching: Bool,
                 lastError: UsageError?,
                 isFiring: Bool,
-                fireResult: ChatGPTFireResult?) {
+                fireResult: ChatGPTFireResult?,
+                fireDriftSeconds: TimeInterval? = nil,
+                fireHistory: [FireHistoryEntry] = []) {
         self.profile = profile
         self.display = display
         self.connectionState = connectionState
@@ -120,6 +162,8 @@ public struct CodexProfileRuntimeState: Equatable, Sendable {
         self.lastError = lastError
         self.isFiring = isFiring
         self.fireResult = fireResult
+        self.fireDriftSeconds = fireDriftSeconds
+        self.fireHistory = fireHistory
     }
 
     public var snapshot: UsageSnapshot? { display.snapshot }

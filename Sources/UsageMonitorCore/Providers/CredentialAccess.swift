@@ -13,6 +13,10 @@ public enum CredentialAccessPurpose: String, Sendable, CaseIterable {
     /// deliberately no "status query" purpose: a status question is answered from memory and
     /// must never reach the keychain (KEYCHAIN_REVISION_PLAN.md P1.3).
     case providerRead = "provider-read"
+    /// A user-confirmed Command Code fire. It may retry a blocked Keychain read.
+    case manualFire = "manual-fire"
+    /// A timer-originated Command Code fire. It must never show a Keychain dialog.
+    case scheduledFire = "scheduled-fire"
     /// A credential was just saved and is being exercised.
     case connect = "connect"
     case save = "save"
@@ -27,8 +31,8 @@ public enum CredentialAccessPurpose: String, Sendable, CaseIterable {
 public extension CredentialAccessPurpose {
     var mayRetryBlocked: Bool {
         switch self {
-        case .userRequestedRead, .connect: return true
-        case .startupPrime, .providerRead, .save, .delete: return false
+        case .userRequestedRead, .connect, .manualFire: return true
+        case .startupPrime, .providerRead, .scheduledFire, .save, .delete: return false
         }
     }
 }

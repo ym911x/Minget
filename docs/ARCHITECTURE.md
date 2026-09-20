@@ -25,6 +25,8 @@
 | `UsageCache` | v3 `profileID + accountID` 命名空间，以及 v2→v3 一次性迁移 |
 | `MenuBarPreferences` | 菜单栏来源（Profile ID 或 DeepSeek）与 DeepSeek 币种显示选择 |
 | `ChatGPTFireService` | 手动点火：直启官方 Codex CLI，固定参数，丢弃子进程输出 |
+| `FireSchedulePreferences` | 三个目标的每日多时点计划、勾选状态和跨重启去重台账 |
+| `CommandCodeFireService` | 使用 Keychain Key 和隔离 `HOME` 直启官方 CLI，执行固定最小点火请求 |
 
 配置与运行态分离：Profile 是常量值，运行态全部在 `CodexProfileRuntime` 内由锁保护。业务逻辑以稳定 ID 为键，不依赖数组位置，因此后续版本可以直接扩展第三个 Profile。
 
@@ -40,8 +42,12 @@ flowchart LR
     B --> BServer[codex app-server B]
     Store --> DeepSeek[DeepSeek 官方余额接口]
     DeepSeek --> Keychain[macOS Keychain]
-    Store --> Fire[ChatGPTFireService]
+    Store --> Schedule[每日多时点计划]
+    Schedule --> Fire[ChatGPTFireService]
+    Schedule --> CCFire[CommandCodeFireService]
     Fire --> CLI[官方 codex exec]
+    CCFire --> CCCLI[官方 command-code]
+    Keychain --> CCFire
     Store --> Cache[本机缓存与偏好设置]
 ```
 
@@ -53,7 +59,11 @@ flowchart LR
 
 菜单栏一次只显示一个来源，来源与显示偏好都只保存非敏感选择值。遮挡检查只读取本机屏幕和状态项位置，每 10 秒执行一次，不产生网络请求，也不消耗模型 token。
 
-手动点火是本应用唯一的模型请求路径：由用户点击卡片按钮并经固定确认对话框触发，直接执行官方 Codex CLI 的固定参数，子进程输出持续 drain 后丢弃，不进入日志、缓存或界面。定时点火继续由外部 LaunchAgent 与 `minget-fire` 承担，应用既不调用也不修改它们。
+点火有两条官方 CLI 路径。OpenAI 使用对应 Profile 的官方 Codex CLI；Command Code 使用 Minget Keychain 中的 Key 和隔离临时 `HOME` 启动官方 `command-code` CLI。两者均不经 shell，使用固定最小参数，子进程输出持续 drain 后丢弃，不进日志、缓存或界面。触发来源为用户确认的卡片按钮，或设置页中用户已勾选的每日时间。计划引擎在启动、30 秒 tick、唤醒和时钟改变时评估，只补跑 10 分钟并以计划时刻持久化去重。
+
+1.3.2 起 OpenAI 点火成功后的确认只读额度（`handshake + rateLimits/read`），Command Code 确认只读 `credits`。两者都展示三态、实测差值，并在内存保留最近 3 次。
+
+刷新节奏（1.3.2）：详情页时钟 30 秒一 tick，菜单栏倒计时按需用 `Date()` 计算；ChatGPT 定时按重置时间退避（临近 30 秒、无数据 60 秒、否则 120 秒）；Command Code credits 每轮读取，summary/subscriptions 按凭证摘要隔离并分别复用 15 分钟；菜单栏宽度按尺寸签名缓存；唤醒后只用现有 app-server 探活，失败 Profile 才进入普通刷新，30 秒内与定时轮询互斥。
 
 ### DeepSeek
 
@@ -67,7 +77,8 @@ flowchart LR
 
 - 不在日志、诊断信息或测试产物中输出 API Key、访问令牌、OAuth token、Codex CLI session id、点火 raw output 和完整 Cookie。
 - DeepSeek 与 Command Code 的 API Key 使用 Keychain 保存。
-- 唯一的窄例外是把用户配置的隔离目录作为 `CODEX_HOME` 传给官方 Codex CLI 子进程；应用自身不读取其中的认证文件。
+- Codex 点火的窄例外是把用户配置的隔离目录作为 `CODEX_HOME` 传给官方 Codex CLI 子进程；应用自身不读取其中的认证文件。
+- Command Code 点火是第二个窄例外：Key 只传给隔离 `HOME` 的官方 CLI，应用 HTTP 客户端仍拒绝模型端点。
 - 调试与归档产物默认位于被 Git 忽略的 `artifacts/`；渲染测试证据写入 `$TMPDIR/Minget-1.3.0-Evidence/`。
 - 任何新增服务都应先验证官方取数路径、费用和凭据边界，再进入实现。
 
@@ -83,7 +94,7 @@ Minget is a Swift Package Manager based macOS menu bar application. The internal
 - Each child is launched with a copy of the current environment whose `CODEX_HOME` is the profile's isolated directory. Minget never opens, lists or parses that directory.
 - The menu bar shows exactly one source at a time — profile A, profile B, or DeepSeek — chosen by a persisted non-secret preference.
 - DeepSeek data comes from its official balance endpoint; the API key is stored in macOS Keychain.
-- Manual fire runs the official Codex CLI with a fixed argument list and discards its output; it is the only model-request path and is only reachable through the user's confirmation dialog.
+- Fire runs the official Codex or Command Code CLI with fixed minimal arguments and discards its output. It is reachable only through a user-confirmed card action or a daily schedule row the user explicitly enabled.
 - The retired Zhipu GLM integration has no runtime, WebKit, network, or browser-session path; only its local app-owned retirement cleanup remains.
 - Geometry checks for notch and menu bar visibility are fully local and do not consume model tokens.
 - Logs and diagnostics exclude API keys, access tokens, session ids, full cookies, and raw account responses.

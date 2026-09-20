@@ -9,6 +9,21 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.3.2 修订
+
+- 点火确认只读取额度（`handshake + rateLimits/read`），不再附带账号身份请求；失败熔断语义不变。
+- 点火结果追加实测差值：`新窗口已确认 · +6小时12分`，未变化如 `请求成功，窗口未变化 · +32秒`，暂无法确认不追加；辅助功能值同步。
+- 每个账号内存保留最近 3 次点火，悬停结果查看 `MM-dd HH:mm 结果 · 差值` 多行；重启即清空，不持久化。
+- 详情页时钟从每秒降为每 30 秒；菜单栏倒计时仍按需计算，不受影响。
+- ChatGPT 定时按重置时间退避：临近 10 分钟内 30 秒，无数据 60 秒，否则 120 秒。
+- Command Code 统计与订阅 15 分钟复用，额度仍 5 分钟；手动刷新强制全量。
+- 菜单栏宽度按尺寸签名缓存；睡眠唤醒后一次节流刷新。
+- 设置页新增每日 5 小时点火计划：OpenAI 账号 A、账号 B 和 Command Code 各自可添加多个时间，每条勾选后生效，错过最多补跑 10 分钟。
+- Command Code 详情卡新增「5 小时点火」：用户确认或启用计划后，Minget 把 Keychain 中的 Key 仅传给隔离环境中的官方 CLI，执行一次最小请求，丢弃输出，再仅读 `credits` 确认窗口。
+- R2 测试维护修复：辅助功能测试循环内重取窗口，注释按实测对齐。
+
+本版本是小版本优化版。菜单栏格式、额度语义和点火三态真值表不变；Command Code 卡片与设置页因新控件增高。
+
 ## v1.3.1 修订
 
 - 两个 ChatGPT 账号的刷新仍同时启动，但任一账号一返回就立即发布自己的新状态，不再等待另一个账号。卡片顺序仍固定为账号 A、账号 B；整轮刷新状态仍在最后一个账号完成后才结束。
@@ -79,8 +94,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## 当前版本
 
-- 当前版本：`1.3.1`
-- 状态：双 Profile 完成即发布、点火确认三态、Command Code 辅助接口容错、缓存标识与辅助功能修复已实现；451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建、严格签名和发布提交 CI 通过。源码发布页：[Minget v1.3.1](https://github.com/ym911x/Minget/releases/tag/v1.3.1)。真实界面、真实 DeepSeek 菜单栏余额、A/B 两次真实点火与机器重启复验仍待用户验收，详见 [1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)。
+- 当前版本：`1.3.2`
+- 状态：点火轻量确认、差值与历史、30/60/120 秒刷新、Command Code 辅助缓存、唤醒探活、每日多时点点火计划和 Command Code 卡片点火均已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项 AX XCTest 明确跳过、0 失败；测试使用 fake CLI/Keychain/transport，不消耗额度。Command Code 真实手动点火已由用户在 PATH 修复签名包中确认成功。用户于 2026-09-20 接受 1.3.2 发布，真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，详见 [1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -94,21 +109,22 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 - 检测状态项是否进入刘海遮挡区域，并在空间不足时从完整模式压缩为保留双额度与双时间条的紧凑模式；紧凑内容仍无法显示时打开详情窗口，不显示残缺文字。
 - 点击菜单栏打开详情后，点击桌面或其他应用可立即收起弹层，同时保留原点击效果。
 - 应用以显式 AppKit 入口启动，不声明任何 SwiftUI Scene；冷启动只出现菜单栏图标，不会出现空的设置窗口。弹层在显示前先确定内容尺寸，屏幕容纳不下整页时改用普通详情窗口，不会留下越界且无法移回的弹层。
-- 详情页为 440 pt 宽的固定单列无滚动布局，一排一张卡片：ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张全开时 `440 × 552 pt`，两张服务卡都隐藏时收缩为 `440 × 330 pt`，普通详情窗口立即同步调整尺寸。
+- 详情页为 440 pt 宽的固定单列无滚动布局，一排一张卡片：ChatGPT A、ChatGPT B、DeepSeek、Command Code；四张全开时 `440 × 566 pt`，两张服务卡都隐藏时收缩为 `440 × 330 pt`，普通详情窗口立即同步调整尺寸。
 - 每张 ChatGPT 卡片显示 Profile 名称、连接/缓存状态、套餐、实际账号邮箱、5 小时与周额度的**剩余额度轨道和各自的重置时间分段轨道**（5 小时 5 段、周 7 段）、可用重置次数、点火结果和“5 小时点火”按钮。
-- 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”“请求成功，窗口未变化”和证据不足时的“请求成功，暂无法确认”。
+- 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”“请求成功，窗口未变化”和证据不足时的“请求成功，暂无法确认”，确认态与未变化态追加实测差值，悬停查看最近 3 次内存历史。
 - DeepSeek 卡片把 Logo、wordmark、连接状态、服务状态和余额放在同一行，横向最多显示 3 个币种金额，超过 3 个时第三项显示“另有 N 个币种”；不换算、不合计、不伪造 0。
 - Command Code 卡片的三条额度轨道显示**剩余**（越用越短），右侧只显示“余额 / 总计”；每条下方各有一条重置时间轨道，5 小时与周只显示绝对重置时间，本月保留剩余天数。`credits` 失败按缓存或错误处理，`summary`/`subscriptions` 失败只影响统计区，并在缓存时显示套餐名后的`· 缓存`。
-- 设置页固定 `520 × 600 pt`：菜单栏显示使用纵向 radio group，服务组列出两个只读 ChatGPT 行的 `CODEX_HOME` 尾段，DeepSeek 与 Command Code 管理表单单开 accordion。
+- Command Code 卡片提供「5 小时点火」；固定确认后由隔离 `HOME` 的官方 CLI 执行最小请求，并复用 OpenAI 的三态、差值和最近 3 条历史语义。
+- 设置页固定 `520 × 700 pt`，内部使用一个滚动区；点火计划支持 OpenAI A、OpenAI B 和 Command Code 各自多时点、独立勾选和本地持久化。
 - OpenAI 详情卡显示账号可用重置次数，并在服务提供有效到期明细时显示最近到期时间；缓存或字段不可用时明确显示不可用。
 - 详情面板使用放大的 OpenAI Blossom 图标和 API 返回的 Codex 套餐类型；DeepSeek 可在设置中选择显示或隐藏，隐藏不会断开连接，也不会改变菜单栏来源。
 - DeepSeek 卡片在同一水平线显示用户提供的鲸鱼图标、只保留 `deepseek` 的透明文字标识、状态和余额；状态页不可达时明确显示不可用。官方余额接口不提供账号名称或邮箱，因此不显示虚构账号信息。
-- 详情页与设置页直接显示整页内容，不使用滚动容器或滚动条。
+- 详情页不使用滚动容器；设置页为承载可增长计划列表使用一个有界滚动区。
 - 通过 DeepSeek 官方余额接口读取余额，API Key 保存在 macOS Keychain。
-- Command Code API Key 仅由用户在应用设置页输入并存入 macOS Keychain；详情卡可隐藏但隐藏不会删除 Key 或停止既有刷新机制。
+- Command Code API Key 仅由用户在应用设置页输入并存入 macOS Keychain；平时只用于只读用量，用户手动确认或勾选定时点火后才会传给官方 CLI。
 - 启动时清理旧版智谱 GLM 的应用内凭据、缓存与显示偏好；失败会在下次启动重试。
 - 连接状态和数据缓存保存在本机，不上传到第三方服务。
-- 支持手动刷新和既有自动刷新机制。
+- 支持手动刷新和按重置时间退避的自动刷新机制；详情页时钟 30 秒一 tick，菜单栏倒计时按需计算。
 
 ## 运行
 
@@ -167,6 +183,12 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 - [v1.3.1 审核状态](docs/versions/1.3.1/REVIEW.md)
 - [v1.3.1 验收台账](docs/versions/1.3.1/ACCEPTANCE.md)
 - [v1.3.1 发布说明](docs/versions/1.3.1/RELEASE_NOTES.md)
+- [v1.3.2 需求](docs/versions/1.3.2/REQUIREMENTS.md)
+- [v1.3.2 实施任务](docs/versions/1.3.2/IMPLEMENTATION_TASKS.md)
+- [v1.3.2 实施报告](docs/versions/1.3.2/IMPLEMENTATION_REPORT.md)
+- [v1.3.2 审核状态](docs/versions/1.3.2/REVIEW.md)
+- [v1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)
+- [v1.3.2 发布说明](docs/versions/1.3.2/RELEASE_NOTES.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -181,7 +203,7 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.0 adds a second Codex account, a selectable menu bar source, and a per-account manual fire button; 1.3.1 publishes each account the moment it finishes, splits fire confirmation into three outcomes, and makes Command Code statistics optional so a failed summary cannot hide the credits.
+**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.3.2 adds user-enabled daily multi-time firing for both ChatGPT accounts and Command Code, plus a Command Code fire button backed by the official CLI.
 
 ### Features
 
@@ -190,18 +212,20 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 - Labels the ChatGPT quota text with the account short label and keeps both reset-time rows: `A 5H 78% | W 42%` full, `A 78% 42%` compact. The compact fallback still includes both values; if even that cannot be rendered, the detail window opens.
 - Shows the DeepSeek menu bar entry as an amount from the official balance endpoint, with no conversion, no summing, and no reset-time rows: `DS CNY 123.45` in both semantic modes, using larger typography and spacing in full mode. With nothing attributable it shows `DS —` and one warning marker, never a zero.
 - Closes the detail popover when the user clicks the desktop or another app while preserving the original click.
-- Uses a fixed, non-scrolling 440 pt single-column detail layout — one card per row: ChatGPT A, ChatGPT B, DeepSeek, Command Code. All four cards fit a 440 × 552 pt page; with both service cards hidden the page shrinks to 440 × 330 pt.
+- Uses a fixed, non-scrolling 440 pt single-column detail layout — one card per row: ChatGPT A, ChatGPT B, DeepSeek, Command Code. All four cards fit a 440 × 566 pt page; with both service cards hidden the page shrinks to 440 × 330 pt.
 - Each ChatGPT card pairs every window's remaining-credit track with its own segmented reset-time rail (five segments for the five-hour window, seven for the weekly one).
 - Command Code's credit tracks show *remaining* (shrinking from the right as credit is used) and only `balance / total` at the right. Five-hour and weekly rows use absolute reset times; the monthly row retains relative days.
 - Starts as an explicit AppKit app with no SwiftUI scene, so a cold start shows only the menu-bar icon and never an empty settings window; the panel fixes its content size before it is shown and falls back to the detail window when the page cannot fit the screen.
 - Each ChatGPT card shows the profile name, connection or cache state, the plan returned by `account/read`, the real account email, both quota windows, reset times, available reset credits, the last fire result, and its own fire button.
 - Manual fire runs the official Codex CLI with a fixed argument list under that account's isolated `CODEX_HOME` and discards the child's output. It reports three separate outcomes: a confirmed new window, a request that succeeded while the window stayed put, and a request that succeeded with no live evidence to compare.
+- Command Code fire passes the app-owned Keychain key only to the official CLI in an isolated `HOME`, disables auto-update, sessions and skills, discards output, and confirms the window through the read-only credits endpoint.
+- Settings supports multiple daily local fire times for ChatGPT A, ChatGPT B and Command Code. Each row is opt-in, catches up for at most ten minutes after wake or launch, and is deduplicated across app restarts.
 - Publishes each ChatGPT account's state as soon as that account returns, rather than holding a fast account behind a slow one.
 - Places the DeepSeek logo, wordmark, connection state, service state, and balances on one line. It shows up to three currency amounts (currency code ascending, unnamed bucket last); beyond three the third slot becomes a fixed overflow line.
-- Uses a fixed 520 × 600 pt settings page with a vertical radio group for the menu bar source, two read-only ChatGPT rows showing only the `CODEX_HOME` suffix, and single-open accordions for the DeepSeek and Command Code forms.
+- Uses a fixed 520 × 700 pt settings page with one bounded scroll region for the extensible fire schedules and provider controls.
 - Displays the read-only `rateLimitResetCredits.availableCount` value and, when supplied by the service, the nearest future expiry in the OpenAI detail card. Cached or missing fields remain explicitly unavailable.
 - Lets users show or hide the DeepSeek and Command Code cards without disconnecting either, and independently of the menu bar source.
-- Shows the complete detail page and the settings page in fixed-size surfaces without any scroll container or scrollbar.
+- Keeps the complete detail page non-scrolling; the settings page uses one bounded scroll region because the schedule list is user-extensible.
 - Reads DeepSeek balances through its official balance endpoint.
 - Retires legacy GLM credentials, cache entries, and display preferences during startup.
 - Keeps provider credentials in macOS Keychain. Minget never opens, parses, copies or uploads a Codex configuration or auth file; it only passes a user-configured isolated directory to the official CLI as `CODEX_HOME`.

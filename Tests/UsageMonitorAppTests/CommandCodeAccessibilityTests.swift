@@ -164,10 +164,31 @@ final class CommandCodeAccessibilityTests: XCTestCase {
             var activated = 0
             let card = CommandCodeOverviewCard(report: emptyReport(connection),
                                                openSettings: { activated += 1 })
+            // Each state gets its own window, and the tree is re-read from that window only:
+            // reusing the pre-loop `windows` would press the previous state's entry, or none
+            // at all once the previous window is closed (REVIEW.md R2).
+            window?.orderOut(nil)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            let beforeWindows: [AXUIElement] = axAttribute(application, kAXWindowsAttribute) ?? []
             host(card, size: CommandCodeOverviewCard.size)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            let deadline = Date().addingTimeInterval(1)
+            var currentWindow: AXUIElement?
+            repeat {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+                let currentWindows: [AXUIElement] = axAttribute(application, kAXWindowsAttribute) ?? []
+                currentWindow = currentWindows.first { candidate in
+                    !beforeWindows.contains { previous in CFEqual(previous, candidate) }
+                }
+            } while currentWindow == nil && Date() < deadline
 
-            let nodes = accessibilityNodes(in: windows)
+            guard let currentWindow else {
+                throw XCTSkip("""
+                    not executed: the current state exposed no new accessibility window, so there \
+                    is no tree to walk for \(title). Use the standalone harness in \
+                    IMPLEMENTATION_REPORT.md §10, or VoiceOver, to re-verify R1.
+                    """)
+            }
+            let nodes = accessibilityNodes(in: [currentWindow])
 
             // The non-interactive identity stays one combined element.
             let identity = nodes.first { $0.description == "Command Code" }
@@ -188,6 +209,7 @@ final class CommandCodeAccessibilityTests: XCTestCase {
             XCTAssertEqual(result, .success, "AXPress on the settings entry must succeed")
             XCTAssertEqual(activated, 1,
                            "pressing the settings entry must run the product's action exactly once")
+            window?.orderOut(nil)
         }
     }
 

@@ -19,7 +19,7 @@ enum DetailPageLayout {
 
     static let codexCardHeight: CGFloat = 129
     static let deepSeekCardHeight: CGFloat = 48
-    static let commandCodeCardHeight: CGFloat = 162
+    static let commandCodeCardHeight: CGFloat = 176
 
     enum Kind: String, Equatable, Sendable {
         case header, chatGPTA, chatGPTB, deepSeek, commandCode
@@ -101,6 +101,8 @@ struct UsagePanelView: View {
             }
             if preferences.showCommandCode {
                 CommandCodeOverviewCard(report: report(for: .commandcode),
+                                        fireState: model.commandCodeFireState,
+                                        onFire: { model.fireCommandCode() },
                                         openSettings: { onSettings?() })
             }
         }
@@ -169,7 +171,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.2"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -586,7 +588,7 @@ struct DeepSeekOverviewCard: View {
     }
 }
 
-// MARK: - Command Code card (416 × 162)
+// MARK: - Command Code card (416 × 176)
 
 /// Internal rather than private for the same reason as the DeepSeek card.
 struct CommandCodeOverviewCard: View {
@@ -596,12 +598,23 @@ struct CommandCodeOverviewCard: View {
     static let windowGroupSpacing: CGFloat = 4
     static let headerHeight: CGFloat = 24
     static let summaryHeight: CGFloat = 33
+    static let footerHeight: CGFloat = 13
     static let valueWidth: CGFloat = 116
+    static let fireButtonWidth: CGFloat = 76
+    static let fireButtonTitle = "5 小时点火"
+    static let fireButtonRunningTitle = "点火中…"
+    static let confirmationTitle = "启动 Command Code 5 小时额度窗口？"
+    static let confirmationMessage = "将把钥匙串中的 Command Code Key 交给官方 CLI 执行一次最小模型请求，会消耗少量额度。输出不会保存。"
+    static let confirmButtonTitle = "确认点火"
+    static let cancelButtonTitle = "取消"
 
     let report: ProviderReport
+    var fireState = CommandCodeFireViewState()
+    var onFire: (() -> Void)? = nil
     let openSettings: () -> Void
     /// Injected so the render tests can pin one clock reading.
     var now: Date = Date()
+    @State private var showsFireConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -612,6 +625,7 @@ struct CommandCodeOverviewCard: View {
                     .padding(.bottom, kind == .billingPeriod ? 0 : Self.windowGroupSpacing - 1)
             }
             summary.frame(height: Self.summaryHeight)
+            fireFooter.frame(height: Self.footerHeight)
         }
         .padding(10)
         .frame(width: Self.size.width, height: Self.size.height, alignment: .topLeading)
@@ -622,26 +636,59 @@ struct CommandCodeOverviewCard: View {
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
+        .confirmationDialog(Self.confirmationTitle,
+                            isPresented: $showsFireConfirmation,
+                            titleVisibility: .visible) {
+            Button(Self.confirmButtonTitle) { onFire?() }
+            Button(Self.cancelButtonTitle, role: .cancel) {}
+        } message: {
+            Text(Self.confirmationMessage)
+        }
     }
 
-    /// Cached numbers stay on display but every track is drawn fainter.
+    /// Report-level cache state applies to every row. Auxiliary components retain their own
+    /// freshness because a live credits read may legitimately reuse older enrichment data.
     private var isCached: Bool { report.connection == .stale }
+    private var summaryFreshness: ProviderUsageComponentFreshness? { report.usage?.summaryFreshness }
+    private var subscriptionFreshness: ProviderUsageComponentFreshness? { report.usage?.subscriptionFreshness }
+    private var planFreshness: ProviderUsageComponentFreshness? {
+        guard report.usage?.planName?.isEmpty == false else { return nil }
+        return subscriptionFreshness
+    }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
             CommandCodeHeaderIdentity(connection: report.connection,
                                       planName: report.usage?.planName,
-                                      lastSuccessAt: report.lastSuccessAt)
+                                      lastSuccessAt: report.lastSuccessAt,
+                                      planFreshness: planFreshness)
             Spacer(minLength: 8)
-            if report.usage == nil {
+            if report.usage == nil && report.connection == .notConfigured {
                 Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
                     .buttonStyle(.link)
                     .font(.system(size: 10))
+            } else {
+                Button {
+                    showsFireConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        if fireState.isFiring { ProgressView().controlSize(.small) }
+                        Text(fireState.isFiring ? Self.fireButtonRunningTitle : Self.fireButtonTitle)
+                            .font(.system(size: 10))
+                            .lineLimit(1)
+                    }
+                    .frame(width: Self.fireButtonWidth, height: 22)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(fireState.isFiring)
+                .accessibilityLabel("Command Code \(Self.fireButtonTitle)")
             }
         }
         // The cached state must be readable, not just implied by the fainter tracks.
         .help(CommandCodeCardPresentation.helpText(connection: report.connection,
-                                                   lastSuccessAt: report.lastSuccessAt))
+                                                   lastSuccessAt: report.lastSuccessAt,
+                                                   planFreshness: planFreshness))
     }
 
     // MARK: Window rows
@@ -650,6 +697,12 @@ struct CommandCodeOverviewCard: View {
     /// (REVISION_SPEC.md §7.1–§7.3).
     private func windowBlock(_ kind: ProviderUsageWindow.Kind) -> some View {
         let window = window(kind)
+        let usesCachedSummary = summaryFreshness?.isCached == true
+            && window?.used != nil
+        let usesCachedSubscription = subscriptionFreshness?.isCached == true
+            && (report.usage?.billingPeriodStart != nil || report.usage?.billingPeriodEnd != nil)
+        let rowIsCached = isCached || (kind == .billingPeriod
+            && (usesCachedSummary || usesCachedSubscription))
         let time = ProviderTimeModel.progress(kind: kind,
                                              window: window,
                                              billingPeriodStart: report.usage?.billingPeriodStart,
@@ -663,11 +716,11 @@ struct CommandCodeOverviewCard: View {
                 ProviderTrackBar(fraction: window?.remainingFraction,
                                  tint: .purple,
                                  height: 5,
-                                 isCached: isCached)
+                                 isCached: rowIsCached)
                     .frame(maxWidth: .infinity)
                 Text(CommandCodeCardPresentation.quotaText(window))
                     .font(.system(size: 9, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(rowIsCached ? Color.orange : Color.secondary)
                     .lineLimit(1)
                     .frame(width: Self.valueWidth, alignment: .trailing)
             }
@@ -676,7 +729,7 @@ struct CommandCodeOverviewCard: View {
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
                     .frame(width: 46, alignment: .leading)
-                ProviderTimeBar(progress: time.progress, isCached: isCached)
+                ProviderTimeBar(progress: time.progress, isCached: rowIsCached)
                     .frame(maxWidth: .infinity)
                 Text(CommandCodeCardPresentation.timeText(kind: kind,
                                                           window: window,
@@ -684,7 +737,7 @@ struct CommandCodeOverviewCard: View {
                                                           outcome: time,
                                                           now: now))
                     .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(rowIsCached ? Color.orange : Color.secondary)
                     .lineLimit(1)
                     .frame(width: Self.valueWidth, alignment: .trailing)
             }
@@ -698,17 +751,63 @@ struct CommandCodeOverviewCard: View {
     // MARK: Summary
 
     private var summary: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(CommandCodeCardPresentation.summaryLines(report.usage?.summary).enumerated()),
-                    id: \.offset) { _, line in
+        let summaryIsCached = isCached || summaryFreshness?.isCached == true
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(CommandCodeCardPresentation.summaryLines(report.usage?.summary,
+                                                                    isCached: summaryIsCached).enumerated()),
+                    id: \.offset) { index, line in
                 Text(line)
                     .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(summaryIsCached && index == 0 ? Color.orange : Color.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(height: 11, alignment: .leading)
             }
         }
+        .help(summaryIsCached
+              ? CommandCodeCardPresentation.componentCacheHelpText(name: "统计",
+                                                                    freshness: summaryFreshness,
+                                                                    fallback: report.lastSuccessAt)
+              : "实时统计")
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(summaryIsCached
+                            ? CommandCodeCardPresentation.componentCacheHelpText(name: "统计",
+                                                                                 freshness: summaryFreshness,
+                                                                                 fallback: report.lastSuccessAt)
+                            : "实时统计")
+    }
+
+    private var fireFooter: some View {
+        HStack(spacing: 6) {
+            Spacer(minLength: 0)
+            Text(fireState.resultText)
+                .font(.system(size: 9))
+                .foregroundStyle(fireResultColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("点火状态")
+                .accessibilityValue(fireState.result == nil ? "未点火" : fireState.statusText)
+                .help(fireState.history.isEmpty
+                      ? fireState.statusText
+                      : fireState.history.map(\.displayLine).joined(separator: "\n"))
+            if let drift = fireState.driftText {
+                Text("· \(drift)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(fireResultColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    private var fireResultColor: Color {
+        guard let result = fireState.result else { return .secondary }
+        if result.isSuccess { return .green }
+        if result.isFailure { return .orange }
+        return .secondary
     }
 }
 
@@ -717,13 +816,15 @@ struct CommandCodeOverviewCard: View {
 ///
 /// It is a view of its own for two reasons, both about accessibility (REVIEW.md R1):
 /// - it is the only part of the header that may be combined into a single accessibility
-///   element. Combining a container that holds a `Button` merges the button away and leaves it
-///   without its own `AXPress` action, so the settings button must stay *outside* this type;
+///   element. Combining a container that holds a `Button` folds the entry into the
+///   container: the measured harm is the lost entry element and its own label (VoiceOver
+///   only announces the header), so the settings button must stay *outside* this type;
 /// - a test can host it alone and assert that no interactive control lives inside it.
 struct CommandCodeHeaderIdentity: View {
     let connection: ProviderConnectionState
     let planName: String?
     let lastSuccessAt: Date?
+    let planFreshness: ProviderUsageComponentFreshness?
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
@@ -731,7 +832,9 @@ struct CommandCodeHeaderIdentity: View {
                 .frame(width: 20, height: 20)
             VStack(alignment: .leading, spacing: 0) {
                 Text("Command Code").font(.system(size: 12, weight: .bold)).lineLimit(1)
-                Text(CommandCodeCardPresentation.subtitle(connection: connection, planName: planName))
+                Text(CommandCodeCardPresentation.subtitle(connection: connection,
+                                                          planName: planName,
+                                                          planIsCached: planFreshness?.isCached == true))
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -744,7 +847,8 @@ struct CommandCodeHeaderIdentity: View {
         .accessibilityLabel("Command Code")
         .accessibilityValue(CommandCodeCardPresentation.accessibilitySubtitle(connection: connection,
                                                                               planName: planName,
-                                                                              lastSuccessAt: lastSuccessAt))
+                                                                              lastSuccessAt: lastSuccessAt,
+                                                                              planFreshness: planFreshness))
     }
 }
 
@@ -768,11 +872,12 @@ enum CommandCodeCardPresentation {
     /// The card's one-line subtitle (REQUIREMENTS.md §5.4). A plan name is only ever appended
     /// to, never replaced: a cached report with a plan says `<套餐> · 缓存`, so the cache state
     /// stays visible instead of being hidden behind the plan name.
-    static func subtitle(connection: ProviderConnectionState, planName: String?) -> String {
+    static func subtitle(connection: ProviderConnectionState, planName: String?,
+                         planIsCached: Bool = false) -> String {
         let plan = planName.flatMap { $0.isEmpty ? nil : $0 }
         switch connection {
         case .connected:
-            return plan ?? "已连接"
+            return plan.map { planIsCached ? "\($0) · 缓存" : $0 } ?? "已连接"
         case .stale:
             return plan.map { "\($0) · 缓存" } ?? "缓存数据"
         case .connecting: return "正在获取"
@@ -790,19 +895,35 @@ enum CommandCodeCardPresentation {
     }
 
     /// Tooltip for the header. Only a cached report needs anything beyond its own subtitle.
-    static func helpText(connection: ProviderConnectionState, lastSuccessAt: Date?) -> String {
-        guard connection == .stale else { return subtitle(connection: connection, planName: nil) }
-        return cacheHelpText(lastSuccessAt: lastSuccessAt)
+    static func helpText(connection: ProviderConnectionState, lastSuccessAt: Date?,
+                         planFreshness: ProviderUsageComponentFreshness? = nil) -> String {
+        if connection == .stale { return cacheHelpText(lastSuccessAt: lastSuccessAt) }
+        if planFreshness?.isCached == true {
+            return componentCacheHelpText(name: "套餐", freshness: planFreshness, fallback: lastSuccessAt)
+        }
+        return subtitle(connection: connection, planName: nil)
     }
 
     /// Accessibility value: the subtitle always, plus the cache wording when cached, so the
     /// cache semantics survive into assistive technology.
     static func accessibilitySubtitle(connection: ProviderConnectionState,
                                       planName: String?,
-                                      lastSuccessAt: Date?) -> String {
-        let base = subtitle(connection: connection, planName: planName)
-        guard connection == .stale else { return base }
-        return "\(base)，\(cacheHelpText(lastSuccessAt: lastSuccessAt))"
+                                      lastSuccessAt: Date?,
+                                      planFreshness: ProviderUsageComponentFreshness? = nil) -> String {
+        let planIsCached = planFreshness?.isCached == true
+        let base = subtitle(connection: connection, planName: planName, planIsCached: planIsCached)
+        if connection == .stale { return "\(base)，\(cacheHelpText(lastSuccessAt: lastSuccessAt))" }
+        guard planIsCached else { return base }
+        return "\(base)，\(componentCacheHelpText(name: "套餐", freshness: planFreshness, fallback: lastSuccessAt))"
+    }
+
+    static func componentCacheHelpText(name: String,
+                                       freshness: ProviderUsageComponentFreshness?,
+                                       fallback: Date?) -> String {
+        guard let successfulAt = freshness?.lastSuccessfulAt ?? fallback else {
+            return "\(name)缓存 · 成功时间未知"
+        }
+        return "\(name)缓存 · 上次成功 \(UsageFormatting.shortDateTime(successfulAt))"
     }
 
     /// `$3.00 / $4.00`, built only from values the service actually reported. The track carries
@@ -845,9 +966,10 @@ enum CommandCodeCardPresentation {
 
     /// Exactly three single-line summaries, in the fixed order. Any field the service did not
     /// report is a `—`, never a fabricated zero and never an extra line.
-    static func summaryLines(_ summary: ProviderUsageSummary?) -> [String] {
-        [
-            "\(periodText(summary?.periodBasis)) · Token \(count(summary?.totalTokens)) · 请求 \(count(summary?.totalRuns))",
+    static func summaryLines(_ summary: ProviderUsageSummary?, isCached: Bool = false) -> [String] {
+        let cachePrefix = isCached ? "缓存 · " : ""
+        return [
+            "\(cachePrefix)\(periodText(summary?.periodBasis)) · Token \(count(summary?.totalTokens)) · 请求 \(count(summary?.totalRuns))",
             "输入 \(count(summary?.inputTokens)) · 输出 \(count(summary?.outputTokens)) · 成功 \(count(summary?.completedRuns)) · 失败 \(count(summary?.failedRuns))",
             "成功率 \(percent(summary?.successRate)) · 成本 \(UsageFormatting.usdAmount(summary?.totalCostUSD))",
         ]

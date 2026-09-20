@@ -22,6 +22,10 @@ public enum ChatGPTFireResult: Equatable, Sendable {
     case requestSucceededConfirmationUnavailable
     /// The official Codex CLI could not be located.
     case codexCLINotFound
+    /// The official Command Code CLI could not be located.
+    case commandCodeCLINotFound
+    /// The Command Code Key could not be read for this request.
+    case credentialUnavailable
     /// The process could not be launched at all.
     case launchFailed
     /// The process exited with a non-zero status.
@@ -38,6 +42,8 @@ public enum ChatGPTFireResult: Equatable, Sendable {
         case .requestSucceededWindowUnchanged: return "请求成功，窗口未变化"
         case .requestSucceededConfirmationUnavailable: return "请求成功，暂无法确认"
         case .codexCLINotFound: return "Codex CLI 不可用"
+        case .commandCodeCLINotFound: return "Command Code CLI 不可用"
+        case .credentialUnavailable: return "Command Code Key 不可用"
         case .launchFailed: return "点火进程启动失败"
         case .nonZeroExit: return "点火请求失败"
         case .timedOut: return "点火请求超时"
@@ -52,7 +58,8 @@ public enum ChatGPTFireResult: Equatable, Sendable {
     /// succeeded" results stay secondary: neither is a failure.
     public var isFailure: Bool {
         switch self {
-        case .codexCLINotFound, .launchFailed, .nonZeroExit, .timedOut, .alreadyRunning:
+        case .codexCLINotFound, .commandCodeCLINotFound, .credentialUnavailable,
+             .launchFailed, .nonZeroExit, .timedOut, .alreadyRunning:
             return true
         case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged,
              .requestSucceededConfirmationUnavailable:
@@ -95,10 +102,15 @@ public enum FireWindowConfirmation {
 
     /// Final classification for one request, from the pre-fire time and the confirmation
     /// reads actually taken (one when the first was already conclusive, otherwise two).
-    public static func classify(previousReset: Date?, observations: [Observation]) -> ChatGPTFireResult {
-        // No "before" value means the comparison the confirmation is built on does not exist,
-        // however good the "after" value looks.
-        guard let previousReset else { return .requestSucceededConfirmationUnavailable }
+    public static func classify(previousReset: Date?,
+                                previousWasLive: Bool,
+                                observations: [Observation]) -> ChatGPTFireResult {
+        // A cached before-value is not evidence from this request's starting point. Even when
+        // it happens to carry a reset time, comparing a later live value against it could
+        // falsely claim either a changed or unchanged window.
+        guard previousWasLive, let previousReset else {
+            return .requestSucceededConfirmationUnavailable
+        }
         let liveTimes = observations.compactMap { observation -> Date? in
             switch observation {
             case .live(let resetsAt): return resetsAt
@@ -111,8 +123,67 @@ public enum FireWindowConfirmation {
     }
 }
 
-/// What launching the fixed Codex CLI command reported, before the window comparison.
+/// One entry of a profile's in-memory fire history. Process lifetime only: never
+/// persisted, never logged, never cached (REQUIREMENTS.md §3.4).
+public struct FireHistoryEntry: Equatable, Sendable {
+    public let result: ChatGPTFireResult
+    public let finishedAt: Date
+    /// Forward movement of the 5-hour `resetsAt` in seconds, or nil when there was
+    /// nothing comparable to measure.
+    public let driftSeconds: TimeInterval?
+
+    public init(result: ChatGPTFireResult, finishedAt: Date, driftSeconds: TimeInterval? = nil) {
+        self.result = result
+        self.finishedAt = finishedAt
+        self.driftSeconds = driftSeconds
+    }
+
+    /// Fixed tooltip line: `MM-dd HH:mm 结果` plus the drift when one exists.
+    public var displayLine: String {
+        let time = Self.timeText(finishedAt)
+        if let driftSeconds {
+            return "\(time) \(result.displayText) · \(FireWindowDrift.displayText(driftSeconds))"
+        }
+        return "\(time) \(result.displayText)"
+    }
+
+    private static func timeText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        return formatter.string(from: date)
+    }
+}
+
+/// Pure arithmetic over two observed reset times: how far the window moved.
 ///
+/// Returns nil when either side is missing or when the later read is not actually
+/// later. A small positive value is clock skew, not a new window — that judgement
+/// stays with `FireWindowConfirmation` and its 60-second threshold. This type only
+/// measures, so the card can show the number the classifier already decided on.
+public enum FireWindowDrift {
+
+    /// Seconds the window moved forward, or nil when there is nothing to compare.
+    public static func shift(from previous: Date?, to current: Date?) -> TimeInterval? {
+        guard let previous, let current else { return nil }
+        let delta = current.timeIntervalSince(previous)
+        guard delta.isFinite, delta >= 0 else { return nil }
+        return delta
+    }
+
+    /// Fixed Chinese units: `+X小时Y分` / `+X分Y秒` / `+X秒`. No milliseconds.
+    public static func displayText(_ interval: TimeInterval) -> String {
+        // Truncate sub-second noise instead of rounding across the same 60-second boundary
+        // used by the classifier: an unchanged 59.6-second drift must never read `+1分0秒`.
+        let total = max(0, Int(interval.rounded(.down)))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 { return "+\(hours)小时\(minutes)分" }
+        if minutes > 0 { return "+\(minutes)分\(seconds)秒" }
+        return "+\(seconds)秒"
+    }
+}
+
 /// The three "request succeeded" card values cannot be produced by the launch alone, so they
 /// are absent here on purpose: the view model produces them from a real refresh.
 public enum ChatGPTFireProcessOutcome: Equatable, Sendable {
@@ -139,6 +210,7 @@ public enum ChatGPTFireProcessOutcome: Equatable, Sendable {
 }
 
 /// Fixed process lifecycle category for diagnostics. No exit code, no output text.
+/// What launching the fixed Codex CLI command reported, before the window comparison.
 extension ChatGPTFireProcessOutcome {
     public var debugSummary: String {
         switch self {
