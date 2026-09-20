@@ -2,7 +2,7 @@
 
 ## 1.3.2（2026-09-20）
 
-状态：点火确认、刷新功耗优化、每日多时点点火计划与 Command Code 手动点火已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项明确跳过、0 失败；Release arm64 构建与 staging/install/archive 严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 明确授权发布；真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，不随发布改记为通过。
+状态：点火确认、刷新功耗优化、每日多时点点火计划与 Command Code 手动点火已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项明确跳过、0 失败；Release arm64 构建与 staging/install/archive 严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 明确授权发布；发布提交 `c51791b`、annotated tag `v1.3.2` 和 [GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.3.2) 已完成。真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，不随发布改记为通过。
 
 ### 点火确认
 

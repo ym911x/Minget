@@ -95,7 +95,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 ## 当前版本
 
 - 当前版本：`1.3.2`
-- 状态：点火轻量确认、差值与历史、30/60/120 秒刷新、Command Code 辅助缓存、唤醒探活、每日多时点点火计划和 Command Code 卡片点火均已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项 AX XCTest 明确跳过、0 失败；测试使用 fake CLI/Keychain/transport，不消耗额度。Command Code 真实手动点火已由用户在 PATH 修复签名包中确认成功。用户于 2026-09-20 接受 1.3.2 发布，真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，详见 [1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)。
+- 状态：点火轻量确认、差值与历史、30/60/120 秒刷新、Command Code 辅助缓存、唤醒探活、每日多时点点火计划和 Command Code 卡片点火均已实现。506 项自动测试执行（Core 360、App 146），505 通过、1 项 AX XCTest 明确跳过、0 失败；测试使用 fake CLI/Keychain/transport，不消耗额度。Command Code 真实手动点火已由用户在 PATH 修复签名包中确认成功。用户于 2026-09-20 接受 1.3.2 发布，真实睡眠/唤醒、完整界面和 Command Code 定时点火保留为发布后验证项，详见 [1.3.2 验收台账](docs/versions/1.3.2/ACCEPTANCE.md)和 [GitHub Release v1.3.2](https://github.com/ym911x/Minget/releases/tag/v1.3.2)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)

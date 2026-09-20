@@ -5,7 +5,7 @@
 ## 基线与边界
 
 - 日期：2026-09-20
-- 基线 HEAD：`5ec2b45`，发布分支 `main`
+- 基线 HEAD：`5ec2b45`；发布提交：`c51791b`；annotated tag：`v1.3.2`；发布分支：`main`
 - 版本：`1.3.2`
 - 全量测试使用 `mktemp` 创建的系统临时 scratch，避免 iCloud Finder 扩展属性导致 XCTest 签名失败。
 - 最终 PATH 修复后的 Release、运行副本与归档副本位于 `/tmp/minget-132-release-*`。早先一次验证误用了构建脚本默认路径，已将旧的 1.3.2 测试包写入 `/Users/yuyimeng/Applications/Minget.app`；后续最终验证未再修改该安装路径。

@@ -22,7 +22,7 @@
 
 `v1.3.1` 已完成并发布：两个 ChatGPT Profile 现在按完成顺序独立发布状态，快速账号不再被慢速账号延迟；点火结果细分为“新窗口已确认”“请求成功，窗口未变化”和“请求成功，暂无法确认”，第一次确认未成立时统一在 5 秒后再做一次只读刷新；Command Code 改为 credits 必须、summary/subscriptions 可选，辅助接口失败不再遮住已取得的额度，套餐名存在时明确标识缓存。Codex 复核发现的 Command Code 设置入口辅助功能阻断已修复，并以真实 AX 树独立验证。451 项自动化测试执行（Core 331、App 120），450 项通过、1 项跳过、0 项失败，Release 构建、严格签名和发布提交 CI 通过。窗口尺寸、菜单栏格式和凭证边界保持 1.3.0 不变；真实界面、真实 DeepSeek 菜单栏余额、A/B 真实点火和机器重启复验仍待用户执行。资料位于 `docs/versions/1.3.1/`，发布页为 [GitHub Release v1.3.1](https://github.com/ym911x/Minget/releases/tag/v1.3.1)。
 
-`v1.3.2` 已完成：点火确认只读额度不读身份，结果追加实测差值与最近 3 次内存历史；详情页时钟降为 30 秒，ChatGPT 按 30/60/120 秒退避，Command Code 辅助组件独立复用 15 分钟，唤醒先探活再按失败 Profile 完整刷新。版本加入 OpenAI A、OpenAI B、Command Code 每日多时点点火计划，以及 Command Code 卡片的手动点火；Command Code 仅在用户确认或勾选计划后，使用 Keychain Key 和隔离 `HOME` 调用官方 CLI 最小请求。506 项自动测试执行，505 通过、1 跳过、0 失败；Release arm64 构建与严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 授权发布；真实睡眠/唤醒、完整界面与 Command Code 定时点火转为发布后验证项，资料位于 `docs/versions/1.3.2/`。
+`v1.3.2` 已完成并发布：点火确认只读额度不读身份，结果追加实测差值与最近 3 次内存历史；详情页时钟降为 30 秒，ChatGPT 按 30/60/120 秒退避，Command Code 辅助组件独立复用 15 分钟，唤醒先探活再按失败 Profile 完整刷新。版本加入 OpenAI A、OpenAI B、Command Code 每日多时点点火计划，以及 Command Code 卡片的手动点火；Command Code 仅在用户确认或勾选计划后，使用 Keychain Key 和隔离 `HOME` 调用官方 CLI 最小请求。506 项自动测试执行，505 通过、1 跳过、0 失败；Release arm64 构建与严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 授权发布；真实睡眠/唤醒、完整界面与 Command Code 定时点火转为发布后验证项。资料位于 `docs/versions/1.3.2/`，发布页为 [GitHub Release v1.3.2](https://github.com/ym911x/Minget/releases/tag/v1.3.2)。
 
 ## 候选方向
 
