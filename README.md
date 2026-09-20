@@ -16,7 +16,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 - 设置页可调整低额度加速开关、15/30/60 秒周期、5 小时阈值、周阈值和 DeepSeek CNY 金额阈值；默认值为启用、30 秒、50%、15%、15.00 元。
 - 当前来源切换、阈值严格小于边界、无效输入 fail-closed 和补充 timer 停止均有回归测试。
 
-本版本已通过发布验收：513 项自动测试执行，512 通过、1 项既有 AX 环境跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。真实低额度服务轮询未通过人为制造额度条件触发，保留为发布后现场观察项。详见 [1.4.0 需求](docs/versions/1.4.0/REQUIREMENTS.md)与[验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
+本版本已通过发布验收：513 项自动测试执行，512 通过、1 项既有 AX 环境跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。发布提交 CI 通过，源码已随 [Minget v1.4.0](https://github.com/ym911x/Minget/releases/tag/v1.4.0) 发布。真实低额度服务轮询未通过人为制造额度条件触发，保留为发布后现场观察项。详见 [1.4.0 需求](docs/versions/1.4.0/REQUIREMENTS.md)与[验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
 
 ## v1.3.2 修订
 
@@ -104,7 +104,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 ## 当前版本
 
 - 当前版本：`1.4.0`
-- 状态：1.4.0 已实现 Command Code 模型统一和菜单栏当前来源低额度自适应刷新；默认补充周期 30 秒，周期与阈值可在设置中调整。最终自动测试 513 项执行，512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。真实低额度服务轮询保留为发布后现场观察项。资料见 [1.4.0 验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
+- 状态：1.4.0 已实现 Command Code 模型统一和菜单栏当前来源低额度自适应刷新；默认补充周期 30 秒，周期与阈值可在设置中调整。最终自动测试 513 项执行，512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、严格签名、签名包退出/重启、设置页明暗布局和发布提交 CI 通过。源码已随 [GitHub Release v1.4.0](https://github.com/ym911x/Minget/releases/tag/v1.4.0) 发布；真实低额度服务轮询保留为发布后现场观察项。资料见 [1.4.0 验收台账](docs/versions/1.4.0/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)

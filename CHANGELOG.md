@@ -2,7 +2,7 @@
 
 ## 1.4.0（2026-09-20）
 
-状态：发布验收通过，待创建 `v1.4.0` 标签与 GitHub Release。513 项自动测试执行（Core 360、App 153），512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。
+状态：发布验收通过并已发布。513 项自动测试执行（Core 360、App 153），512 通过、1 项既有 AX XCTest 明确跳过、0 失败；Release arm64 构建、staging/install/archive 严格签名、签名包退出/重启和设置页明暗布局检查通过。发布提交 `b9c2701`、annotated tag `v1.4.0`、[GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.4.0) 与 CI `35514875456` 均已完成。
 
 ### 点火模型统一
 

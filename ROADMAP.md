@@ -24,7 +24,7 @@
 
 `v1.3.2` 已完成并发布：点火确认只读额度不读身份，结果追加实测差值与最近 3 次内存历史；详情页时钟降为 30 秒，ChatGPT 按 30/60/120 秒退避，Command Code 辅助组件独立复用 15 分钟，唤醒先探活再按失败 Profile 完整刷新。版本加入 OpenAI A、OpenAI B、Command Code 每日多时点点火计划，以及 Command Code 卡片的手动点火；Command Code 仅在用户确认或勾选计划后，使用 Keychain Key 和隔离 `HOME` 调用官方 CLI 最小请求。506 项自动测试执行，505 通过、1 跳过、0 失败；Release arm64 构建与严格签名通过，Command Code 真实手动点火已由用户确认成功。用户于 2026-09-20 授权发布；真实睡眠/唤醒、完整界面与 Command Code 定时点火转为发布后验证项。资料位于 `docs/versions/1.3.2/`，发布页为 [GitHub Release v1.3.2](https://github.com/ym911x/Minget/releases/tag/v1.3.2)。
 
-`v1.4.0` 已完成并通过发布验收：应用内与外部 Command Code 点火路径统一使用 `deepseek/deepseek-v4.1-flash`；菜单栏当前选中的 ChatGPT/DeepSeek 来源支持可配置阈值与 15/30/60 秒低额度补充刷新。513 项自动测试执行，512 通过、1 跳过、0 失败；Release 构建、严格签名、签名包退出/重启和设置页明暗布局检查通过。真实低额度服务轮询保留为发布后现场观察项。资料位于 `docs/versions/1.4.0/`。
+`v1.4.0` 已完成并发布：应用内与外部 Command Code 点火路径统一使用 `deepseek/deepseek-v4.1-flash`；菜单栏当前选中的 ChatGPT/DeepSeek 来源支持可配置阈值与 15/30/60 秒低额度补充刷新。513 项自动测试执行，512 通过、1 跳过、0 失败；Release 构建、严格签名、签名包退出/重启、设置页明暗布局和发布提交 CI 通过。真实低额度服务轮询保留为发布后现场观察项。资料位于 `docs/versions/1.4.0/`，发布页为 [GitHub Release v1.4.0](https://github.com/ym911x/Minget/releases/tag/v1.4.0)。
 
 ## 候选方向
 

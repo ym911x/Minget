@@ -1,6 +1,6 @@
 # 1.4.0 实施任务
 
-状态：代码、自动验证、Release 构建和发布验收已完成，待创建标签与 GitHub Release。需求与边界以 `REQUIREMENTS.md` 为准。
+状态：代码、自动验证、Release 构建、发布验收、标签和 GitHub Release 已完成。需求与边界以 `REQUIREMENTS.md` 为准。
 
 ## 1. 模型统一
 
@@ -36,3 +36,5 @@
 最终 `swift test --disable-sandbox --scratch-path /tmp/minget-140-release-tests` 已完成：Core 360 项通过；App 153 项执行，152 项通过、1 项既有 AX XCTest 明确跳过、0 项失败。合计 513 项执行，512 项通过、1 项跳过、0 项失败。
 
 最终 `scripts/build.sh` 使用独立 `/tmp` scratch/staging/archive 目录完成 Release arm64 构建；staging、`~/Applications/Minget.app` 与 archive 均通过严格签名。已安装包完成真实退出与重新启动，版本为 1.4.0，运行二进制包含固定模型 `deepseek/deepseek-v4.1-flash`。
+
+发布提交 `b9c2701`、annotated tag `v1.4.0` 和 [GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.4.0) 已完成；发布提交 CI `35514875456` 通过。
