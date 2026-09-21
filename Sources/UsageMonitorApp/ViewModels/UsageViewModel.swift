@@ -52,6 +52,8 @@ public final class UsageViewModel: ObservableObject {
     /// Menu bar source, currency and menu-bar-only cadence preferences. No credentials or
     /// provider caches are stored here.
     let menuBarPreferences: MenuBarPreferences
+    /// Local display metadata shared by the detail and settings surfaces.
+    let displayNames: DisplayNamePreferences
     private let fireService: ChatGPTFireService
     private let commandCodeFireService: CommandCodeFireService
     let fireSchedules: FireSchedulePreferences
@@ -134,6 +136,7 @@ public final class UsageViewModel: ObservableObject {
     public init(coordinator: CodexProfilesCoordinator,
                 providerEngine: ProviderRefreshEngine,
                 menuBarPreferences: MenuBarPreferences = .shared,
+                displayNames: DisplayNamePreferences = .shared,
                 fireService: ChatGPTFireService = ChatGPTFireService(),
                 commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
                 fireSchedules: FireSchedulePreferences? = nil,
@@ -148,6 +151,7 @@ public final class UsageViewModel: ObservableObject {
         self.coordinator = coordinator
         self.providerEngine = providerEngine
         self.menuBarPreferences = menuBarPreferences
+        self.displayNames = displayNames
         self.fireService = fireService
         self.commandCodeFireService = commandCodeFireService
         self.fireSchedules = fireSchedules ?? FireSchedulePreferences()
@@ -167,6 +171,7 @@ public final class UsageViewModel: ObservableObject {
     public convenience init(service: UsageService,
                             providerEngine: ProviderRefreshEngine,
                             menuBarPreferences: MenuBarPreferences = .shared,
+                            displayNames: DisplayNamePreferences = .shared,
                             fireService: ChatGPTFireService = ChatGPTFireService(),
                             commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
                             fireSchedules: FireSchedulePreferences? = nil,
@@ -179,9 +184,10 @@ public final class UsageViewModel: ObservableObject {
                             fireRetryDelay: TimeInterval = 5,
                             clockInterval: TimeInterval = 30) {
         self.init(coordinator: CodexProfilesCoordinator(profiles: [ChatGPTAccountProfile.chatGPTA],
-                                                          makeService: { _ in service }),
+                                                        makeService: { _ in service }),
                   providerEngine: providerEngine,
                   menuBarPreferences: menuBarPreferences,
+                  displayNames: displayNames,
                   fireService: fireService,
                   commandCodeFireService: commandCodeFireService,
                   fireSchedules: fireSchedules,

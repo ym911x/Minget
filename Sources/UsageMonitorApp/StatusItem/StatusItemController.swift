@@ -299,20 +299,19 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             showDetailWindow()
             return
         }
-        let preferences = DetailPreferences.shared
-        let size = Self.panelSize(for: preferences)
-
-        // A panel wider or taller than the screen comes up with its far edge off-screen and
-        // cannot be dragged back, so a page that does not fit is shown in the regular detail
-        // window instead (REVISION_SPEC.md §8.2).
         let screen = buttonWindow.screen ?? NSScreen.main
+        let preferences = DetailPreferences.shared
+        let size = Self.panelSize(for: preferences, visibleFrame: screen?.visibleFrame)
+
+        // A short screen is handled by the page's scroll region. Only an unavailable width
+        // still requires the regular detail window fallback.
         guard Self.panelFits(size: size, visibleFrame: screen?.visibleFrame) else {
-            Diagnostics.log("panel does not fit the screen, opening the detail window instead")
+            Diagnostics.log("panel width does not fit the screen, opening the detail window instead")
             showDetailWindow()
             return
         }
 
-        guard let controller = makePanelViewController() else { return }
+        guard let controller = makePanelViewController(maxHeight: size.height) else { return }
         NSApp.activate(ignoringOtherApps: true)
         // Both the hosting controller and the popover are given the final size *before*
         // `show`, so AppKit positions a panel of the right size rather than resizing one it
@@ -376,21 +375,25 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func makePanelViewController() -> PanelHostingController? {
+    func makePanelViewController(maxHeight: CGFloat? = nil) -> PanelHostingController? {
         guard let model else { return nil }
         return PanelHostingController(
             model: model,
             preferences: DetailPreferences.shared,
+            maxHeight: maxHeight,
             onSettings: { [weak self] in self?.showSettingsWindow() })
     }
 
     // MARK: - Panel geometry
 
     /// The panel's content size for the current display preferences.
-    static func panelSize(for preferences: DetailPreferences) -> NSSize {
-        NSSize(width: DetailPageLayout.pageWidth,
-               height: DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
-                                                   showCommandCode: preferences.showCommandCode))
+    static func panelSize(for preferences: DetailPreferences,
+                          visibleFrame: CGRect? = nil) -> NSSize {
+        let preferredHeight = DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
+                                                          showCommandCode: preferences.showCommandCode)
+        return NSSize(width: DetailPageLayout.pageWidth,
+                      height: DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
+                                                              visibleFrame: visibleFrame))
     }
 
     /// The popover anchor: a two-point-wide rect at the button's horizontal midpoint, so the
@@ -402,15 +405,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                height: buttonBounds.height)
     }
 
-    /// Whether the panel fits entirely inside the screen's visible area, allowing a small
-    /// margin for the popover chrome and the arrow.
+    /// Whether the panel width fits inside the screen's visible area. Height may be capped by
+    /// `panelSize` and rendered with a scroll region when the page is taller than the screen.
     ///
     /// Pure on purpose: the caller passes a real `NSScreen.visibleFrame`, and the tests pass
     /// synthetic ones, so the fit rule is pinned without a window server.
     static func panelFits(size: NSSize, visibleFrame: CGRect?, inset: CGFloat = 8) -> Bool {
         guard let visibleFrame, visibleFrame.width > 0, visibleFrame.height > 0 else { return false }
         let usable = visibleFrame.insetBy(dx: inset, dy: inset)
-        return size.width <= usable.width && size.height <= usable.height
+        return size.width <= usable.width
     }
 
     /// Opens the detail window once, if the item is not visible after launch layout.
@@ -461,9 +464,11 @@ final class MenuBarHostingView: NSHostingView<MenuBarLabelView> {
 final class PanelHostingController: NSHostingController<UsagePanelView> {
     init(model: UsageViewModel,
          preferences: DetailPreferences,
+         maxHeight: CGFloat? = nil,
          onSettings: (() -> Void)?) {
         let view = UsagePanelView(model: model,
                                   preferences: preferences,
+                                  maxHeight: maxHeight,
                                   onSettings: onSettings)
         super.init(rootView: view)
     }
@@ -487,10 +492,14 @@ final class DetailWindowController: NSWindowController {
     init(model: UsageViewModel,
          onSettings: (() -> Void)?) {
         let preferences = DetailPreferences.shared
+        let preferredHeight = UsagePanelView.preferredHeight(for: preferences)
+        let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
+                                                        visibleFrame: NSScreen.main?.visibleFrame)
         let panel = UsagePanelView(model: model,
                                    preferences: preferences,
+                                   maxHeight: maxHeight,
                                    onSettings: onSettings)
-        let height = UsagePanelView.preferredHeight(for: preferences)
+        let height = maxHeight
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0,
                                                   width: DetailPageLayout.pageWidth,
                                                   height: height),
@@ -514,7 +523,9 @@ final class DetailWindowController: NSWindowController {
 
     private func applyPreferredContentSize() {
         guard let window else { return }
-        let height = UsagePanelView.preferredHeight(for: DetailPreferences.shared)
+        let preferredHeight = UsagePanelView.preferredHeight(for: DetailPreferences.shared)
+        let height = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
+                                                     visibleFrame: NSScreen.main?.visibleFrame)
         window.setContentSize(NSSize(width: DetailPageLayout.pageWidth, height: height))
     }
 

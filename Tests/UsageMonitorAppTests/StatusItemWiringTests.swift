@@ -117,22 +117,23 @@ final class StatusItemWiringTests: XCTestCase {
 
     // MARK: - Popover geometry (REVISION_SPEC.md §8, §11.5)
 
-    /// The panel's size must be the page's real size, for every display-preference state.
-    func testPanelSizeMatchesTheFixedPageSizes() {
+    /// The panel's preferred size follows the 1.4.1 single-column page; a short screen caps the
+    /// viewport while the page itself supplies the scroll region.
+    func testPanelSizeMatchesThePreferredPageSizes() {
         let defaults = UserDefaults(suiteName: "UsageMonitorAppTests.PanelSize." + UUID().uuidString)!
         defer { defaults.removePersistentDomain(forName: "UsageMonitorAppTests.PanelSize") }
         let preferences = DetailPreferences(defaults: defaults)
 
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 566))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 801))
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 512))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 721))
 
         preferences.showCommandCode = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 330))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 432))
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 384))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 512))
     }
 
     /// The hosting controller and the popover must be given the same size before `show`, so
@@ -175,8 +176,8 @@ final class StatusItemWiringTests: XCTestCase {
         XCTAssertEqual(wide.midX, 90, accuracy: 0.001)
     }
 
-    func testThePanelOnlyShowsWhenTheWholePageFitsOnScreen() {
-        let size = NSSize(width: 440, height: 566)
+    func testThePanelOnlyRequiresItsWidthAndCapsShortViewports() {
+        let size = NSSize(width: 440, height: 740)
 
         // A normal laptop screen: the panel fits with room to spare.
         XCTAssertTrue(StatusItemController.panelFits(
@@ -186,8 +187,9 @@ final class StatusItemWiringTests: XCTestCase {
         // must fall back to the detail window instead of showing a clipped popover.
         XCTAssertFalse(StatusItemController.panelFits(
             size: size, visibleFrame: CGRect(x: 0, y: 25, width: 420, height: 944)))
-        XCTAssertFalse(StatusItemController.panelFits(
-            size: size, visibleFrame: CGRect(x: 0, y: 25, width: 1512, height: 500)))
+        XCTAssertTrue(StatusItemController.panelFits(
+            size: size, visibleFrame: CGRect(x: 0, y: 25, width: 1512, height: 500)),
+            "a short screen uses the detail page scroll region")
 
         // No screen at all: never claim it fits.
         XCTAssertFalse(StatusItemController.panelFits(size: size, visibleFrame: nil))

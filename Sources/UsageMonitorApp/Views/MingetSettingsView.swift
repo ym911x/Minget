@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// 1.4.0 settings surface. The daily fire list is user-extensible, so the content scrolls
+/// 1.4.1 settings surface. The daily fire list is user-extensible, so the content scrolls
 /// inside a bounded window while the title and footer remain reachable.
 ///
 /// Top to bottom: title, the "菜单栏显示" radio group, the service group, advanced
@@ -16,6 +16,7 @@ struct MingetSettingsView: View {
     @ObservedObject var model: UsageViewModel
     @ObservedObject var preferences: DetailPreferences
     @ObservedObject var menuBarPreferences: MenuBarPreferences
+    @ObservedObject var displayNames: DisplayNamePreferences
     var onDetailWindow: (() -> Void)?
     var onQuit: () -> Void
 
@@ -26,11 +27,13 @@ struct MingetSettingsView: View {
     init(model: UsageViewModel,
          preferences: DetailPreferences = .shared,
          menuBarPreferences: MenuBarPreferences = .shared,
+         displayNames: DisplayNamePreferences? = nil,
          onDetailWindow: (() -> Void)? = nil,
          onQuit: @escaping () -> Void) {
         self.model = model
         self.preferences = preferences
         self.menuBarPreferences = menuBarPreferences
+        _displayNames = ObservedObject(wrappedValue: displayNames ?? model.displayNames)
         self.onDetailWindow = onDetailWindow
         self.onQuit = onQuit
         _deepSeekForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .deepseek))
@@ -44,7 +47,9 @@ struct MingetSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     menuBarGroup
-                    FireScheduleSettingsView(preferences: model.fireSchedules)
+                    displayNameGroup
+                    FireScheduleSettingsView(preferences: model.fireSchedules,
+                                             displayNames: displayNames)
                     serviceGroup
 
                     DisclosureGroup("高级诊断") {
@@ -83,7 +88,8 @@ struct MingetSettingsView: View {
                 ForEach(model.coordinator.profileIDs, id: \.self) { profileID in
                     Text(profileName(profileID)).tag(MenuBarPreferences.Selection.profile(profileID))
                 }
-                Text("DeepSeek").tag(MenuBarPreferences.Selection.deepSeek)
+                Text(displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek))
+                    .tag(MenuBarPreferences.Selection.deepSeek)
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
@@ -199,7 +205,11 @@ struct MingetSettingsView: View {
     }
 
     private func profileName(_ profileID: String) -> String {
-        model.profileState(profileID)?.profile.displayName ?? profileID
+        displayNames.displayName(for: profileID)
+    }
+
+    private var displayNameGroup: some View {
+        DisplayNameSettingsView(preferences: displayNames)
     }
 
     // MARK: - Services
@@ -209,12 +219,12 @@ struct MingetSettingsView: View {
             Text("服务").font(.system(size: 13, weight: .semibold)).padding(.bottom, 6)
             ForEach(Array(model.profileStates.enumerated()), id: \.element.id) { index, state in
                 if index > 0 { Divider().padding(.vertical, 6) }
-                ServiceStatusRow(title: state.profile.displayName,
+                ServiceStatusRow(title: displayNames.displayName(for: state.profile.id),
                                  subtitle: state.connectionText,
                                  detail: "CODEX_HOME \(state.profile.codexHomeDisplaySuffix)")
             }
             Divider().padding(.vertical, 6)
-            ServiceStatusRow(title: "DeepSeek", subtitle: providerStatus(.deepseek),
+            ServiceStatusRow(title: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek), subtitle: providerStatus(.deepseek),
                              detail: menuBarPreferences.selection == .deepSeek
                                  ? "菜单栏正在显示，隐藏详情卡不影响余额刷新"
                                  : nil,
@@ -226,7 +236,7 @@ struct MingetSettingsView: View {
                 DeepSeekSettingsView(form: deepSeekForm).padding(.top, 8)
             }
             Divider().padding(.vertical, 6)
-            ServiceStatusRow(title: "Command Code", subtitle: providerStatus(.commandcode),
+            ServiceStatusRow(title: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode), subtitle: providerStatus(.commandcode),
                              detail: nil, toggle: $preferences.showCommandCode,
                              buttonTitle: commandCodeForm.isExpanded ? "收起" : "管理") {
                 toggleForm(.commandcode)
@@ -282,12 +292,102 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.1"
+    }
+}
+
+private struct DisplayNameSettingsView: View {
+    @ObservedObject var preferences: DisplayNamePreferences
+    @State private var drafts: [String: String] = [:]
+    @State private var feedback: [String: String] = [:]
+
+    private static let serviceIDs = [
+        "chatgpt-a", "chatgpt-b",
+        DisplayNamePreferences.ServiceID.deepSeek,
+        DisplayNamePreferences.ServiceID.commandCode
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("显示名称").font(.system(size: 13, weight: .semibold))
+            Text("只修改详情页和设置里的显示文字，不改变账号、缓存或点火计划绑定。最多 40 个字符。")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(Self.serviceIDs, id: \.self) { serviceID in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(fixedLabel(for: serviceID))
+                            .font(.system(size: 10, weight: .medium))
+                            .frame(width: 94, alignment: .leading)
+                        TextField(preferences.defaultName(for: serviceID),
+                                  text: draftBinding(for: serviceID))
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11))
+                        Button("保存") { save(serviceID) }
+                            .controlSize(.small)
+                        Button("默认") { reset(serviceID) }
+                            .controlSize(.small)
+                            .disabled(!preferences.customizedServiceIDs.contains(serviceID))
+                    }
+                    if let message = feedback[serviceID] {
+                        Text(message)
+                            .font(.system(size: 9))
+                            .foregroundStyle(message == "已保存" || message == "已恢复默认" ? Color.green : Color.red)
+                    }
+                }
+            }
+        }
+        .settingsGroupBackground()
+        .onAppear { syncDrafts() }
+    }
+
+    private func fixedLabel(for serviceID: String) -> String {
+        switch serviceID {
+        case "chatgpt-a": return "OpenAI 账号 A"
+        case "chatgpt-b": return "OpenAI 账号 B"
+        case DisplayNamePreferences.ServiceID.deepSeek: return "DeepSeek"
+        case DisplayNamePreferences.ServiceID.commandCode: return "Command Code"
+        default: return serviceID
+        }
+    }
+
+    private func draftBinding(for serviceID: String) -> Binding<String> {
+        Binding(get: {
+            drafts[serviceID] ?? preferences.displayName(for: serviceID)
+        }, set: {
+            drafts[serviceID] = $0
+            feedback.removeValue(forKey: serviceID)
+        })
+    }
+
+    private func save(_ serviceID: String) {
+        let value = drafts[serviceID] ?? preferences.displayName(for: serviceID)
+        if preferences.setDisplayName(value, for: serviceID) {
+            drafts[serviceID] = preferences.displayName(for: serviceID)
+            feedback[serviceID] = "已保存"
+        } else {
+            feedback[serviceID] = "名称最多 40 个字符"
+        }
+    }
+
+    private func reset(_ serviceID: String) {
+        preferences.resetDisplayName(for: serviceID)
+        drafts[serviceID] = preferences.defaultName(for: serviceID)
+        feedback[serviceID] = "已恢复默认"
+    }
+
+    private func syncDrafts() {
+        for serviceID in Self.serviceIDs {
+            drafts[serviceID] = preferences.displayName(for: serviceID)
+        }
     }
 }
 
 private struct FireScheduleSettingsView: View {
     @ObservedObject var preferences: FireSchedulePreferences
+    @ObservedObject var displayNames: DisplayNamePreferences
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -299,7 +399,7 @@ private struct FireScheduleSettingsView: View {
             ForEach(FireScheduleTarget.allCases) { target in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(target.displayName).font(.system(size: 11, weight: .medium))
+                        Text(displayName(for: target)).font(.system(size: 11, weight: .medium))
                         Spacer()
                         Button {
                             preferences.add(target: target)
@@ -336,7 +436,7 @@ private struct FireScheduleSettingsView: View {
                                     Image(systemName: "trash")
                                 }
                                 .buttonStyle(.borderless)
-                                .accessibilityLabel("删除 \(target.displayName) \(timeText(entry.minuteOfDay))")
+                                    .accessibilityLabel("删除 \(displayName(for: target)) \(timeText(entry.minuteOfDay))")
                             }
                         }
                     }
@@ -375,6 +475,13 @@ private struct FireScheduleSettingsView: View {
 
     private func timeText(_ minute: Int) -> String {
         String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+
+    private func displayName(for target: FireScheduleTarget) -> String {
+        if let profileID = target.profileID {
+            return displayNames.displayName(for: profileID)
+        }
+        return displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode)
     }
 }
 

@@ -15,6 +15,7 @@ final class AppContainer {
     let codexProfiles: CodexProfilesCoordinator
     let providerCache: ProviderCache
     let providerEngine: ProviderRefreshEngine
+    let displayNames: DisplayNamePreferences
     let model: UsageViewModel
     let statusItem: StatusItemController
 
@@ -34,9 +35,11 @@ final class AppContainer {
                                               credentials: credentials)
         ProviderRetirementMigration(credentials: credentials, cache: providerCache).run()
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, commandCode], cache: providerCache)
+        displayNames = .shared
         model = UsageViewModel(coordinator: codexProfiles,
                                providerEngine: providerEngine,
                                menuBarPreferences: menuBarPreferences,
+                               displayNames: displayNames,
                                fireSchedules: .shared,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
         statusItem = StatusItemController()

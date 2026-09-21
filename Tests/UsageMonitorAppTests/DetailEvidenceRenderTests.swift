@@ -170,31 +170,31 @@ final class DetailEvidenceRenderTests: XCTestCase {
     // MARK: §12 Evidence
 
     func testRenderFullPageLightAndDark() async throws {
-        // 1. 440 × 566, light, four cards, account A and B with clearly different quotas.
+        // 1. 440 × 801, light, four cards, account A and B with clearly different quotas.
         let (live, livePreferences) = await makeModel("live")
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: livePreferences)),
                              background: .light),
-                  named: "01-detail-440x566-light.png")
+                  named: "01-detail-440x801-light.png")
 
-        // 2. 440 × 566, dark, account A cached and account B live.
+        // 2. 440 × 801, dark, account A cached and account B live.
         let (cached, cachedPreferences) = await makeModel("cached", aStale: true)
         try write(try render(UsagePanelView(model: cached, preferences: cachedPreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: cachedPreferences)),
                              background: .dark),
-                  named: "02-detail-440x566-dark-a-cached.png")
+                  named: "02-detail-440x801-dark-a-cached.png")
 
-        // 3. 440 × 330, light, only the two ChatGPT cards.
+        // 3. 440 × 432, light, only the two ChatGPT cards.
         livePreferences.showDeepSeek = false
         livePreferences.showCommandCode = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: livePreferences), 330)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: livePreferences), 432)
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: livePreferences)),
                              background: .light),
-                  named: "03-detail-440x330-light.png")
+                  named: "03-detail-440x432-light.png")
     }
 
     func testRenderChatGPTCardStates() throws {

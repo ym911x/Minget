@@ -18,6 +18,7 @@
 | 1.3.1 | 是 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | — |
 | 1.3.2 | 是（用户接受发布；保留发布后验证项） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 脱敏渲染，不入库 |
 | 1.4.0 | 是（保留真实低额度现场观察项） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | — | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 明暗设置页渲染，不入库 |
+| 1.4.1 | 验收通过，待发布 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | — | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 明暗详情页渲染，不入库 |
 
 ## 各版本的额外资料
 

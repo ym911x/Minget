@@ -12,16 +12,20 @@ import UsageMonitorCore
 struct CodexProfileCard: View {
 
     static let size = CGSize(width: DetailPageLayout.contentWidth, height: DetailPageLayout.codexCardHeight)
-    static let contentPadding: CGFloat = 10
-    static let rowSpacing: CGFloat = 1
-    static let windowGroupSpacing: CGFloat = 4
-    static let headerHeight: CGFloat = 26
-    static let accountRowHeight: CGFloat = 13
-    static let windowBlockHeight: CGFloat = 25
-    static let footerHeight: CGFloat = 13
-    static let labelWidth: CGFloat = 46
-    static let valueWidth: CGFloat = 92
+    static let contentPadding: CGFloat = 12
+    /// Space between the quota rail and its reset-time rail inside one period group.
+    static let rowSpacing: CGFloat = 4
+    static let windowGroupSpacing: CGFloat = 10
+    static let headerHeight: CGFloat = 34
+    static let accountRowHeight: CGFloat = 16
+    static let headerToWindowSpacing: CGFloat = 12
+    static let windowBlockHeight: CGFloat = 32
+    static let footerHeight: CGFloat = 16
+    static let footerSpacing: CGFloat = 12
+    static let labelWidth: CGFloat = 50
+    static let valueWidth: CGFloat = 102
     static let quotaTrackHeight: CGFloat = 6
+    static let logoSize: CGFloat = 28
 
     static let fireButtonWidth: CGFloat = 76
     static let fireButtonHeight: CGFloat = 22
@@ -36,22 +40,32 @@ struct CodexProfileCard: View {
     static let cancelButtonTitle = "取消"
 
     let state: CodexProfileViewState
+    let displayName: String
     /// Invoked only after the user confirms the fixed dialog.
     var onFire: (() -> Void)?
+
+    init(state: CodexProfileViewState,
+         displayName: String? = nil,
+         onFire: (() -> Void)? = nil) {
+        self.state = state
+        self.displayName = displayName ?? state.profile.displayName
+        self.onFire = onFire
+    }
 
     @State private var showsFireConfirmation = false
     /// One clock reading per body evaluation, shared by both reset rails.
     private let now = Date()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Self.rowSpacing) {
-            headerRow.frame(height: Self.headerHeight)
-            accountRow.frame(height: Self.accountRowHeight)
+        VStack(alignment: .leading, spacing: 0) {
+            headerRow.frame(height: Self.headerHeight + Self.accountRowHeight)
+            Spacer().frame(height: Self.headerToWindowSpacing)
             windowBlock(label: "5 小时", kind: .fiveHour, window: snapshot?.fiveHour)
                 .frame(height: Self.windowBlockHeight)
-                .padding(.bottom, Self.windowGroupSpacing - Self.rowSpacing)
+            Spacer().frame(height: Self.windowGroupSpacing)
             windowBlock(label: "周额度", kind: .weekly, window: snapshot?.weekly)
                 .frame(height: Self.windowBlockHeight)
+            Spacer().frame(height: Self.footerSpacing)
             footer.frame(height: Self.footerHeight)
         }
         .padding(Self.contentPadding)
@@ -78,25 +92,41 @@ struct CodexProfileCard: View {
     // MARK: Header
 
     private var headerRow: some View {
-        HStack(alignment: .center, spacing: 8) {
-            BrandMark()
-                .frame(width: 26, height: 26)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 8) {
+                BrandMark()
+                    .frame(width: Self.logoSize, height: Self.logoSize)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text(state.profile.displayName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Text(state.displayPlanType ?? "套餐暂不可用")
-                    .font(.system(size: 9))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(displayName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    HStack(spacing: 5) {
+                        Text(state.displayPlanType ?? "套餐暂不可用")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        connectionIndicator
+                    }
+                }
+
+                Spacer(minLength: 6)
+
+                fireButton
+            }
+            HStack {
+                Spacer(minLength: 0)
+                Text(state.displayEmail ?? "账号暂不可用")
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                    .accessibilityLabel("账号")
+                    .accessibilityValue(state.displayEmail ?? "账号暂不可用")
             }
-
-            Spacer(minLength: 6)
-
-            fireButton
         }
     }
 
@@ -117,28 +147,22 @@ struct CodexProfileCard: View {
         .buttonStyle(.bordered)
         .controlSize(.small)
         .disabled(state.isFiring)
-        .accessibilityLabel("\(state.profile.displayName) \(Self.fireButtonTitle)")
+        .accessibilityLabel("\(displayName) \(Self.fireButtonTitle)")
     }
 
-    // MARK: Account row
-
-    private var accountRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+    @ViewBuilder
+    private var connectionIndicator: some View {
+        if state.isConnectionHealthy {
+            Circle()
+                .fill(.green)
+                .frame(width: 6, height: 6)
+                .accessibilityLabel("已连接")
+        } else {
             Text(state.connectionText)
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundStyle(connectionColor)
-                .fixedSize(horizontal: true, vertical: false)
-
-            Spacer(minLength: 8)
-
-            Text(state.displayEmail ?? "账号暂不可用")
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-                .accessibilityLabel("账号")
-                .accessibilityValue(state.displayEmail ?? "账号暂不可用")
+                .accessibilityLabel(state.connectionText)
         }
     }
 
@@ -152,15 +176,15 @@ struct CodexProfileCard: View {
 
     private func windowBlock(label: String, kind: RateLimitWindow.Kind, window: RateLimitWindow?) -> some View {
         let progress = ResetTimeModel.progress(expected: kind, window: window, now: now)
-        return VStack(spacing: 2) {
+        return VStack(spacing: Self.rowSpacing) {
             HStack(spacing: 6) {
                 Text(label)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .frame(width: Self.labelWidth, alignment: .leading)
                 QuotaRemainderBar(fraction: fraction(window), color: quotaColor(window))
                     .frame(maxWidth: .infinity)
                 Text(Self.quotaValueText(window))
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(window == nil ? Color.secondary : quotaColor(window))
                     .lineLimit(1)
                     .frame(width: Self.valueWidth, alignment: .trailing)
@@ -168,7 +192,7 @@ struct CodexProfileCard: View {
 
             HStack(spacing: 6) {
                 Text("重置时间")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .frame(width: Self.labelWidth, alignment: .leading)
                 ProviderTimeBar(progress: Self.timeProgress(progress),
@@ -176,10 +200,10 @@ struct CodexProfileCard: View {
                                 tint: .blue)
                     .frame(maxWidth: .infinity)
                 Text(Self.resetValueText(progress, window: window))
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(width: Self.valueWidth, alignment: .trailing)
             }
         }
@@ -236,7 +260,7 @@ struct CodexProfileCard: View {
         HStack(alignment: .center, spacing: 8) {
             Text(UsageFormatting.rateLimitResetText(snapshot?.rateLimitResetCredits,
                                                     source: snapshot?.source ?? .cached))
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -246,7 +270,7 @@ struct CodexProfileCard: View {
             Spacer(minLength: 4)
 
             Text(state.fireResultText)
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundStyle(fireResultColor)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -259,7 +283,7 @@ struct CodexProfileCard: View {
                       : state.fireHistoryLines.joined(separator: "\n"))
             if let drift = state.fireDriftText {
                 Text("· \(drift)")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(fireResultColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -298,7 +322,9 @@ struct QuotaRemainderBar: View {
     }
 }
 
-/// The OpenAI Blossom mark, at the card's 26 pt canvas.
+/// Uses a UI derivative of the official OpenAI SVG whose viewBox follows the visible blossom.
+/// The untouched downloaded assets remain in `assets/brand`; cropping at the vector viewBox
+/// keeps the small mark sharp and avoids scaling an already-laid-out SwiftUI image.
 struct BrandMark: View {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -321,7 +347,11 @@ struct BrandMark: View {
 
     private var image: NSImage? {
         let variant = colorScheme == .dark ? "White" : "Black"
-        for resourceName in ["OAI_OpenAI-Blossom_\(variant).svg", "OAI_OpenAI-Blossom_\(variant).png"] {
+        for resourceName in [
+            "OAI_OpenAI-Blossom_\(variant)-UI.svg",
+            "OAI_OpenAI-Blossom_\(variant).svg",
+            "OAI_OpenAI-Blossom_\(variant).png"
+        ] {
             let parts = resourceName.split(separator: ".", maxSplits: 1).map(String.init)
             guard parts.count == 2,
                   let path = Bundle.main.path(forResource: parts[0], ofType: parts[1]),

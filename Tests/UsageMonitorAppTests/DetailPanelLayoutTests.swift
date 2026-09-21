@@ -4,10 +4,10 @@ import SwiftUI
 import UsageMonitorCore
 @testable import UsageMonitorApp
 
-/// Detail-page geometry, structure and card semantics under REVISION_SPEC.md §4–§7.
+/// Detail-page geometry, structure and card semantics under the 1.4.1 visual specification.
 ///
-/// The detail page is a fixed, non-scrolling 440 pt single column, so its size, row order and
-/// absence of a scroll container are acceptance conditions rather than layout preferences.
+/// The preferred page is a 440 pt single column. A scroll region is introduced only when the
+/// available viewport is shorter than that preferred page.
 @MainActor
 final class DetailPanelLayoutTests: XCTestCase {
 
@@ -42,28 +42,28 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(DetailPageLayout.margin, 12)
         XCTAssertEqual(DetailPageLayout.contentWidth, 416)
         XCTAssertEqual(DetailPageLayout.headerHeight, 36)
-        XCTAssertEqual(DetailPageLayout.rowSpacing, 6)
+        XCTAssertEqual(DetailPageLayout.rowSpacing, 8)
     }
 
-    func testTheFourFixedPageHeights() {
+    func testTheFourPreferredPageHeights() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout"))
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 566)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 801)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 512, "only Command Code")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 721, "only Command Code")
 
         preferences.showCommandCode = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 330, "neither service card")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 432, "neither service card")
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 384, "only DeepSeek")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 512, "only DeepSeek")
     }
 
-    func testTheFourFixedPageHeightsMatchTheRowArithmetic() {
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 566)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 512)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 384)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 330)
+    func testTheFourPreferredPageHeightsMatchTheRowArithmetic() {
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 801)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 721)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 512)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 432)
     }
 
     // MARK: §11.2 Row geometry
@@ -92,10 +92,10 @@ final class DetailPanelLayoutTests: XCTestCase {
         let rows = DetailPageLayout.rows(showDeepSeek: true, showCommandCode: true)
         let heights = Dictionary(uniqueKeysWithValues: rows.map { ($0.kind, $0.frame.height) })
         XCTAssertEqual(heights[.header], 36)
-        XCTAssertEqual(heights[.chatGPTA], 129)
-        XCTAssertEqual(heights[.chatGPTB], 129)
-        XCTAssertEqual(heights[.deepSeek], 48)
-        XCTAssertEqual(heights[.commandCode], 176)
+        XCTAssertEqual(heights[.chatGPTA], 178)
+        XCTAssertEqual(heights[.chatGPTB], 178)
+        XCTAssertEqual(heights[.deepSeek], 72)
+        XCTAssertEqual(heights[.commandCode], 281)
     }
 
     private func expectedCardOrder(showDeepSeek: Bool, showCommandCode: Bool) -> [DetailPageLayout.Kind] {
@@ -106,25 +106,33 @@ final class DetailPanelLayoutTests: XCTestCase {
     }
 
     func testCardSizesMatchTheSpecification() {
-        XCTAssertEqual(CodexProfileCard.size, CGSize(width: 416, height: 129))
-        XCTAssertEqual(CodexProfileCard.contentPadding, 10)
-        XCTAssertEqual(CodexProfileCard.headerHeight, 26)
-        XCTAssertEqual(CodexProfileCard.accountRowHeight, 13)
-        XCTAssertEqual(CodexProfileCard.windowBlockHeight, 25)
-        XCTAssertEqual(CodexProfileCard.windowGroupSpacing, 4)
-        XCTAssertEqual(CodexProfileCard.footerHeight, 13)
-        XCTAssertEqual(CodexProfileCard.labelWidth, 46)
-        XCTAssertEqual(CodexProfileCard.valueWidth, 92)
+        XCTAssertEqual(CodexProfileCard.size, CGSize(width: 416, height: 178))
+        XCTAssertEqual(CodexProfileCard.contentPadding, 12)
+        XCTAssertEqual(CodexProfileCard.headerHeight, 34)
+        XCTAssertEqual(CodexProfileCard.accountRowHeight, 16)
+        XCTAssertEqual(CodexProfileCard.rowSpacing, 4)
+        XCTAssertEqual(CodexProfileCard.headerToWindowSpacing, 12)
+        XCTAssertEqual(CodexProfileCard.windowBlockHeight, 32)
+        XCTAssertEqual(CodexProfileCard.windowGroupSpacing, 10)
+        XCTAssertEqual(CodexProfileCard.footerHeight, 16)
+        XCTAssertEqual(CodexProfileCard.footerSpacing, 12)
+        XCTAssertEqual(CodexProfileCard.labelWidth, 50)
+        XCTAssertEqual(CodexProfileCard.valueWidth, 102)
         XCTAssertEqual(CodexProfileCard.quotaTrackHeight, 6)
+        XCTAssertEqual(CodexProfileCard.logoSize, 28)
         XCTAssertEqual(CodexProfileCard.fireButtonWidth, 76)
         XCTAssertEqual(CodexProfileCard.fireButtonHeight, 22)
         XCTAssertEqual(ProviderTimeBar.height, 3)
         XCTAssertEqual(ProviderTimeBar.segmentGap, 2)
-        XCTAssertEqual(DeepSeekOverviewCard.size, CGSize(width: 416, height: 48))
-        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 416, height: 176))
-        XCTAssertEqual(CommandCodeOverviewCard.windowGroupSpacing, 4)
+        XCTAssertEqual(DeepSeekOverviewCard.size, CGSize(width: 416, height: 72))
+        XCTAssertEqual(DeepSeekOverviewCard.logoSize, 34)
+        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 416, height: 281))
+        XCTAssertEqual(CommandCodeOverviewCard.windowGroupSpacing, 10)
+        XCTAssertEqual(CommandCodeOverviewCard.headerToWindowSpacing, 12)
+        XCTAssertEqual(CommandCodeOverviewCard.quotaToSummarySpacing, 12)
+        XCTAssertEqual(CommandCodeOverviewCard.summaryToFooterSpacing, 12)
         XCTAssertEqual(CommandCodeOverviewCard.valueWidth, 116)
-        XCTAssertEqual(CommandCodeOverviewCard.footerHeight, 13)
+        XCTAssertEqual(CommandCodeOverviewCard.footerHeight, 16)
         XCTAssertEqual(CommandCodeOverviewCard.fireButtonWidth, 76)
     }
 
@@ -145,9 +153,9 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(CommandCodeOverviewCard.fireButtonRunningTitle, "点火中…")
     }
 
-    // MARK: §4.2 No scroll container
+    // MARK: §4.2 Scroll only when the viewport is shorter than preferred
 
-    func testDetailPageNeverEmbedsAScrollContainer() {
+    func testDetailPageUsesNoScrollAtItsPreferredHeight() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.NoScroll"))
         let model = makeModel()
 
@@ -155,15 +163,27 @@ final class DetailPanelLayoutTests: XCTestCase {
             preferences.showDeepSeek = showDeepSeek
             preferences.showCommandCode = showCommandCode
 
-            let hosting = NSHostingView(rootView: UsagePanelView(model: model, preferences: preferences))
+            let hosting = NSHostingView(rootView: UsagePanelView(model: model, preferences: preferences,
+                                                                  maxHeight: UsagePanelView.preferredHeight(for: preferences)))
             hosting.frame = NSRect(x: 0, y: 0,
                                    width: DetailPageLayout.pageWidth,
                                    height: UsagePanelView.preferredHeight(for: preferences))
             hosting.layoutSubtreeIfNeeded()
 
             XCTAssertFalse(containsScrollContainer(hosting),
-                           "\(showDeepSeek)/\(showCommandCode): the detail page must not scroll")
+                           "\(showDeepSeek)/\(showCommandCode): preferred page should not scroll")
         }
+    }
+
+    func testDetailPageAddsOneScrollRegionWhenViewportIsShort() {
+        let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.Short"))
+        let model = makeModel("short")
+        let hosting = NSHostingView(rootView: UsagePanelView(model: model,
+                                                              preferences: preferences,
+                                                              maxHeight: 520))
+        hosting.frame = NSRect(x: 0, y: 0, width: DetailPageLayout.pageWidth, height: 520)
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(containsScrollContainer(hosting))
     }
 
     func testCardsFitTheirFixedFramesWithoutClipping() {
@@ -451,7 +471,7 @@ final class DetailPanelLayoutTests: XCTestCase {
                                                  billingPeriodEnd: monthlyEnd, now: now)
         XCTAssertEqual(CommandCodeCardPresentation.timeText(kind: .billingPeriod, window: nil, usage: usage,
                                                             outcome: monthly, now: now),
-                       "剩余 12天 · \(UsageFormatting.shortDate(monthlyEnd))")
+                       "12天 · \(UsageFormatting.shortDate(monthlyEnd))")
 
         let arrived = ProviderTimeModel.progress(kind: .fiveHour,
                                                  window: ccWindow(kind: .fiveHour, used: "1", limit: "4", remaining: "3",
@@ -462,14 +482,14 @@ final class DetailPanelLayoutTests: XCTestCase {
                        "等待刷新")
     }
 
-    func testCommandCodeAlwaysHasThreeQuotaRowsAndThreeSummaryLines() {
+    func testCommandCodeKeepsThreeQuotaRowsAndTwoGroupedSummaryLines() {
         XCTAssertEqual(CommandCodeCardPresentation.windowKinds, [.fiveHour, .weekly, .billingPeriod])
         let lines = CommandCodeCardPresentation.summaryLines(nil)
-        XCTAssertEqual(lines.count, 3)
+        XCTAssertEqual(lines.count, 2)
         XCTAssertTrue(lines.allSatisfy { $0.contains("—") })
-        XCTAssertEqual(lines[0], "统计暂不可用 · Token — · 请求 —")
-        XCTAssertEqual(lines[1], "输入 — · 输出 — · 成功 — · 失败 —")
-        XCTAssertEqual(lines[2], "成功率 — · 成本 —")
+        XCTAssertEqual(lines[0], "Token — · 输入 — · 输出 — · 成本 —")
+        XCTAssertEqual(lines[1], "请求 — · 成功 — · 失败 — · 成功率 —")
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(nil), "统计暂不可用")
         XCTAssertEqual(CommandCodeCardPresentation.label(.billingPeriod), "本月")
     }
 
@@ -485,7 +505,7 @@ final class DetailPanelLayoutTests: XCTestCase {
                                                 totalRuns: 2, completedRuns: 2, failedRuns: 0,
                                                 successRate: dec("100"), totalCostUSD: dec("0.5"),
                                                 periodBasis: .unknown)
-        XCTAssertTrue(CommandCodeCardPresentation.summaryLines(unknownPeriod)[0].hasPrefix("统计周期未确认 · Token 10"))
+        XCTAssertTrue(CommandCodeCardPresentation.summaryLines(unknownPeriod)[0].hasPrefix("Token 10"))
         XCTAssertFalse(CommandCodeCardPresentation.summaryLines(unknownPeriod)[0].contains("暂不可用"))
     }
 
@@ -516,13 +536,23 @@ final class DetailPanelLayoutTests: XCTestCase {
                                                             planIsCached: true),
                        "individual-go · 缓存",
                        "a reused plan stays visibly cached even while credits are live")
+
+        XCTAssertEqual(CommandCodeCardPresentation.brandSubtitle(displayName: "Command Code",
+                                                                 connection: .connected,
+                                                                 planName: "individual-go"),
+                       "individual-go")
+        XCTAssertEqual(CommandCodeCardPresentation.brandSubtitle(displayName: "Command Code $1",
+                                                                 connection: .connected,
+                                                                 planName: "individual-go"),
+                       "Command Code · individual-go")
     }
 
     func testComponentCacheWordingCarriesItsOwnSuccessTime() {
         let lastSuccess = Date(timeIntervalSince1970: 1_800_000_000)
         let cached = ProviderUsageComponentFreshness(lastSuccessfulAt: lastSuccess, isLive: false)
+        XCTAssertEqual(CommandCodeCardPresentation.periodText(nil, isCached: true), "缓存 · 统计暂不可用")
         XCTAssertTrue(CommandCodeCardPresentation.summaryLines(nil, isCached: true)[0]
-            .hasPrefix("缓存 · 统计暂不可用"))
+            .hasPrefix("缓存 · Token —"))
         XCTAssertEqual(CommandCodeCardPresentation.componentCacheHelpText(name: "统计",
                                                                           freshness: cached,
                                                                           fallback: nil),
