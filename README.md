@@ -16,7 +16,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 - 时间条固定为 5 小时 5 格、周额度 7 格，本月使用连续条；Command Code 统计拆为 Token／成本和请求／结果两行，月度文案使用“天数 · 日期”。
 - 设置页为两个 ChatGPT 账号、DeepSeek 和 Command Code 提供本地显示名称、保存和恢复默认；名称同步详情页、来源选择、点火计划和辅助标签，菜单栏继续使用 A/B/DS 短标签。
 
-本版本已完成代码实现、完整自动测试、Release arm64 构建、严格签名和真实界面验收；用户已确认按可见图案边界修订后的 OpenAI 与 DeepSeek Logo，并于 2026-09-21 授权正式发布。详见 [1.4.1 需求](docs/versions/1.4.1/REQUIREMENTS.md)、[实施任务](docs/versions/1.4.1/IMPLEMENTATION_TASKS.md) 与[验收台账](docs/versions/1.4.1/ACCEPTANCE.md)。
+本版本已完成代码实现、完整自动测试、Release arm64 构建、严格签名和真实界面验收；用户已确认按可见图案边界修订后的 OpenAI 与 DeepSeek Logo。发布提交 CI 通过，源码已随 [Minget v1.4.1](https://github.com/ym911x/Minget/releases/tag/v1.4.1) 发布。详见 [1.4.1 需求](docs/versions/1.4.1/REQUIREMENTS.md)、[实施任务](docs/versions/1.4.1/IMPLEMENTATION_TASKS.md) 与[验收台账](docs/versions/1.4.1/ACCEPTANCE.md)。
 
 ## v1.4.0 更新
 
@@ -113,7 +113,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 ## 当前版本
 
 - 当前版本：`1.4.1`
-- 状态：1.4.1 外观优化与本地显示名称已完成发布验收；517 项自动测试执行，516 通过、1 项 AX 环境跳过、0 失败；Release arm64 构建、严格签名、签名包重启和真实界面验收通过。用户已授权正式发布。资料见 [1.4.1 验收台账](docs/versions/1.4.1/ACCEPTANCE.md)。
+- 状态：1.4.1 外观优化与本地显示名称已完成并发布；517 项自动测试执行，516 通过、1 项 AX 环境跳过、0 失败；Release arm64 构建、严格签名、签名包重启、真实界面验收和发布提交 CI 通过。源码已随 [GitHub Release v1.4.1](https://github.com/ym911x/Minget/releases/tag/v1.4.1) 发布。资料见 [1.4.1 验收台账](docs/versions/1.4.1/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
