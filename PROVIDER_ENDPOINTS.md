@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-19
-适用版本：1.3.2
+更新日期：2026-09-23
+适用版本：1.4.2
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -49,6 +49,17 @@
 - 诊断只记录 Profile ID、固定结果分类和自有子进程生命周期。
 
 菜单栏安全区域检查只读取本机屏幕和状态项几何位置，不调用网络或模型。
+
+## 外部点火计划脚本（1.4.2 模板）
+
+- 位置：`scripts/minget-fire/` 与 `scripts/install-minget-fire.sh`。这是可复现的模板与显式安装器，不是应用运行路径；Minget 应用本身仍不调用、不修改 `~/.local/bin/minget-fire`、`~/.local/libexec/minget-fire` 或任何 LaunchAgent。
+- 行为：严格串行 OpenAI A → 15 秒 → OpenAI B → 15 秒 → Command Code；单请求 120 秒超时；命令、模型与每日时间表沿用现网既有值。
+- 传输：官方 `codex exec` 与官方 `command-code` CLI；全部路径、工作目录、日志位置与时限由 `MINGET_FIRE_*` 环境变量覆盖，生产默认值对应既有 `~/.local` 布局。
+- 读取器：Python 字节缓冲 `os.read` 加单一单调总期限，兼容分包与粘包 JSON；子进程以自有进程组回收（SIGTERM 后 SIGKILL）。
+- 日志：固定词表（target/start/end/exit/duration/window/used/reset/drift），不记录子进程原始输出、身份或凭据。
+- 退出码：请求成功时，重置时间观测"未变化 / 不可用"均退出 0（"前移"另以观测行标注，不证明新窗口）；只有进程失败或超时（124）退出非零。
+- 安装器：SHA-256 预期哈希校验、按目标时间戳备份并校验、临时文件哈希复核后原子替换、打印回滚指令；不写 plist、不重载 launchd、不从构建产物安装。
+- 验证：fake CLI 沙盒测试 37 项断言（C）；串行顺序、超时续跑、分包/粘包、总期限与进程组回收均由假 CLI 固定。真实定时运行待用户验收。
 
 ## DeepSeek
 
@@ -126,7 +137,14 @@ Command Code Studio 公开说明确认其展示成本、token 和运行分析，
 
 ## English summary
 
-This document records the data sources, evidence level, and security boundaries used by Minget 1.3.2.
+This document records the data sources, evidence level, and security boundaries used by Minget 1.4.2.
+
+### External fire scheduler template (1.4.2)
+
+- `scripts/minget-fire/` plus `scripts/install-minget-fire.sh` provide a reproducible scheduler template and an explicit installer; the Minget app itself still never calls or modifies `~/.local/bin/minget-fire` or any LaunchAgent.
+- The template runs strictly serial OpenAI A → 15 s → OpenAI B → 15 s → Command Code with a 120 s per-request timeout, mirroring the existing production commands, models, and schedules; every path and limit is overridable via `MINGET_FIRE_*` environment variables.
+- The Python reader uses byte-buffered `os.read` with a single monotonic deadline, tolerates fragmented and coalesced JSON, and reaps children as an owned process group. Logs carry only fixed sanitized fields; unchanged/unavailable reset observations exit 0 when the request itself succeeded, while process failure or timeout exits nonzero.
+- The installer verifies SHA-256 hashes, takes a timestamped backup, replaces atomically, and prints rollback instructions; it never writes or reloads a launchd plist and never installs from build artifacts.
 
 ### Codex
 

@@ -84,6 +84,36 @@ final class RefreshCadenceTests: XCTestCase {
                        UsageViewModel.idleCodexRefreshInterval)
     }
 
+    func testRetryDeadlineShortensNormalTimerAndExpiredGateUsesNormalCadence() {
+        XCTAssertEqual(
+            UsageViewModel.retryAwareCodexRefreshInterval(
+                normalInterval: 60,
+                retryDates: [Self.now.addingTimeInterval(30), Self.now.addingTimeInterval(90)],
+                now: Self.now
+            ),
+            30,
+            "a first backoff retry is scheduled at its 30-second deadline"
+        )
+        XCTAssertEqual(
+            UsageViewModel.retryAwareCodexRefreshInterval(
+                normalInterval: 30,
+                retryDates: [Self.now.addingTimeInterval(300)],
+                now: Self.now
+            ),
+            30,
+            "a faster ordinary timer still serves healthy profiles independently"
+        )
+        XCTAssertEqual(
+            UsageViewModel.retryAwareCodexRefreshInterval(
+                normalInterval: 60,
+                retryDates: [Self.now.addingTimeInterval(-1)],
+                now: Self.now
+            ),
+            60,
+            "an already-due gate must not produce a zero-length timer"
+        )
+    }
+
     // MARK: Menu-bar low-usage acceleration
 
     private func menuBarSettings(interval: Int = 30,

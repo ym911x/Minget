@@ -116,8 +116,26 @@ struct CodexProfileCard: View {
 
                 fireButton
             }
-            HStack {
+            HStack(spacing: 6) {
+                // Per-card last-success line: the header must never imply every card is
+                // fresh, so a stale or failed card states when it last succeeded (1.4.2 §5).
+                if let lastSuccess = state.lastSuccessText {
+                    Text(lastSuccess)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .accessibilityLabel("上次成功")
+                        .accessibilityValue(lastSuccess)
+                }
                 Spacer(minLength: 0)
+                if let identityLabel = state.identityLabel {
+                    Text(identityLabel)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .accessibilityLabel(identityLabel)
+                }
                 Text(state.displayEmail ?? "账号暂不可用")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)

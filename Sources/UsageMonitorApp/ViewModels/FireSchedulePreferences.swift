@@ -55,7 +55,7 @@ struct CommandCodeFireViewState: Equatable, Sendable {
     var driftText: String? {
         guard let result, let driftSeconds else { return nil }
         switch result {
-        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged:
+        case .requestSucceededResetAdvanced, .requestSucceededResetUnchanged:
             return FireWindowDrift.displayText(driftSeconds)
         default:
             return nil

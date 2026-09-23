@@ -2,24 +2,26 @@ import Foundation
 
 /// Result of one manual fire request, in the fixed vocabulary the card may display.
 ///
-/// `exit 0` only means the request ran. Whether a *new* 5-hour window actually started is a
-/// separate question, answered by comparing the service's `resetsAt` before and after the
-/// request, so "request succeeded" and "new window confirmed" are never conflated
-/// (REQUIREMENTS.md §7.2, REVIEW.md risk row 5).
+/// `exit 0` only means the request ran. What the service's `resetsAt` did across the
+/// request is a separate question, answered by comparing live reads before and after, so
+/// "request succeeded" and "reset time advanced" are never conflated — and an advance of
+/// at least the threshold means exactly that the reset time moved forward, never that a
+/// new window is *proven* (REQUIREMENTS.md §7.2, REVIEW.md risk row 5).
 ///
 /// No raw process text is representable here: the enum is the whole vocabulary.
 public enum ChatGPTFireResult: Equatable, Sendable {
 
-    /// The request ran and the service moved the 5-hour window forward by at least the
-    /// confirmation threshold.
-    case requestSucceededWindowConfirmed
-    /// The request ran, but the 5-hour window did not move. Nothing is inferred from that.
-    case requestSucceededWindowUnchanged
-    /// The request ran, but there was not enough live evidence to compare the window before
-    /// and after. Distinct from `.requestSucceededWindowUnchanged`, which asserts the window
-    /// really was unchanged: this one asserts only that the request succeeded
+    /// The request ran and the service's 5-hour reset time moved forward by at least the
+    /// threshold. Evidence of an advanced reset time, not proof of a new window.
+    case requestSucceededResetAdvanced
+    /// The request ran, and the reset time did not advance beyond the threshold. An
+    /// observation about the service, not a failure of the request.
+    case requestSucceededResetUnchanged
+    /// The request ran, but there was not enough live evidence to compare the reset time
+    /// before and after. Distinct from `.requestSucceededResetUnchanged`, which asserts the
+    /// reset time really was unchanged: this one asserts only that the request succeeded
     /// (REQUIREMENTS.md §4.1).
-    case requestSucceededConfirmationUnavailable
+    case requestSucceededResetUnavailable
     /// The official Codex CLI could not be located.
     case codexCLINotFound
     /// The official Command Code CLI could not be located.
@@ -38,9 +40,9 @@ public enum ChatGPTFireResult: Equatable, Sendable {
     /// Fixed card text (UI_SPEC.md §9). Raw process output never appears here.
     public var displayText: String {
         switch self {
-        case .requestSucceededWindowConfirmed: return "新窗口已确认"
-        case .requestSucceededWindowUnchanged: return "请求成功，窗口未变化"
-        case .requestSucceededConfirmationUnavailable: return "请求成功，暂无法确认"
+        case .requestSucceededResetAdvanced: return "请求成功，重置时间前移"
+        case .requestSucceededResetUnchanged: return "请求成功，重置时间未变化"
+        case .requestSucceededResetUnavailable: return "请求成功，重置时间未知"
         case .codexCLINotFound: return "Codex CLI 不可用"
         case .commandCodeCLINotFound: return "Command Code CLI 不可用"
         case .credentialUnavailable: return "Command Code Key 不可用"
@@ -52,17 +54,18 @@ public enum ChatGPTFireResult: Equatable, Sendable {
     }
 
     /// Draws in the success colour.
-    public var isSuccess: Bool { self == .requestSucceededWindowConfirmed }
+    public var isSuccess: Bool { self == .requestSucceededResetAdvanced }
 
-    /// Draws in the failure colour (timeout and errors). The two non-confirming "request
-    /// succeeded" results stay secondary: neither is a failure.
+    /// Draws in the failure colour (timeout and errors). The two non-advancing "request
+    /// succeeded" results stay secondary: an unchanged or unobservable reset time is not a
+    /// request failure.
     public var isFailure: Bool {
         switch self {
         case .codexCLINotFound, .commandCodeCLINotFound, .credentialUnavailable,
              .launchFailed, .nonZeroExit, .timedOut, .alreadyRunning:
             return true
-        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged,
-             .requestSucceededConfirmationUnavailable:
+        case .requestSucceededResetAdvanced, .requestSucceededResetUnchanged,
+             .requestSucceededResetUnavailable:
             return false
         }
     }
@@ -71,18 +74,18 @@ public enum ChatGPTFireResult: Equatable, Sendable {
 /// The one place that turns "the request ran" into one of the three possible outcomes.
 ///
 /// The rule is a truth table over fixed observations, not a judgement about the provider:
-/// a new window can only be claimed when a *live* read from before the request and a *live*
-/// read from after it differ by at least the threshold. A cached read is not evidence, a live
-/// read without a reset time is not evidence, and with no "before" value nothing can be
-/// compared at all — that case reports the request alone rather than guessing
-/// (REQUIREMENTS.md §4.3).
+/// the reset time is only reported as advanced when a *live* read from before the request
+/// and a *live* read from after it differ by at least the threshold. A cached read is not
+/// evidence, a live read without a reset time is not evidence, and with no "before" value
+/// nothing can be compared at all — that case reports the request alone rather than
+/// guessing (REQUIREMENTS.md §4.3).
 ///
 /// `Observation` deliberately carries no raw error, response or process output: it is the
 /// whole vocabulary, so nothing provider-specific can leak into the card.
 public enum FireWindowConfirmation {
 
-    /// The minimum forward movement that counts as a new window. Anything smaller is clock
-    /// skew, not a restarted 5-hour window.
+    /// The minimum forward movement that counts as an advanced reset time. Anything
+    /// smaller is clock skew, not a moved 5-hour window.
     public static let threshold: TimeInterval = 60
 
     /// One confirmation read, reduced to what the truth table may use.
@@ -90,12 +93,14 @@ public enum FireWindowConfirmation {
         /// A live read that reported a usable 5-hour reset time.
         case live(resetsAt: Date)
         /// A cached read, a failed read, or a live read with no 5-hour reset time. None of
-        /// these can confirm a window, and they are deliberately indistinguishable here.
+        /// these can observe a change, and they are deliberately indistinguishable here.
         case noEvidence
     }
 
-    /// Whether one live observation proves the window moved.
-    public static func confirms(live: Date, previous: Date?) -> Bool {
+    /// Whether one live observation shows the reset time advanced past the threshold.
+    /// This measures movement of the reported reset time only; it never proves a new
+    /// window opened.
+    public static func observesAdvancedReset(live: Date, previous: Date?) -> Bool {
         guard let previous else { return false }
         return live.timeIntervalSince(previous) >= threshold
     }
@@ -107,9 +112,9 @@ public enum FireWindowConfirmation {
                                 observations: [Observation]) -> ChatGPTFireResult {
         // A cached before-value is not evidence from this request's starting point. Even when
         // it happens to carry a reset time, comparing a later live value against it could
-        // falsely claim either a changed or unchanged window.
+        // falsely claim either a moved or an unchanged reset time.
         guard previousWasLive, let previousReset else {
-            return .requestSucceededConfirmationUnavailable
+            return .requestSucceededResetUnavailable
         }
         let liveTimes = observations.compactMap { observation -> Date? in
             switch observation {
@@ -117,9 +122,9 @@ public enum FireWindowConfirmation {
             case .noEvidence: return nil
             }
         }
-        guard !liveTimes.isEmpty else { return .requestSucceededConfirmationUnavailable }
-        let moved = liveTimes.contains { confirms(live: $0, previous: previousReset) }
-        return moved ? .requestSucceededWindowConfirmed : .requestSucceededWindowUnchanged
+        guard !liveTimes.isEmpty else { return .requestSucceededResetUnavailable }
+        let advanced = liveTimes.contains { observesAdvancedReset(live: $0, previous: previousReset) }
+        return advanced ? .requestSucceededResetAdvanced : .requestSucceededResetUnchanged
     }
 }
 

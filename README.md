@@ -9,6 +9,17 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.4.2 刷新调度与外部脚本模板
+
+- 每个账号的完整刷新、确认读取、唤醒探测与手动刷新共享一次"进行中"的结果；等待者拿到当轮实际结果，忙碌不再被当作失败或缓存命中。刷新进行中再次点击会排队恰好一次补刷，手动刷新按钮不再禁用。
+- 瞬时失败按"立即重试一次 + 30/60/120/300 秒自动退避（封顶 300 秒）"处理；timer 会按最近重试期限提前唤醒；成功清零，手动重试旁路；退出登录、缺少 CLI 不进入重试循环。超时拆分为额度 15 秒、握手 5 秒、身份 3 秒。
+- 账号身份三态显示：已确认、上次身份（明确标签）、账号暂不可用；同一 app-server 连接代次内的瞬时身份读取故障保留上次身份并标注，新连接、退出登录与账号替换使旧身份失效。
+- 卡片自带 fetching / live / cache / failure 与最近成功时间；头部在存在未实时卡片时显示"部分数据未更新"。
+- 点火结果与重置时间观测继续分离（前移 / 未变化 / 未知），确认读取保持只读（2 秒、必要时 5 秒，无第二次模型请求），并以请求完成时间作为点火后证据的新鲜度屏障。
+- 新增 `scripts/minget-fire/` 外部点火计划脚本模板（严格串行 A → 15 秒 → B → 15 秒 → Command Code、120 秒超时、干净日志、退出码只反映请求结果）与 `scripts/install-minget-fire.sh` 显式安装器（模板 hash 校验、旧版 allowlist、未知改动拒绝、备份、原子替换、精确回滚指令，不触碰 launchd；同一路径无需重载）。
+
+本机 Release arm64 签名包与外部脚本模板已安装，旧签名应用和旧脚本均保留备份，LaunchAgent plist 与 05:30 / 10:35 / 15:40 时刻未改。2026-09-23 的 15:40 自然运行中，三路请求均以 exit 0 结束，LaunchAgent 本轮 exit 0；A 的窗口观测不可用，B 的重置时间未变化，不能据此声称额度窗口已推进。真实界面三次手动刷新已观察到数据返回；用户于 2026-09-24 确认详情页关闭重开三次均正常。第三轮聚合结束标志未单独留证，保留此证据边界。 公开发布核验见验收台账。未经真实服务验证，不承诺每次刷新或请求都能即时推进服务端额度窗口。详见 [1.4.2 需求](docs/versions/1.4.2/REQUIREMENTS.md)、[实施任务](docs/versions/1.4.2/IMPLEMENTATION_TASKS.md)、[实施报告](docs/versions/1.4.2/IMPLEMENTATION_REPORT.md) 与[验收台账](docs/versions/1.4.2/ACCEPTANCE.md)。
+
 ## v1.4.1 外观优化
 
 - 详情页保持 440 pt 单列，放大标题、额度和辅助文字，用 4/10/12 pt 留白分组，移除卡片内细分隔线；短屏只滚动卡片区。
@@ -112,8 +123,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## 当前版本
 
-- 当前版本：`1.4.1`
-- 状态：1.4.1 外观优化与本地显示名称已完成并发布；517 项自动测试执行，516 通过、1 项 AX 环境跳过、0 失败；Release arm64 构建、严格签名、签名包重启、真实界面验收和发布提交 CI 通过。源码已随 [GitHub Release v1.4.1](https://github.com/ym911x/Minget/releases/tag/v1.4.1) 发布。资料见 [1.4.1 验收台账](docs/versions/1.4.1/ACCEPTANCE.md)。
+- 当前版本：`1.4.2`（本机验收通过；发布核验见验收台账）
+- 状态：Swift 测试 538 项执行、537 通过、1 项 AX 环境跳过、0 失败；外部脚本与安装器 53 项假 CLI 断言通过。安装后的自然任务中三路请求与 LaunchAgent 均 exit 0，但 A 窗口观测不可用、B 重置时间未变化。真实界面三次手动刷新已观察到数据返回；用户于 2026-09-24 确认详情页关闭重开三次均正常。第三轮聚合结束标志未单独留证，保留此证据边界。资料见 [1.4.2 验收台账](docs/versions/1.4.2/ACCEPTANCE.md)。
 - 平台：macOS 13 及以上，Apple Silicon
 - 发布记录：[CHANGELOG.md](CHANGELOG.md)
 - 后续规划：[ROADMAP.md](ROADMAP.md)
@@ -218,6 +229,13 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 - [v1.4.1 审核状态](docs/versions/1.4.1/REVIEW.md)
 - [v1.4.1 验收台账](docs/versions/1.4.1/ACCEPTANCE.md)
 - [v1.4.1 发布说明](docs/versions/1.4.1/RELEASE_NOTES.md)
+- [v1.4.2 需求](docs/versions/1.4.2/REQUIREMENTS.md)
+- [v1.4.2 实施任务](docs/versions/1.4.2/IMPLEMENTATION_TASKS.md)
+- [v1.4.2 实施报告](docs/versions/1.4.2/IMPLEMENTATION_REPORT.md)
+- [v1.4.2 实施自审](docs/versions/1.4.2/REVIEW.md)
+- [v1.4.2 验收台账](docs/versions/1.4.2/ACCEPTANCE.md)
+- [v1.4.2 发布说明](docs/versions/1.4.2/RELEASE_NOTES.md)
+- [外部点火脚本模板](scripts/minget-fire/README.md)
 - [项目协作规则](AGENTS.md)
 
 历史方案、任务单和审核报告均已冻结在 `docs/archive/v1.0`。后续版本的需求和审核记录使用新的文件，避免改写 v1.0 的基线资料。
@@ -232,7 +250,7 @@ swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"
 
 ## English
 
-**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.4.1 refines the detail-page hierarchy, short-screen scrolling and local display names while preserving the existing provider and fire paths.
+**Minget** is a macOS menu bar app for viewing two isolated ChatGPT (Codex) accounts, DeepSeek balances, and optional Command Code usage. Version 1.4.2 introduces per-profile shared single-flight refreshes (manual clicks queue exactly one follow-up), an immediate-retry-plus-backoff ladder, a three-state identity display (confirmed / previous / unavailable), and a reproducible external fire-scheduler template with an explicit installer, while preserving the existing provider and fire paths.
 
 ### Features
 

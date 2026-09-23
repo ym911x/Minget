@@ -159,7 +159,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         CodexProfileViewState(profile: profile,
                               display: display,
                               connectionState: .connected,
-                              account: account(email),
+                              identity: .confirmed(account(email)),
                               isRefreshing: false,
                               isFiring: false,
                               fireResult: fireResult,
@@ -202,13 +202,13 @@ final class DetailEvidenceRenderTests: XCTestCase {
         let unknown = CodexProfileViewState(profile: .chatGPTA,
                                             display: .unavailable(.rpcFailed(.other)),
                                             connectionState: .disconnected,
-                                            account: nil,
+                                            identity: .unavailable,
                                             isRefreshing: false, isFiring: false, fireResult: nil)
         // 4b. Both reset times already reached: emptied rails and 等待刷新.
         let arrived = snapshot(fiveHourPercent: 40, weeklyPercent: 8,
                                fiveHourRemaining: -60, weeklyRemaining: -3600)
         let arrivedState = state(.chatGPTB, display: .live(arrived), email: "demo-b@example.com",
-                                 fireResult: .requestSucceededWindowUnchanged)
+                                 fireResult: .requestSucceededResetUnchanged)
 
         let stem = VStack(alignment: .leading, spacing: 8) {
             Text("未知重置时间（灰色轨道 + 中央 ?）").font(.system(size: 9)).foregroundStyle(.secondary)
@@ -224,7 +224,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
             CodexProfileCard(state: CodexProfileViewState(profile: .chatGPTA,
                                                           display: .live(snapshot(fiveHourPercent: 78, weeklyPercent: 42)),
                                                           connectionState: .connected,
-                                                          account: account("demo@example.com"),
+                                                          identity: .confirmed(account("demo@example.com")),
                                                           isRefreshing: false, isFiring: true,
                                                           fireResult: nil))
         }
@@ -237,28 +237,28 @@ final class DetailEvidenceRenderTests: XCTestCase {
         let longReset = snapshot(fiveHourPercent: 78, weeklyPercent: 42, resetCredits: 123)
         let finished = anchor.addingTimeInterval(-120)
         let confirmed = state(.chatGPTA, display: .live(longReset), email: "demo@example.com",
-                              fireResult: .requestSucceededWindowConfirmed,
+                              fireResult: .requestSucceededResetAdvanced,
                               fireDriftSeconds: 6 * 3600 + 12 * 60,
-                              fireHistory: [FireHistoryEntry(result: .requestSucceededWindowConfirmed,
+                              fireHistory: [FireHistoryEntry(result: .requestSucceededResetAdvanced,
                                                              finishedAt: finished,
                                                              driftSeconds: 6 * 3600 + 12 * 60)])
         let unchanged = state(.chatGPTB, display: .live(longReset), email: "demo-b@example.com",
-                              fireResult: .requestSucceededWindowUnchanged,
+                              fireResult: .requestSucceededResetUnchanged,
                               fireDriftSeconds: 32,
-                              fireHistory: [FireHistoryEntry(result: .requestSucceededWindowUnchanged,
+                              fireHistory: [FireHistoryEntry(result: .requestSucceededResetUnchanged,
                                                              finishedAt: finished,
                                                              driftSeconds: 32)])
         let unavailable = state(.chatGPTA, display: .live(longReset), email: "demo@example.com",
-                                fireResult: .requestSucceededConfirmationUnavailable,
+                                fireResult: .requestSucceededResetUnavailable,
                                 fireDriftSeconds: nil,
-                                fireHistory: [FireHistoryEntry(result: .requestSucceededConfirmationUnavailable,
+                                fireHistory: [FireHistoryEntry(result: .requestSucceededResetUnavailable,
                                                                finishedAt: finished)])
         let stem = VStack(alignment: .leading, spacing: 8) {
             Text("确认：长重置文案 + 长差值，结果优先").font(.system(size: 9)).foregroundStyle(.secondary)
             CodexProfileCard(state: confirmed)
             Text("未变化：长结果 + 短差值").font(.system(size: 9)).foregroundStyle(.secondary)
             CodexProfileCard(state: unchanged)
-            Text("暂无法确认：不显示差值").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text("重置时间未知：不显示差值").font(.system(size: 9)).foregroundStyle(.secondary)
             CodexProfileCard(state: unavailable)
         }
         .padding(12)
@@ -314,7 +314,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
                                      lastSuccessAt: nil, connection: .unavailable,
                                      isLive: false, error: .other, consoleURL: nil)
         var fired = CommandCodeFireViewState()
-        fired.finish(.requestSucceededWindowConfirmed,
+        fired.finish(.requestSucceededResetAdvanced,
                      driftSeconds: 5 * 3600,
                      finishedAt: anchor)
 

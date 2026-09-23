@@ -183,7 +183,8 @@ struct UsagePanelView: View {
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .disabled(isAnyRefreshInFlight)
+            // Never disabled while a refresh runs: a click during an active cycle queues
+            // exactly one follow-up cycle (1.4.2 §3.1), it is not swallowed.
             .accessibilityLabel("刷新，\(updateStatusText)")
 
             Button {
@@ -202,7 +203,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.2"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -216,17 +217,26 @@ struct UsagePanelView: View {
 
     /// The global line aggregates every visible source: both ChatGPT profiles and every
     /// displayed provider card. Reporting only account A would hide a stalled account B.
+    ///
+    /// A ChatGPT card that is not showing live data counts as not updated even when it has
+    /// nothing to timestamp: `.unavailable` must never be aggregated away by the other
+    /// card's fresh date (1.4.2 §5).
     private var updateStatusText: String {
         _ = model.tick
         if isAnyRefreshInFlight { return "刷新中…" }
 
+        let hasCodexProblem = model.profileStates.contains { state in
+            if state.isRefreshing { return false }
+            if case .live = state.display { return false }
+            return true
+        }
         let hasProviderProblem = visibleReports.contains { report in
             switch report.connection {
             case .stale, .unavailable, .authSuspended, .needsAuthorization, .unverified: return true
             case .notConfigured, .connecting, .connected: return false
             }
         }
-        if model.isStale || hasProviderProblem { return "部分数据未更新" }
+        if hasCodexProblem || model.isStale || hasProviderProblem { return "部分数据未更新" }
 
         var dates: [Date] = model.codexSnapshotDates
         dates.append(contentsOf: visibleReports.compactMap(\.lastSuccessAt))

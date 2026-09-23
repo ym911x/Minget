@@ -125,7 +125,7 @@ final class CommandCodeFireLifecycleTests: XCTestCase {
 
         XCTAssertTrue(model.fireCommandCode())
         let result = await waitForResult(model)
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed)
+        XCTAssertEqual(result, .requestSucceededResetAdvanced)
         let drift = try XCTUnwrap(model.commandCodeFireState.driftSeconds)
         XCTAssertEqual(drift, 5 * 3600, accuracy: 0.01)
         XCTAssertEqual(model.commandCodeFireState.history.count, 1)

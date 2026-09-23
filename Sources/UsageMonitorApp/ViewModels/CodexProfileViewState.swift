@@ -12,8 +12,8 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     public let profile: ChatGPTAccountProfile
     public let display: UsageDisplay
     public let connectionState: UsageService.ConnectionState
-    /// Identity from `account/read` for this cycle, or nil when it could not be established.
-    public let account: CodexAccount?
+    /// Identity state (1.4.2 §3.4): confirmed, previous (labelled 上次身份) or unavailable.
+    public let identity: ProfileIdentityState
     public let isRefreshing: Bool
     public let isFiring: Bool
     /// The last fire result, or nil when this profile has not been fired in this session.
@@ -27,7 +27,7 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     public init(profile: ChatGPTAccountProfile,
                 display: UsageDisplay,
                 connectionState: UsageService.ConnectionState,
-                account: CodexAccount?,
+                identity: ProfileIdentityState = .unavailable,
                 isRefreshing: Bool,
                 isFiring: Bool,
                 fireResult: ChatGPTFireResult?,
@@ -36,7 +36,7 @@ public struct CodexProfileViewState: Identifiable, Equatable {
         self.profile = profile
         self.display = display
         self.connectionState = connectionState
-        self.account = account
+        self.identity = identity
         self.isRefreshing = isRefreshing
         self.isFiring = isFiring
         self.fireResult = fireResult
@@ -49,7 +49,7 @@ public struct CodexProfileViewState: Identifiable, Equatable {
         self.init(profile: runtime.profile,
                   display: runtime.display,
                   connectionState: runtime.connectionState,
-                  account: runtime.account,
+                  identity: runtime.identity,
                   isRefreshing: runtime.isFetching,
                   isFiring: runtime.isFiring,
                   fireResult: runtime.fireResult,
@@ -62,10 +62,22 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     public var isStale: Bool { display.isStale }
 
     /// Account email for the account row, or nil so the card says 账号暂不可用.
-    public var displayEmail: String? { account?.displayEmail }
+    public var displayEmail: String? { identity.account?.displayEmail }
+
+    /// Explicit identity label. Only a preserved previous identity gets one: the card must
+    /// never show the old email as if it were still verified (1.4.2 §3.4).
+    public var identityLabel: String? { identity.label }
 
     /// Package label from the service, preserved verbatim.
-    public var displayPlanType: String? { account?.displayPlanType }
+    public var displayPlanType: String? { identity.account?.displayPlanType }
+
+    /// When this profile last had a successful fetch, for the per-card header line. Nil for
+    /// a live card (which shows its own freshness) and when nothing was ever fetched.
+    public var lastSuccessText: String? {
+        guard let fetchedAt = display.snapshot?.fetchedAt else { return nil }
+        if case .live = display { return nil }
+        return UsageFormatting.updatedText(fetchedAt: fetchedAt)
+    }
 
     /// Fixed result text and optional drift are separate so the card can protect the result
     /// while truncating the diagnostic suffix first.
@@ -74,10 +86,10 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     public var fireDriftText: String? {
         guard let fireResult else { return nil }
         switch fireResult {
-        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged:
+        case .requestSucceededResetAdvanced, .requestSucceededResetUnchanged:
             guard let fireDriftSeconds else { return nil }
             return FireWindowDrift.displayText(fireDriftSeconds)
-        case .requestSucceededConfirmationUnavailable, .codexCLINotFound,
+        case .requestSucceededResetUnavailable, .codexCLINotFound,
              .commandCodeCLINotFound, .credentialUnavailable, .launchFailed,
              .nonZeroExit, .timedOut, .alreadyRunning:
             return nil

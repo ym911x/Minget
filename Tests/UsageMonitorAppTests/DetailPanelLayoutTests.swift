@@ -193,7 +193,7 @@ final class DetailPanelLayoutTests: XCTestCase {
         let state = CodexProfileViewState(profile: .chatGPTA,
                                           display: .live(snapshot),
                                           connectionState: .connected,
-                                          account: CodexAccount(kind: .chatgpt, email: "demo@example.com", planType: "plus"),
+                                          identity: .confirmed(CodexAccount(kind: .chatgpt, email: "demo@example.com", planType: "plus")),
                                           isRefreshing: false, isFiring: false, fireResult: nil)
 
         let hosting = NSHostingView(rootView: CodexProfileCard(state: state))
@@ -278,19 +278,19 @@ final class DetailPanelLayoutTests: XCTestCase {
                                       fetchedAt: Date(), source: .codexAppServer)
         let a = CodexProfileViewState(profile: .chatGPTA, display: .live(aSnapshot),
                                       connectionState: .connected,
-                                      account: CodexAccount(kind: .chatgpt, email: "a@example.com", planType: "plus"),
+                                      identity: .confirmed(CodexAccount(kind: .chatgpt, email: "a@example.com", planType: "plus")),
                                       isRefreshing: false, isFiring: false, fireResult: nil)
         let b = CodexProfileViewState(profile: .chatGPTB, display: .live(bSnapshot),
                                       connectionState: .connected,
-                                      account: CodexAccount(kind: .chatgpt, email: "b@example.com", planType: "pro"),
+                                      identity: .confirmed(CodexAccount(kind: .chatgpt, email: "b@example.com", planType: "pro")),
                                       isRefreshing: false, isFiring: false,
-                                      fireResult: .requestSucceededWindowUnchanged)
+                                      fireResult: .requestSucceededResetUnchanged)
 
         XCTAssertEqual(a.snapshot?.fiveHour?.remainingPercent, 66)
         XCTAssertEqual(b.snapshot?.fiveHour?.remainingPercent, 12)
         XCTAssertNotEqual(a.displayEmail, b.displayEmail)
         XCTAssertNil(a.fireResult, "account A has no result")
-        XCTAssertEqual(b.fireResult, .requestSucceededWindowUnchanged, "account B keeps its own result")
+        XCTAssertEqual(b.fireResult, .requestSucceededResetUnchanged, "account B keeps its own result")
     }
 
     func testTheTwoFireButtonsNeverShareState() async throws {

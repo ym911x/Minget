@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// 1.4.1 settings surface. The daily fire list is user-extensible, so the content scrolls
+/// 1.4.2 settings surface. The daily fire list is user-extensible, so the content scrolls
 /// inside a bounded window while the title and footer remain reachable.
 ///
 /// Top to bottom: title, the "菜单栏显示" radio group, the service group, advanced
@@ -292,7 +292,7 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.2"
     }
 }
 

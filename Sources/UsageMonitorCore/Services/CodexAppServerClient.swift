@@ -30,6 +30,15 @@ extension CodexAppServerProviding {
 public final class CodexAppServerClient: CodexAppServerProviding {
     public static let rateLimitsMethod = "account/rateLimits/read"
     public static let accountMethod = "account/read"
+    /// Handshake budget (1.4.2): `initialize` must answer within 5 seconds.
+    public static let handshakeTimeout: TimeInterval = 5.0
+    /// Identity budget (1.4.2): `account/read` is supplementary and gets 3 seconds.
+    public static let identityTimeout: TimeInterval = 3.0
+    /// Quota budget (1.4.2): `account/rateLimits/read` is the payload that matters and
+    /// gets the widest window, 15 seconds.
+    public static let quotaTimeout: TimeInterval = 15.0
+    /// Legacy single budget kept as the protocol-level parameter default; the service paths
+    /// above no longer share one value.
     public static let defaultTimeout: TimeInterval = 5.0
 
     private let transport: JSONRPCClient

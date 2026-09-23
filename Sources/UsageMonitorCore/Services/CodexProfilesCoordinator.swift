@@ -50,6 +50,16 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
 
     public var profileIDs: [String] { runtimes.map(\.profileID) }
 
+    /// Retry gates that still belong to automatic retryable profiles. The UI timer uses
+    /// these deadlines to wake at the backoff boundary instead of waiting for its ordinary
+    /// 30/60/120-second refresh cadence.
+    public var automaticRetryDates: [Date] {
+        runtimes.compactMap { runtime in
+            guard !runtime.service.isManualRetryRequired else { return nil }
+            return runtime.service.automaticRetryGate
+        }
+    }
+
     public func runtime(for profileID: String) -> CodexProfileRuntime? {
         byID[profileID]
     }
@@ -71,17 +81,23 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     }
 
     /// Refreshes one profile and records the outcome on its runtime. Blocking: callers run
-    /// it off the main thread, and two profiles may run at the same time.
+    /// it off the main thread, and two profiles may run at the same time. Timeouts are the
+    /// 1.4.2 split: handshake 5 s, identity 3 s, quota 15 s (REQUIREMENTS.md §3.2).
     @discardableResult
     public func fetch(profileID: String,
                       resetFailureBudget: Bool = false,
-                      fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout) -> Result<UsageService.FetchResult, Error> {
+                      handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
+                      identityTimeout: TimeInterval = CodexAppServerClient.identityTimeout,
+                      quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout) -> Result<UsageService.FetchResult, Error> {
         guard let runtime = byID[profileID] else {
             return .failure(UsageError.rpcFailed(.other))
         }
         runtime.recordFetchStart()
         let outcome = Result {
-            try runtime.service.fetch(resetFailureBudget: resetFailureBudget, fetchTimeout: fetchTimeout)
+            try runtime.service.fetch(resetFailureBudget: resetFailureBudget,
+                                      handshakeTimeout: handshakeTimeout,
+                                      identityTimeout: identityTimeout,
+                                      quotaTimeout: quotaTimeout)
         }
         switch outcome {
         case .success(let result):
@@ -94,16 +110,22 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
 
     /// Confirmation-only read of one profile: rate limits without the identity read.
     /// The fire sequence only needs the 5-hour `resetsAt`; the account fields stay
-    /// untouched so a confirmation can never re-attribute the runtime.
+    /// untouched so a confirmation can never re-attribute the runtime. The confirmation
+    /// belongs to a manual fire, so it passes `resetFailureBudget: true` and cannot be
+    /// starved by the automatic backoff gate (1.4.2 REQUIREMENTS.md §3.5).
     @discardableResult
     public func fetchRateLimitsOnly(profileID: String,
-                                    fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout) -> Result<UsageService.FetchResult, Error> {
+                                    resetFailureBudget: Bool = false,
+                                    handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
+                                    quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout) -> Result<UsageService.FetchResult, Error> {
         guard let runtime = byID[profileID] else {
             return .failure(UsageError.rpcFailed(.other))
         }
         runtime.recordFetchStart()
         let outcome = Result {
-            try runtime.service.fetchRateLimitsOnly(fetchTimeout: fetchTimeout)
+            try runtime.service.fetchRateLimitsOnly(resetFailureBudget: resetFailureBudget,
+                                                    handshakeTimeout: handshakeTimeout,
+                                                    quotaTimeout: quotaTimeout)
         }
         switch outcome {
         case .success(let result):
@@ -123,15 +145,17 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
 
     /// Wake-only probe for one profile. A healthy existing child updates only the quota
     /// display; an unhealthy child is reported to the caller for an ordinary full refresh.
-    /// Suppressed probes do not touch runtime state, so an open breaker or an in-flight read
-    /// cannot flicker the card or be mistaken for a failure.
+    /// Suppressed probes (retry gate active) do not touch runtime state, so the ladder
+    /// cannot be circumvented and the card cannot flicker.
     @discardableResult
     public func probeAfterWake(
         profileID: String,
-        fetchTimeout: TimeInterval = CodexAppServerClient.defaultTimeout
+        handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
+        quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout
     ) -> UsageService.WakeProbeResult {
         guard let runtime = byID[profileID] else { return .suppressed }
-        let outcome = runtime.service.probeRateLimitsAfterWake(fetchTimeout: fetchTimeout)
+        let outcome = runtime.service.probeRateLimitsAfterWake(handshakeTimeout: handshakeTimeout,
+                                                               quotaTimeout: quotaTimeout)
         if case .refreshed(let result) = outcome {
             runtime.recordConfirmationSuccess(result)
         }
@@ -154,6 +178,16 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     /// drained. Concurrent on purpose: two bounded drains running one after the other would
     /// double how long termination can take, and nothing about one profile's child depends
     /// on the other's.
+    /// Whether the automatic retry ladder currently holds one profile's next automatic
+    /// attempt back (backoff gate open, or a manual retry required). The view model's
+    /// scheduler uses this to skip automatic work that the ladder would refuse anyway;
+    /// manual calls bypass it entirely (1.4.2 §3.3 — the ladder is wired into the
+    /// scheduler, not just into the service's own gate).
+    public func isAutomaticRetryGated(profileID: String) -> Bool {
+        guard let runtime = byID[profileID] else { return false }
+        return runtime.service.isRetryBackoffActive || runtime.service.isManualRetryRequired
+    }
+
     public func stop(shutdownTimeout: TimeInterval = 8.0) {
         let group = DispatchGroup()
         for runtime in runtimes {

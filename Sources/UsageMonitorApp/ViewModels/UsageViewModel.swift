@@ -39,6 +39,9 @@ public final class UsageViewModel: ObservableObject {
 
     /// True while a ChatGPT refresh cycle is in flight (any profile).
     @Published public private(set) var isRefreshing = false
+    /// A manual refresh arrived while a cycle was running: exactly one follow-up cycle is
+    /// owed once that cycle ends (1.4.2 §3.1). Automatic arrivals never set this.
+    private var pendingManualRefresh = false
     @Published public private(set) var isProviderRefreshing = false
     @Published public private(set) var isDeepSeekStatusRefreshing = false
     /// Per-platform, fixed-vocabulary feedback for the credential settings forms (Round 6).
@@ -103,6 +106,16 @@ public final class UsageViewModel: ObservableObject {
             if snapshot != nil { hasData = true }
         }
         return hasData ? idleCodexRefreshInterval : baseInterval
+    }
+
+    /// Selects the next UI timer interval while honoring the earliest per-profile retry
+    /// deadline. A retry gate can shorten the normal cadence, but never makes a profile
+    /// fetch before its own service permits it.
+    static func retryAwareCodexRefreshInterval(normalInterval: TimeInterval,
+                                               retryDates: [Date],
+                                               now: Date) -> TimeInterval {
+        guard let nextRetry = retryDates.filter({ $0 > now }).min() else { return normalInterval }
+        return min(normalInterval, max(0.1, nextRetry.timeIntervalSince(now)))
     }
 
     /// How long to wait after a successful request before the confirming refresh, and how
@@ -439,6 +452,7 @@ public final class UsageViewModel: ObservableObject {
         }
         isStopped = true
         isRefreshing = false
+        pendingManualRefresh = false
         isProviderRefreshing = false
         isDeepSeekStatusRefreshing = false
         timer?.cancel()
@@ -513,16 +527,27 @@ public final class UsageViewModel: ObservableObject {
     /// Rebuilds the ChatGPT timer only when the cadence actually changed, so a steady
     /// state keeps one subscription instead of churning one per round.
     private func rescheduleCodexTimer() {
-        let interval = currentCodexInterval
-        if timer != nil, abs(interval - lastCodexTimerInterval) < 0.001 { return }
+        let now = Date()
+        let retryDates = coordinator.automaticRetryDates
+        let retryDeadline = retryDates.filter { $0 > now }.min()
+        let interval = Self.retryAwareCodexRefreshInterval(
+            normalInterval: currentCodexInterval,
+            retryDates: retryDates,
+            now: now
+        )
+        if timer != nil,
+           abs(interval - lastCodexTimerInterval) < 0.001,
+           retryDeadline == lastCodexRetryDeadline { return }
         timer?.cancel()
         lastCodexTimerInterval = interval
+        lastCodexRetryDeadline = retryDeadline
         timer = Timer.publish(every: interval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.scheduledCodexRefresh() }
     }
 
     private var lastCodexTimerInterval: TimeInterval = 0
+    private var lastCodexRetryDeadline: Date?
 
     /// Creates an additional timer only while the currently selected source is below its
     /// configured threshold. The ordinary ChatGPT/provider timers remain responsible for all
@@ -705,8 +730,16 @@ public final class UsageViewModel: ObservableObject {
     /// on the main actor. Waiting for `waitForAll()` would hold a fast account's fresh numbers
     /// behind a slow one's request, which is the 1.3.0 defect this cycle shape removes
     /// (REQUIREMENTS.md §3.1).
+    ///
+    /// A manual request (`resetFailureBudget: true`) arriving while a cycle runs is never
+    /// dropped: it queues exactly one follow-up cycle (1.4.2 §3.1). Automatic callers only
+    /// coalesce — the running cycle's fresh results are what they wanted anyway.
     private func refresh(resetFailureBudget: Bool = false) {
-        guard !isStopped, !isRefreshing else { return }
+        guard !isStopped else { return }
+        if isRefreshing {
+            if resetFailureBudget { pendingManualRefresh = true }
+            return
+        }
         isRefreshing = true
         let coordinator = self.coordinator
         let profileIDs = coordinator.profileIDs
@@ -714,6 +747,13 @@ public final class UsageViewModel: ObservableObject {
             await withTaskGroup(of: String.self) { group in
                 for profileID in profileIDs {
                     group.addTask {
+                        // Automatic rounds respect the per-profile retry ladder: a profile
+                        // whose backoff gate is open is skipped here rather than told
+                        // "no" again by the service. Manual rounds (resetFailureBudget)
+                        // bypass the gate by design.
+                        if !resetFailureBudget, coordinator.isAutomaticRetryGated(profileID: profileID) {
+                            return profileID
+                        }
                         _ = coordinator.fetch(profileID: profileID,
                                               resetFailureBudget: resetFailureBudget)
                         return profileID
@@ -740,19 +780,27 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Ends the cycle once the last profile has returned, and only then clears the round-wide
-    /// refreshing flag so the next round can start.
+    /// refreshing flag so the next round can start. A queued manual refresh runs here, exactly
+    /// once, as the next cycle.
     private func finishProfileRefreshCycle() {
         // A cancelled or stopped view model must not publish state after teardown. The flag is
         // still cleared so a later cycle is not blocked by a stale `true`.
         guard !isStopped, !Task.isCancelled else {
             isRefreshing = false
             refreshTask = nil
+            pendingManualRefresh = false
             return
         }
         isRefreshing = false
         refreshTask = nil
         publishProfileStates()
         tick += 1
+        if pendingManualRefresh {
+            // Exactly one follow-up; it clears the flag itself before the next cycle starts.
+            pendingManualRefresh = false
+            refresh(resetFailureBudget: true)
+            return
+        }
         rescheduleCodexTimer()
         rescheduleMenuBarRefreshTimer()
     }
@@ -883,7 +931,11 @@ public final class UsageViewModel: ObservableObject {
             return
         }
 
-        // The request ran. Wait, then force-refresh this profile only — the other account's
+        // The request ran. Everything observed from here on counts as post-fire evidence;
+        // the barrier is the completion of the request itself.
+        let fireCompletedAt = Date()
+
+        // Wait, then force-refresh this profile only — the other account's
         // window was not touched by this request.
         try? await Task.sleep(nanoseconds: Self.nanoseconds(fireConfirmDelay))
         guard !isStopped else { return }
@@ -891,13 +943,13 @@ public final class UsageViewModel: ObservableObject {
         // First confirmation read. When it is already conclusive the second read is skipped:
         // there is nothing left to learn, and the extra read is pure load on the service.
         var observations: [FireWindowConfirmation.Observation] = []
-        let first = await fetchFiveHourResetObservation(profileID: profileID)
+        let first = await fetchFiveHourResetObservation(profileID: profileID, notBefore: fireCompletedAt)
         observations.append(first)
         if previousWasLive,
            case .live(let resetsAt) = first,
-           FireWindowConfirmation.confirms(live: resetsAt, previous: previousFiveHourReset) {
+           FireWindowConfirmation.observesAdvancedReset(live: resetsAt, previous: previousFiveHourReset) {
             finishFireCycle(profileID: profileID,
-                            result: .requestSucceededWindowConfirmed,
+                            result: .requestSucceededResetAdvanced,
                             previousFiveHourReset: previousFiveHourReset,
                             observations: observations)
             return
@@ -908,7 +960,7 @@ public final class UsageViewModel: ObservableObject {
         // new window on the first read (REQUIREMENTS.md §4.2 steps 3–5).
         try? await Task.sleep(nanoseconds: Self.nanoseconds(fireRetryDelay))
         guard !isStopped else { return }
-        observations.append(await fetchFiveHourResetObservation(profileID: profileID))
+        observations.append(await fetchFiveHourResetObservation(profileID: profileID, notBefore: fireCompletedAt))
 
         finishFireCycle(profileID: profileID,
                         result: FireWindowConfirmation.classify(previousReset: previousFiveHourReset,
@@ -942,13 +994,13 @@ public final class UsageViewModel: ObservableObject {
                           previous: Date?,
                           observations: [FireWindowConfirmation.Observation]) -> TimeInterval? {
         switch result {
-        case .requestSucceededWindowConfirmed, .requestSucceededWindowUnchanged:
+        case .requestSucceededResetAdvanced, .requestSucceededResetUnchanged:
             let latest = observations.compactMap { observation -> Date? in
                 if case .live(let resetsAt) = observation { return resetsAt }
                 return nil
             }.last
             return FireWindowDrift.shift(from: previous, to: latest)
-        case .requestSucceededConfirmationUnavailable, .codexCLINotFound,
+        case .requestSucceededResetUnavailable, .codexCLINotFound,
              .commandCodeCLINotFound, .credentialUnavailable, .launchFailed,
              .nonZeroExit, .timedOut, .alreadyRunning:
             return nil
@@ -1005,8 +1057,8 @@ public final class UsageViewModel: ObservableObject {
         observations.append(first)
         if previousWasLive,
            case .live(let resetsAt) = first,
-           FireWindowConfirmation.confirms(live: resetsAt, previous: previousReset) {
-            finishCommandCodeFire(result: .requestSucceededWindowConfirmed,
+           FireWindowConfirmation.observesAdvancedReset(live: resetsAt, previous: previousReset) {
+            finishCommandCodeFire(result: .requestSucceededResetAdvanced,
                                   previousReset: previousReset,
                                   observations: observations)
             refreshProvider(.commandcode, force: false)
@@ -1082,11 +1134,19 @@ public final class UsageViewModel: ObservableObject {
     ///
     /// The confirmation path deliberately skips `account/read`: it resolves no identity,
     /// touches no attribution and triggers no cache migration.
-    private func fetchFiveHourResetObservation(profileID: String) async -> FireWindowConfirmation.Observation {
+    private func fetchFiveHourResetObservation(profileID: String, notBefore barrier: Date) async -> FireWindowConfirmation.Observation {
         let coordinator = self.coordinator
         return await Task.detached(priority: .userInitiated) {
-            let outcome = coordinator.fetchRateLimitsOnly(profileID: profileID)
+            // A manual fire owns its confirmation: the read bypasses the automatic
+            // backoff gate exactly like the manual fire itself.
+            let outcome = coordinator.fetchRateLimitsOnly(profileID: profileID,
+                                                          resetFailureBudget: true)
             guard case .success(let result) = outcome, result.isLive,
+                  // Freshness barrier: a shared read that began before the fire request
+                  // finished is pre-fire evidence, however live it looks, and must not
+                  // be counted (1.4.2 independent review: 点火后共享查询必须确实发生于
+                  // 请求完成后).
+                  let startedAt = result.readStartedAt, startedAt >= barrier,
                   let resetsAt = result.snapshot.fiveHour?.resetsAt else {
                 return FireWindowConfirmation.Observation.noEvidence
             }

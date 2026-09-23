@@ -36,26 +36,26 @@ final class FireDriftTests: XCTestCase {
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: before,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: before.addingTimeInterval(59))]),
-                       .requestSucceededWindowUnchanged)
+                       .requestSucceededResetUnchanged)
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: before,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: before.addingTimeInterval(60))]),
-                       .requestSucceededWindowConfirmed)
+                       .requestSucceededResetAdvanced)
         XCTAssertEqual(FireWindowDrift.displayText(59), "+59秒")
         XCTAssertEqual(FireWindowDrift.displayText(60), "+1分0秒")
     }
 
     func testHistoryEntryLinesCarryTimeResultAndDrift() {
         let at = Date(timeIntervalSince1970: 1_786_000_000)
-        let confirmed = FireHistoryEntry(result: .requestSucceededWindowConfirmed,
+        let confirmed = FireHistoryEntry(result: .requestSucceededResetAdvanced,
                                          finishedAt: at,
                                          driftSeconds: 6 * 3600 + 12 * 60)
-        XCTAssertTrue(confirmed.displayLine.contains("新窗口已确认"))
+        XCTAssertTrue(confirmed.displayLine.contains("请求成功，重置时间前移"))
         XCTAssertTrue(confirmed.displayLine.contains("+6小时12分"))
 
-        let unconfirmed = FireHistoryEntry(result: .requestSucceededConfirmationUnavailable,
+        let unconfirmed = FireHistoryEntry(result: .requestSucceededResetUnavailable,
                                            finishedAt: at)
-        XCTAssertTrue(unconfirmed.displayLine.contains("请求成功，暂无法确认"))
+        XCTAssertTrue(unconfirmed.displayLine.contains("请求成功，重置时间未知"))
         XCTAssertFalse(unconfirmed.displayLine.contains("+"),
                        "an unconfirmed request shows the request alone, never a drift")
     }
@@ -64,7 +64,7 @@ final class FireDriftTests: XCTestCase {
         let runtime = CodexProfileRuntime(profile: .chatGPTA,
                                           service: UsageService(factory: { throw UsageError.rpcFailed(.other) }))
         for _ in 0..<4 {
-            runtime.recordFireFinished(.requestSucceededWindowUnchanged, driftSeconds: 10)
+            runtime.recordFireFinished(.requestSucceededResetUnchanged, driftSeconds: 10)
         }
         XCTAssertEqual(runtime.state().fireHistory.count, CodexProfileRuntime.maxFireHistory)
         XCTAssertEqual(CodexProfileRuntime.maxFireHistory, 3)

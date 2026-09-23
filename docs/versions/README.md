@@ -19,6 +19,7 @@
 | 1.3.2 | 是（用户接受发布；保留发布后验证项） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 脱敏渲染，不入库 |
 | 1.4.0 | 是（保留真实低额度现场观察项） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | — | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 明暗设置页渲染，不入库 |
 | 1.4.1 | 是 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | — | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | `/tmp` 明暗详情页渲染，不入库 |
+| 1.4.2 | 验收通过（发布核验见 ACCEPTANCE.md） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | — |
 
 ## 各版本的额外资料
 
@@ -28,6 +29,7 @@
 | 1.1.0 | `assets/` | 该版本自带的界面素材 |
 | 1.3.0 | `REVISION_SPEC.md`、`UI_SPEC.md`、`AGENT_HANDOFF.md`、`FIRE_DESIGN_BACKGROUND.md` | 真实界面验收否决后的回归修订规格、最终界面规格、交接说明，以及脱敏后的双账号点火设计背景 |
 | 1.3.1 | — | 记录 R1 无障碍阻断的发现与修复，无发布说明以外的额外文件 |
+| 1.4.2 | `INDEPENDENT_REVIEW.md` | Codex 独立审核意见（实施输入；全部条目已在版本 `REVIEW.md` 中逐项应答） |
 
 ## 发布
 

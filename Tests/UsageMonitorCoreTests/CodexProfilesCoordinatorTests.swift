@@ -182,7 +182,7 @@ final class CodexProfilesCoordinatorTests: XCTestCase {
         }
     }
 
-    func testEachProfileKeepsItsOwnFailureBudget() {
+    func testEachProfileKeepsItsOwnRetryLadder() {
         let cache = UsageCache(userDefaults: makeDefaults())
         let failing = StubClient()
         failing.persistentError = .rpcFailed(.timedOut(method: "account/rateLimits/read"))
@@ -192,15 +192,36 @@ final class CodexProfilesCoordinatorTests: XCTestCase {
         }
 
         for _ in 0..<3 { _ = coordinator.fetch(profileID: "chatgpt-a") }
-        XCTAssertTrue(coordinator.runtime(for: "chatgpt-a")!.service.isFailureEpisodeActive)
+        XCTAssertTrue(coordinator.runtime(for: "chatgpt-a")!.service.isRetryBackoffActive,
+                      "A's failed episodes open A's backoff gate")
 
-        // Account B has never failed, so its budget is untouched: a shared budget would have
-        // frozen it too.
-        XCTAssertFalse(coordinator.runtime(for: "chatgpt-b")!.service.isFailureEpisodeActive)
+        // Account B has never failed, so its ladder is untouched: a shared gate would have
+        // held it back too.
+        XCTAssertFalse(coordinator.runtime(for: "chatgpt-b")!.service.isRetryBackoffActive)
         let firstB = coordinator.fetch(profileID: "chatgpt-b")
         XCTAssertNil(try? firstB.get())
         XCTAssertGreaterThanOrEqual(failing.startCalls, 4,
                                     "B must have been allowed its own attempt plus restart")
+    }
+
+    func testAutomaticRetryDatesExcludeProfilesRequiringManualAction() {
+        let cache = UsageCache(userDefaults: makeDefaults())
+        let transient = StubClient()
+        transient.persistentError = .rpcFailed(.timedOut(method: "account/rateLimits/read"))
+        let signedOut = StubClient()
+        signedOut.readErrors = [.codexNotSignedIn]
+        let coordinator = CodexProfilesCoordinator { profile in
+            let client = profile.id == "chatgpt-a" ? transient : signedOut
+            return UsageService(factory: { client }, cache: cache, profileID: profile.id, restartDelay: 0)
+        }
+
+        _ = coordinator.fetch(profileID: "chatgpt-a")
+        _ = coordinator.fetch(profileID: "chatgpt-b")
+
+        XCTAssertEqual(coordinator.automaticRetryDates.count, 1,
+                       "only the transient profile should contribute an automatic timer deadline")
+        XCTAssertGreaterThan(coordinator.automaticRetryDates[0], Date())
+        XCTAssertTrue(coordinator.runtime(for: "chatgpt-b")!.service.isManualRetryRequired)
     }
 
     // MARK: - Shutdown

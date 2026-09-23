@@ -204,10 +204,10 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededConfirmationUnavailable,
+        XCTAssertEqual(result, .requestSucceededResetUnavailable,
                        "a cached read is not evidence that a new window started, and it is not "
                        + "evidence that it did not: the card reports the request alone")
-        XCTAssertEqual(model.profileState("chatgpt-a")?.fireResult?.displayText, "请求成功，暂无法确认")
+        XCTAssertEqual(model.profileState("chatgpt-a")?.fireResult?.displayText, "请求成功，重置时间未知")
     }
 
     func testAStalePreFireWindowCannotConfirmANewWindow() async throws {
@@ -236,7 +236,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededConfirmationUnavailable,
+        XCTAssertEqual(result, .requestSucceededResetUnavailable,
                        "a cached before-value cannot prove that this request created the later live window")
         XCTAssertNil(model.profileState("chatgpt-a")?.fireDriftSeconds)
     }
@@ -258,7 +258,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed,
+        XCTAssertEqual(result, .requestSucceededResetAdvanced,
                        "the 5s retry must be able to produce a live confirmation")
     }
 
@@ -273,7 +273,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowUnchanged,
+        XCTAssertEqual(result, .requestSucceededResetUnchanged,
                        "a live read of the same window is not a new window")
     }
 
@@ -295,7 +295,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed)
+        XCTAssertEqual(result, .requestSucceededResetAdvanced)
         XCTAssertEqual(model.profileState("chatgpt-a")?.snapshot?.fiveHour?.resetsAt, movedWindow,
                        "the card must show the newly observed window")
     }
@@ -313,7 +313,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowUnchanged)
+        XCTAssertEqual(result, .requestSucceededResetUnchanged)
     }
 
     // MARK: §4.3 The final classification truth table, row by row
@@ -328,64 +328,64 @@ final class FireLifecycleTests: XCTestCase {
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: moved)]),
-                       .requestSucceededWindowConfirmed)
+                       .requestSucceededResetAdvanced)
         // Row 2: a before value and live values, none of which moved far enough.
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: previous)]),
-                       .requestSucceededWindowUnchanged)
+                       .requestSucceededResetUnchanged)
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: nearly)]),
-                       .requestSucceededWindowUnchanged)
+                       .requestSucceededResetUnchanged)
         // A later live value can still confirm, even when the first one did not move.
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: previous),
                                                                       .live(resetsAt: moved)]),
-                       .requestSucceededWindowConfirmed)
+                       .requestSucceededResetAdvanced)
         // Row 3: a before value but no live evidence at all.
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: [.noEvidence, .noEvidence]),
-                       .requestSucceededConfirmationUnavailable)
+                       .requestSucceededResetUnavailable)
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: true,
                                                        observations: []),
-                       .requestSucceededConfirmationUnavailable)
+                       .requestSucceededResetUnavailable)
         // Row 4: no before value, however good the later reads look.
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: nil,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: moved)]),
-                       .requestSucceededConfirmationUnavailable)
+                       .requestSucceededResetUnavailable)
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: nil,
                                                        previousWasLive: true,
                                                        observations: [.live(resetsAt: previous),
                                                                       .live(resetsAt: moved)]),
-                       .requestSucceededConfirmationUnavailable)
+                       .requestSucceededResetUnavailable)
         // A cached before-value is never promoted into proof by a later live read.
         XCTAssertEqual(FireWindowConfirmation.classify(previousReset: previous,
                                                        previousWasLive: false,
                                                        observations: [.live(resetsAt: moved)]),
-                       .requestSucceededConfirmationUnavailable)
+                       .requestSucceededResetUnavailable)
         // The threshold itself counts as movement; the classifier and the card share it.
         XCTAssertEqual(FireWindowConfirmation.threshold, 60)
-        XCTAssertTrue(FireWindowConfirmation.confirms(live: previous.addingTimeInterval(60), previous: previous))
-        XCTAssertFalse(FireWindowConfirmation.confirms(live: previous.addingTimeInterval(59), previous: previous))
-        XCTAssertFalse(FireWindowConfirmation.confirms(live: moved, previous: nil))
+        XCTAssertTrue(FireWindowConfirmation.observesAdvancedReset(live: previous.addingTimeInterval(60), previous: previous))
+        XCTAssertFalse(FireWindowConfirmation.observesAdvancedReset(live: previous.addingTimeInterval(59), previous: previous))
+        XCTAssertFalse(FireWindowConfirmation.observesAdvancedReset(live: moved, previous: nil))
     }
 
     /// The three "request succeeded" outcomes are neither successes nor failures, so the card
     /// draws them in the secondary colour rather than claiming more than it knows.
     func testTheThreeRequestSucceededResultsCarryNoSuccessOrFailureColour() {
-        XCTAssertTrue(ChatGPTFireResult.requestSucceededWindowConfirmed.isSuccess)
-        XCTAssertFalse(ChatGPTFireResult.requestSucceededWindowUnchanged.isSuccess)
-        XCTAssertFalse(ChatGPTFireResult.requestSucceededConfirmationUnavailable.isSuccess)
-        for result in [ChatGPTFireResult.requestSucceededWindowUnchanged,
-                       .requestSucceededConfirmationUnavailable] {
+        XCTAssertTrue(ChatGPTFireResult.requestSucceededResetAdvanced.isSuccess)
+        XCTAssertFalse(ChatGPTFireResult.requestSucceededResetUnchanged.isSuccess)
+        XCTAssertFalse(ChatGPTFireResult.requestSucceededResetUnavailable.isSuccess)
+        for result in [ChatGPTFireResult.requestSucceededResetUnchanged,
+                       .requestSucceededResetUnavailable] {
             XCTAssertFalse(result.isFailure, "\(result) is not a failure")
         }
-        XCTAssertEqual(ChatGPTFireResult.requestSucceededConfirmationUnavailable.displayText, "请求成功，暂无法确认")
+        XCTAssertEqual(ChatGPTFireResult.requestSucceededResetUnavailable.displayText, "请求成功，重置时间未知")
     }
 
     /// A live first read that already moved the window ends the sequence immediately: the
@@ -405,7 +405,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed)
+        XCTAssertEqual(result, .requestSucceededResetAdvanced)
         XCTAssertEqual(client.readCount, readsAfterPrelude + 1,
                        "a confirmed first read must not be followed by a second refresh")
         XCTAssertEqual(client.accountReadCount, accountReadsAfterPrelude,
@@ -428,7 +428,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed)
+        XCTAssertEqual(result, .requestSucceededResetAdvanced)
         XCTAssertEqual(client.readCount, readsAfterPrelude + 2,
                        "an unmoved live read must be retried once, and the retry is a real read")
     }
@@ -447,7 +447,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowUnchanged)
+        XCTAssertEqual(result, .requestSucceededResetUnchanged)
     }
 
     /// No "before" value at all: the comparison the confirmation is built on does not exist,
@@ -469,7 +469,7 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededConfirmationUnavailable)
+        XCTAssertEqual(result, .requestSucceededResetUnavailable)
     }
 
     // MARK: 1.3.2 Drift suffix and history
@@ -487,15 +487,15 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowConfirmed)
+        XCTAssertEqual(result, .requestSucceededResetAdvanced)
         let state = try XCTUnwrap(model.profileState("chatgpt-a"))
         XCTAssertEqual(state.fireDriftSeconds ?? -1, 6 * 3600 + 12 * 60, accuracy: 0.001)
-        XCTAssertEqual(state.fireResultText, "新窗口已确认")
+        XCTAssertEqual(state.fireResultText, "请求成功，重置时间前移")
         XCTAssertEqual(state.fireDriftText, "+6小时12分")
-        XCTAssertEqual(state.fireStatusText, "新窗口已确认 · +6小时12分")
+        XCTAssertEqual(state.fireStatusText, "请求成功，重置时间前移 · +6小时12分")
         XCTAssertEqual(state.fireHistory.count, 1)
         XCTAssertEqual(state.fireHistoryLines.count, 1)
-        XCTAssertTrue(state.fireHistoryLines[0].contains("新窗口已确认"))
+        XCTAssertTrue(state.fireHistoryLines[0].contains("请求成功，重置时间前移"))
     }
 
     func testUnchangedFireShowsASmallDriftAndUnconfirmedShowsNone() async throws {
@@ -511,23 +511,23 @@ final class FireLifecycleTests: XCTestCase {
         model.fire(profileID: "chatgpt-a")
         let result = await waitForFireResult(model)
 
-        XCTAssertEqual(result, .requestSucceededWindowUnchanged)
+        XCTAssertEqual(result, .requestSucceededResetUnchanged)
         let state = try XCTUnwrap(model.profileState("chatgpt-a"))
-        XCTAssertEqual(state.fireResultText, "请求成功，窗口未变化")
+        XCTAssertEqual(state.fireResultText, "请求成功，重置时间未变化")
         XCTAssertEqual(state.fireDriftText, "+32秒")
-        XCTAssertEqual(state.fireStatusText, "请求成功，窗口未变化 · +32秒")
+        XCTAssertEqual(state.fireStatusText, "请求成功，重置时间未变化 · +32秒")
     }
 
     func testFireDriftHelperCoversOnlyMeasuredOutcomes() {
         let moved = Self.windowStart.addingTimeInterval(3600)
-        XCTAssertEqual(UsageViewModel.fireDrift(result: .requestSucceededWindowConfirmed,
+        XCTAssertEqual(UsageViewModel.fireDrift(result: .requestSucceededResetAdvanced,
                                                 previous: Self.windowStart,
                                                 observations: [.live(resetsAt: moved)]) ?? -1,
                        3600, accuracy: 0.001 as TimeInterval)
-        XCTAssertNil(UsageViewModel.fireDrift(result: .requestSucceededConfirmationUnavailable,
+        XCTAssertNil(UsageViewModel.fireDrift(result: .requestSucceededResetUnavailable,
                                               previous: Self.windowStart,
                                               observations: [.live(resetsAt: moved)]))
-        XCTAssertNil(UsageViewModel.fireDrift(result: .requestSucceededWindowConfirmed,
+        XCTAssertNil(UsageViewModel.fireDrift(result: .requestSucceededResetAdvanced,
                                               previous: nil,
                                               observations: [.live(resetsAt: moved)]))
     }
