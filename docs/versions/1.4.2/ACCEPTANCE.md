@@ -29,7 +29,7 @@
 - [x] 真实恢复路径：B 从缓存及上次成功时间恢复到实时额度；身份暂不可用时仍显示额度，后续恢复套餐和邮箱；A 独立更新，不被 B 缓存状态阻塞。顶部失败时显示“部分数据未更新”。本机签名在完整访问环境下再次严格验证通过。
 - [x] 新模板脚本经 `scripts/install-minget-fire.sh` 显式安装，三个旧文件均有同 hash 备份；安装器未修改 plist 或重载 launchd。
 - [x] 安装后首个自然定时运行已核验，LaunchAgent 保持加载，plist SHA-256 与安装前一致：`0a54ea2d961e56837a211b3c0b8f190ef6c0bbaacf7357efd045ece2b48518ea`，时间仍为 05:30 / 10:35 / 15:40。
-- [ ] GitHub Release 与发布提交 CI。
+- [x] GitHub Release 与发布提交 CI：[35890064042](https://github.com/ym911x/Minget/actions/runs/35890064042) 已完成，`conclusion=success`，测试与应用构建均通过。
 
 ### 2026-09-23 自然定时运行
 
@@ -41,7 +41,8 @@
 ## 3. 验收边界
 
 - 没有手动触发点火。上述请求来自用户原有 LaunchAgent 的自然运行。
-- 未提交、未推送、未发布。
+- 已于 2026-09-24 推送发布提交 `e094a67b25abfc10ed5c3458ff44c0ca708ff162` 并创建注释标签 `v1.4.2`；标签对象 `89e0b7fdd105c0da268d99b5ae0bb78e9af222da`，远端解引用与发布提交一致。
+- [GitHub Release v1.4.2](https://github.com/ym911x/Minget/releases/tag/v1.4.2) 已公开，非 draft、非 prerelease，公开页面 HTTP 200；沿用源码发布，无未公证二进制附件。
 - 未读取全局 Codex/Claude 配置、认证文件或 Profile 内容；真实外部脚本仅通过已授权的 CLI 点火路径运行，日志为固定脱敏字段。
 - 自动脚本测试使用 `/tmp` 沙盒假 CLI；真实自然运行是单独的验收证据，不以测试替代。
 - macOS 于真实界面第一轮刷新后锁屏，CUA 明确报告需用户解锁；未尝试绕过锁屏，也未将未完成的 UI 轮次记为通过。
