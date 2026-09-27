@@ -1,10 +1,9 @@
 # 当前审核状态
 
-当前版本：1.4.3。Codex 直接实现并检查最终差异；严格签名、本机备份安装、Finder 启动与双账号真实只读核验完成。真实界面交互验收待补；第二台 Mac 未实测；已正式发布，发布提交 CI 通过，核验见本版本发布记录。
+当前开发版本：1.5.0。Codex 已实现详情页切换、首次连接引导与账号管理、官方 ChatGPT 登录接线、底部操作和菜单栏重复点击处理。完整自动测试、Release 构建、严格签名、本机备份安装及退出子进程回收已通过。当前 Mac 锁屏，签名包真实菜单栏交互和真实连接尚待验收；第二台 Mac 未实测。未推送或发布 v1.5.0，公开最新版本仍为 1.4.3。
 
-- [实施报告](docs/versions/1.4.3/IMPLEMENTATION_REPORT.md)
-- [审核](docs/versions/1.4.3/REVIEW.md)
-- [验收台账](docs/versions/1.4.3/ACCEPTANCE.md)
-- [发布核验](docs/versions/1.4.3/PUBLICATION.md)
+- [实施报告](docs/versions/1.5.0/IMPLEMENTATION_REPORT.md)
+- [审核](docs/versions/1.5.0/REVIEW.md)
+- [验收台账](docs/versions/1.5.0/ACCEPTANCE.md)
 
-历史根审核页已保存在 [1.4.2 快照](docs/versions/1.4.2/ROOT_REVIEW_SNAPSHOT.md)；冻结 v1.0 基线保持原样。
+1.4.3 的审核及发布证据保留在 [1.4.3 版本目录](docs/versions/1.4.3/)；冻结 v1.0 基线保持原样。

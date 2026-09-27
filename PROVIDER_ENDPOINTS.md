@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
 更新日期：2026-09-27
-适用版本：1.4.3
+适用版本：1.5.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -38,6 +38,12 @@
 - 用途：读取账号类型和可用的邮箱标识，并确定该 Profile 当次读数的归属。
 - 验证：请求为 A，响应结构为 B。响应结构依据本机 Codex 协议 schema；真实账号显示待用户验收。
 - 边界：不读取 `~/.codex/auth.json`，不触发 token 刷新。
+
+### `account/login/start`、`account/login/completed`、`account/login/cancel`（1.5.0）
+
+- 依据：[Codex App Server 官方文档](https://learn.chatgpt.com/docs/app-server) 中的 ChatGPT 浏览器登录流程。调用方传 `type: chatgpt`；官方子进程返回 `loginId` 与 HTTPS `authUrl`，浏览器完成授权后发出带同一 `loginId` 的完成通知。取消时把该 ID 交给 `account/login/cancel`。
+- 每个账号沿用已有隔离 `CODEX_HOME` 和长生命周期 app-server 子进程；同一时间仅允许一个交互登录。完成通知只接受当前连接代次及当前登录 ID，成功后按既有身份与额度只读路径刷新；旧通知和取消后的通知忽略。
+- Minget 只把限定为官方域名的登录 URL 交给系统默认浏览器，不读取浏览器会话或认证文件，不记录 URL、响应正文或令牌。登录本身由用户在官方页面完成。登录请求不调用模型端点，也不点火。
 
 ### 手动点火（`codex exec`，模型请求例外）
 

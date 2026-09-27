@@ -72,6 +72,9 @@ public final class UsageService: @unchecked Sendable {
     // MARK: Shared single-flight state
     /// Exactly one operation (fetch, rate-limits-only read or wake probe) runs at a time.
     private var operationRunning = false
+    private var interactiveLoginActive = false
+    private var interactiveLoginID: String?
+    private var interactiveLoginPendingCompletions: [String: Bool] = [:]
     private var operationThread: Thread?
     private var operationFinished = DispatchSemaphore(value: 0)
     /// Waiters joined to the running operation; each receives its actual result.
@@ -203,6 +206,96 @@ public final class UsageService: @unchecked Sendable {
     public var isOperationRunning: Bool {
         lock.lock(); defer { lock.unlock() }
         return operationRunning
+    }
+
+    public var isInteractiveLoginActive: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return interactiveLoginActive
+    }
+
+    /// Uses this profile's existing app-server child. Called on a background queue.
+    /// The active flag prevents quota reads from competing with the login ceremony.
+    public func beginManagedLogin(onCompleted: @escaping (Bool) -> Void) throws -> ManagedLoginStart {
+        let deadline = Date().addingTimeInterval(30)
+        while true {
+            lock.lock()
+            if stopped || interactiveLoginActive {
+                lock.unlock()
+                throw UsageError.rpcFailed(.other)
+            }
+            if !operationRunning {
+                interactiveLoginActive = true
+                let loginGeneration = generation
+                lock.unlock()
+                do {
+                    let activeClient = try acquireClient(generationAtStart: loginGeneration)
+                    try activeClient.handshake(timeout: CodexAppServerClient.handshakeTimeout)
+                    let epoch = currentConnectionEpoch
+                    activeClient.setLoginCompletionHandler { [weak self] id, success in
+                        guard let self else { return }
+                        self.lock.lock()
+                        let accepted = self.interactiveLoginActive
+                            && self.generation == loginGeneration
+                            && self.connectionEpoch == epoch
+                            && (self.interactiveLoginID == nil || self.interactiveLoginID == id)
+                        let completed = accepted && self.interactiveLoginID == id
+                        if accepted && self.interactiveLoginID == nil {
+                            self.interactiveLoginPendingCompletions[id] = success
+                        }
+                        if completed {
+                            self.interactiveLoginActive = false
+                            self.interactiveLoginID = nil
+                            self.interactiveLoginPendingCompletions.removeAll()
+                        }
+                        self.lock.unlock()
+                        if completed { onCompleted(success) }
+                    }
+                    let started = try activeClient.startManagedLogin(timeout: 10)
+                    lock.lock()
+                    let stillActive = interactiveLoginActive
+                        && generation == loginGeneration
+                        && connectionEpoch == epoch
+                    let earlyCompletion = stillActive ? interactiveLoginPendingCompletions[started.id] : nil
+                    interactiveLoginPendingCompletions.removeAll()
+                    if stillActive {
+                        if earlyCompletion == nil {
+                            interactiveLoginID = started.id
+                        } else {
+                            interactiveLoginActive = false
+                        }
+                    }
+                    lock.unlock()
+                    if !stillActive {
+                        try? activeClient.cancelManagedLogin(id: started.id, timeout: 5)
+                        throw UsageError.rpcFailed(.shutdown)
+                    }
+                    if let earlyCompletion { onCompleted(earlyCompletion) }
+                    return started
+                } catch {
+                    lock.lock()
+                    interactiveLoginActive = false
+                    interactiveLoginID = nil
+                    interactiveLoginPendingCompletions.removeAll()
+                    lock.unlock()
+                    throw error
+                }
+            }
+            lock.unlock()
+            guard Date() < deadline else { throw UsageError.rpcFailed(.timedOut(method: "login wait")) }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+    }
+
+    public func cancelManagedLogin() {
+        lock.lock()
+        let id = interactiveLoginID
+        let activeClient = client
+        interactiveLoginActive = false
+        interactiveLoginID = nil
+        interactiveLoginPendingCompletions.removeAll()
+        lock.unlock()
+        guard let id, let activeClient else { return }
+        try? activeClient.cancelManagedLogin(id: id, timeout: 5)
     }
 
     /// Current connection epoch. Increments whenever a new child is published; identity
@@ -393,6 +486,10 @@ public final class UsageService: @unchecked Sendable {
         if stopped {
             lock.unlock()
             throw UsageError.rpcFailed(.shutdown)
+        }
+        if interactiveLoginActive {
+            lock.unlock()
+            throw UsageError.rpcFailed(.other)
         }
         if operationRunning {
             let box = joinLocked(kind: kind)
@@ -880,6 +977,9 @@ public final class UsageService: @unchecked Sendable {
         lock.lock()
         generation += 1
         stopped = true
+        interactiveLoginActive = false
+        interactiveLoginID = nil
+        interactiveLoginPendingCompletions.removeAll()
         state = .idle
         var found: [CodexAppServerProviding] = []
         if let client { found.append(client); self.client = nil }

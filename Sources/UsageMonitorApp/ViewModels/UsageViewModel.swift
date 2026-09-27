@@ -25,6 +25,9 @@ public final class UsageViewModel: ObservableObject {
     /// `displayState`/`codexAccount` pair is deliberately gone: it could only ever describe
     /// one account.
     @Published public private(set) var profileStates: [CodexProfileViewState] = []
+    @Published private(set) var loginStatus: [String: String] = [:]
+    @Published private(set) var activeLoginProfile: String?
+    private var loginAttemptID: UUID?
 
     // MARK: Providers
 
@@ -451,6 +454,8 @@ public final class UsageViewModel: ObservableObject {
             return
         }
         isStopped = true
+        activeLoginProfile = nil
+        loginAttemptID = nil
         isRefreshing = false
         pendingManualRefresh = false
         isProviderRefreshing = false
@@ -711,6 +716,94 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: - Refreshing
 
+    public func connectChatGPT(profileID: String) {
+        guard activeLoginProfile == nil,
+              let runtime = coordinator.runtime(for: profileID), !isStopped else { return }
+        let attemptID = UUID()
+        loginAttemptID = attemptID
+        activeLoginProfile = profileID
+        loginStatus[profileID] = "正在准备官方登录…"
+        let service = runtime.service
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let started = try service.beginManagedLogin { [weak self] success in
+                    Task { @MainActor in self?.finishChatGPTLogin(profileID: profileID, attemptID: attemptID, success: success) }
+                }
+                await self?.showBrowserLogin(started, profileID: profileID, attemptID: attemptID, service: service)
+            } catch {
+                let message = (error as? UsageError).map(Self.loginErrorText)
+                    ?? "无法启动登录，请检查 Codex 安装后重试。"
+                await self?.failBrowserLogin(profileID: profileID, attemptID: attemptID, message: message)
+            }
+        }
+    }
+
+    private func showBrowserLogin(_ started: ManagedLoginStart, profileID: String,
+                                  attemptID: UUID, service: UsageService) {
+        guard service.isInteractiveLoginActive else { return }
+        guard activeLoginProfile == profileID, loginAttemptID == attemptID else {
+            if service.isInteractiveLoginActive {
+                Task.detached { service.cancelManagedLogin() }
+            }
+            return
+        }
+        loginStatus[profileID] = "等待在浏览器中完成授权…"
+        if !NSWorkspace.shared.open(started.authorizationURL) {
+            activeLoginProfile = nil
+            loginAttemptID = nil
+            loginStatus[profileID] = "无法打开官方登录页，请检查默认浏览器后重试。"
+            Task.detached { service.cancelManagedLogin() }
+        }
+    }
+
+    private func failBrowserLogin(profileID: String, attemptID: UUID, message: String) {
+        guard activeLoginProfile == profileID, loginAttemptID == attemptID else { return }
+        activeLoginProfile = nil
+        loginAttemptID = nil
+        loginStatus[profileID] = message
+    }
+
+    nonisolated private static func loginErrorText(_ error: UsageError) -> String {
+        switch error {
+        case .codexCLINotFound:
+            return "未找到 Codex CLI。请安装官方 Codex 桌面应用或 CLI 后重试。"
+        case .codexNodeUnavailable:
+            return "缺少 Node 运行环境。请安装 Node 或官方 Codex 桌面应用后重试。"
+        case .rpcFailed(.serverError(code: -32601)), .rpcFailed(.malformedResponse):
+            return "当前 Codex 不支持所需登录接口。请更新 Codex 后重试。"
+        default:
+            return UsageFormatting.errorText(error).components(separatedBy: "\n")[0] + "，请重试。"
+        }
+    }
+
+    public func cancelChatGPTLogin() {
+        guard let id = activeLoginProfile, let service = coordinator.runtime(for: id)?.service else { return }
+        activeLoginProfile = nil
+        loginAttemptID = nil
+        loginStatus[id] = "已取消登录"
+        Task.detached { service.cancelManagedLogin() }
+    }
+
+    private func finishChatGPTLogin(profileID: String, attemptID: UUID, success: Bool) {
+        guard activeLoginProfile == profileID, loginAttemptID == attemptID else { return }
+        activeLoginProfile = nil
+        loginStatus[profileID] = success ? "授权完成，正在读取额度…" : "登录未完成，请重试。"
+        guard success else { return }
+        let coordinator = self.coordinator
+        Task.detached(priority: .userInitiated) { [weak self] in
+            _ = coordinator.fetch(profileID: profileID, resetFailureBudget: true)
+            await self?.publishLoginRefresh(profileID: profileID, attemptID: attemptID)
+        }
+    }
+
+    private func publishLoginRefresh(profileID: String, attemptID: UUID) {
+        guard loginAttemptID == attemptID else { return }
+        publishProfileStates()
+        let state = profileStates.first(where: { $0.profile.id == profileID })
+        loginStatus[profileID] = (state?.snapshot != nil && state?.isStale == false && state?.failure == nil)
+            ? "连接成功，额度已更新" : "已登录，实时额度暂不可用，请重试。"
+    }
+
     /// Manual refresh: always fetches both profiles and every provider; the only path that
     /// re-opens the Codex failure budget.
     public func refreshNow() {
@@ -751,7 +844,8 @@ public final class UsageViewModel: ObservableObject {
                         // whose backoff gate is open is skipped here rather than told
                         // "no" again by the service. Manual rounds (resetFailureBudget)
                         // bypass the gate by design.
-                        if !resetFailureBudget, coordinator.isAutomaticRetryGated(profileID: profileID) {
+                        if coordinator.runtime(for: profileID)?.service.isInteractiveLoginActive == true
+                            || (!resetFailureBudget && coordinator.isAutomaticRetryGated(profileID: profileID)) {
                             return profileID
                         }
                         _ = coordinator.fetch(profileID: profileID,

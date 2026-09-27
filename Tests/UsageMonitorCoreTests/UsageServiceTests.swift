@@ -15,6 +15,9 @@ final class StubClient: CodexAppServerProviding {
     var isTransportRunning = true
     /// Identity the stub reports for `account/read`.
     var account: CodexAccount?
+    var loginHandler: ((String, Bool) -> Void)?
+    var completeLoginBeforeStartReturns = false
+    var cancelledLoginIDs: [String] = []
 
     func start() throws {
         startCalls += 1
@@ -41,9 +44,55 @@ final class StubClient: CodexAppServerProviding {
         stopCalls += 1
         isTransportRunning = false
     }
+
+    func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void) { loginHandler = handler }
+    func startManagedLogin(timeout: TimeInterval) throws -> ManagedLoginStart {
+        if completeLoginBeforeStartReturns { loginHandler?("login-1", true) }
+        return ManagedLoginStart(id: "login-1", authorizationURL: URL(string: "https://chatgpt.com/auth")!)
+    }
+    func cancelManagedLogin(id: String, timeout: TimeInterval) throws { cancelledLoginIDs.append(id) }
 }
 
 final class UsageServiceTests: XCTestCase {
+
+    func testManagedLoginPausesReadsAndRejectsLateCompletionAfterCancel() throws {
+        let stub = StubClient()
+        let service = UsageService(factory: { stub }, cache: UsageCache(userDefaults: makeUserDefaults()))
+        var completions: [Bool] = []
+        let started = try service.beginManagedLogin { completions.append($0) }
+        XCTAssertEqual(started.id, "login-1")
+        XCTAssertTrue(service.isInteractiveLoginActive)
+        XCTAssertThrowsError(try service.fetch())
+        service.cancelManagedLogin()
+        XCTAssertEqual(stub.cancelledLoginIDs, ["login-1"])
+        stub.loginHandler?("login-1", true)
+        XCTAssertTrue(completions.isEmpty)
+        XCTAssertFalse(service.isInteractiveLoginActive)
+    }
+
+    func testManagedLoginAcceptsOnlyMatchingCompletion() throws {
+        let stub = StubClient()
+        let service = UsageService(factory: { stub }, cache: UsageCache(userDefaults: makeUserDefaults()))
+        var completions: [Bool] = []
+        _ = try service.beginManagedLogin { completions.append($0) }
+        stub.loginHandler?("different-login", true)
+        XCTAssertTrue(completions.isEmpty)
+        stub.loginHandler?("login-1", true)
+        XCTAssertEqual(completions, [true])
+        XCTAssertFalse(service.isInteractiveLoginActive)
+    }
+
+    func testManagedLoginHandlesCompletionBeforeStartReply() throws {
+        let stub = StubClient()
+        stub.completeLoginBeforeStartReturns = true
+        let service = UsageService(factory: { stub }, cache: UsageCache(userDefaults: makeUserDefaults()))
+        var completions: [Bool] = []
+        let started = try service.beginManagedLogin { completions.append($0) }
+        XCTAssertEqual(started.id, "login-1")
+        XCTAssertEqual(completions, [true])
+        XCTAssertFalse(service.isInteractiveLoginActive)
+        XCTAssertTrue(stub.cancelledLoginIDs.isEmpty)
+    }
     let fiveHour = RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300, usedPercent: 25,
                                    remainingPercent: 75, resetsAt: Date(timeIntervalSince1970: 1_788_935_373))
     let weekly = RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080, usedPercent: 58,

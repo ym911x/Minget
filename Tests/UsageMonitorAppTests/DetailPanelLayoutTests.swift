@@ -47,16 +47,16 @@ final class DetailPanelLayoutTests: XCTestCase {
 
     func testTheFourPreferredPageHeights() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout"))
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 801)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 837)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 721, "only Command Code")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 757, "only Command Code")
 
         preferences.showCommandCode = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 432, "neither service card")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 468, "neither service card")
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 512, "only DeepSeek")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 548, "only DeepSeek")
     }
 
     func testTheFourPreferredPageHeightsMatchTheRowArithmetic() {
@@ -64,6 +64,21 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 721)
         XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 512)
         XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 432)
+    }
+
+    func testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility() {
+        let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.Tabs"))
+        preferences.displayMode = .byProvider
+        preferences.selectedTab = .chatGPT
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 502)
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 502)
+        preferences.selectedTab = .commandCode
+        let commandHeight = UsagePanelView.preferredHeight(for: preferences)
+        XCTAssertLessThan(commandHeight, 502)
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, commandHeight)
+        preferences.showCommandCode = false
+        XCTAssertEqual(preferences.effectiveTab, .all)
+        XCTAssertFalse(preferences.visibleTabs.contains(.commandCode))
     }
 
     // MARK: §11.2 Row geometry

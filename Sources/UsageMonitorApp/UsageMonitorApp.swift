@@ -82,18 +82,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let shutdownTimeout: TimeInterval = 10
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let showFirstRun = FirstRunGate.shouldPresent()
         NSApp.setActivationPolicy(.accessory)  // menu bar only, no Dock icon
         Diagnostics.log("applicationDidFinishLaunching")
         MainActor.assumeIsolated {
             let model = AppLifecycle.model
             model.start()
             AppLifecycle.statusItem.install(model: model)
+            if showFirstRun {
+                FirstRunGate.markPresented()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    MainActor.assumeIsolated { AppLifecycle.statusItem.showAccountsWindow(firstRun: true) }
+                }
+            }
 
             // The detail window must open when the menu bar icon is hidden, otherwise the
             // user has no way to reach the data after a relaunch (v1.1 requirement 1).
-            DispatchQueue.main.asyncAfter(deadline: .now() + StatusItemController.initialLayoutDelay + 0.5) {
-                MainActor.assumeIsolated {
-                    AppLifecycle.statusItem.openDetailWindowIfItemIsHidden()
+            if !showFirstRun {
+                DispatchQueue.main.asyncAfter(deadline: .now() + StatusItemController.initialLayoutDelay + 0.5) {
+                    MainActor.assumeIsolated {
+                        AppLifecycle.statusItem.openDetailWindowIfItemIsHidden()
+                    }
                 }
             }
         }

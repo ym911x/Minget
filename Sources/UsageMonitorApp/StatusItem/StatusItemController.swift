@@ -66,6 +66,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let dismissMonitor = PopoverDismissMonitor()
     private var detailWindowController: DetailWindowController?
     private var settingsWindowController: SettingsWindowController?
+    private var accountsWindowController: AccountsWindowController?
+    private var statusClickShouldCloseUntil = Date.distantPast
 
     private var model: UsageViewModel?
     private var stateMachine = MenuBarSpaceStateMachine()
@@ -77,6 +79,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private(set) var labelSignature: String?
     private var monitor: MenuBarSpaceMonitor?
     private var cancellables: Set<AnyCancellable> = []
+    private var detailPreferenceObserver: AnyCancellable?
     private var hasAutoOpenedDetailWindow = false
     /// Width currently applied to the status item. `private(set)` for the wiring tests.
     private(set) var appliedWidth: CGFloat = 0
@@ -116,6 +119,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
+        detailPreferenceObserver = DetailPreferences.shared.objectWillChange
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.resizeVisiblePanel() }
+                }
+            }
 
         button.target = self
         button.action = #selector(statusItemClicked(_:))
@@ -157,6 +166,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         monitor?.stop()
         monitor = nil
         cancellables.removeAll()
+        detailPreferenceObserver = nil
         closePanel()
         dismissMonitor.stop()   // idempotent: no callback survives the item
         popover.delegate = nil
@@ -164,6 +174,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         detailWindowController = nil
         settingsWindowController?.window?.orderOut(nil)
         settingsWindowController = nil
+        accountsWindowController?.window?.orderOut(nil)
+        accountsWindowController = nil
         if let item = statusItem {
             item.button?.subviews.forEach { $0.removeFromSuperview() }
             NSStatusBar.system.removeStatusItem(item)
@@ -280,6 +292,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Internal (not private) so the wiring tests can pin the button to this action.
     @objc func statusItemClicked(_ sender: Any?) {
+        if Date() < statusClickShouldCloseUntil {
+            statusClickShouldCloseUntil = .distantPast
+            closePanel()
+            return
+        }
         togglePanel()
     }
 
@@ -311,7 +328,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             return
         }
 
-        guard let controller = makePanelViewController(maxHeight: size.height) else { return }
+        let screenHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000,
+                                                           visibleFrame: screen?.visibleFrame)
+        guard let controller = makePanelViewController(maxHeight: screenHeight) else { return }
         NSApp.activate(ignoringOtherApps: true)
         // Both the hosting controller and the popover are given the final size *before*
         // `show`, so AppKit positions a panel of the right size rather than resizing one it
@@ -330,9 +349,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // monitor and close it again. `isShown` alone was not reliable enough across macOS
         // versions; this makes the outside-click behaviour explicit and testable
         // (v1.0.2 requirement 4).
-        dismissMonitor.install(popover: popover, statusButton: button) { [weak self] in
-            self?.closePanel()
-        }
+        dismissMonitor.install(popover: popover, statusButton: button,
+                               onStatusButtonDown: { [weak self] in
+                                   self?.statusClickShouldCloseUntil = Date().addingTimeInterval(1)
+                               }, onDismiss: { [weak self] in self?.closePanel() })
     }
 
     func closePanel() {
@@ -340,9 +360,26 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         dismissMonitor.stop()
     }
 
+    private func resizeVisiblePanel() {
+        guard popover.isShown, let button = statusItem?.button else { return }
+        let frame = button.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
+        let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame)
+        let screenHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000, visibleFrame: frame)
+        guard let controller = makePanelViewController(maxHeight: screenHeight, refreshOnAppear: false) else { return }
+        controller.preferredContentSize = size
+        popover.contentViewController = controller
+        popover.contentSize = size
+    }
+
     /// Every close path ends here, including the ones AppKit starts itself (escape key, app
     /// deactivation, a click on another window), so no monitor outlives the popover.
     func popoverDidClose(_ notification: Notification) {
+        if let event = NSApp.currentEvent,
+           event.type == .leftMouseDown || event.type == .rightMouseDown,
+           PopoverDismissMonitor.target(for: event, popover: popover,
+                                           statusButton: statusItem?.button) == .statusItemButton {
+            statusClickShouldCloseUntil = Date().addingTimeInterval(1)
+        }
         dismissMonitor.stop()
     }
 
@@ -354,7 +391,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         if detailWindowController == nil {
             detailWindowController = DetailWindowController(
                 model: model,
-                onSettings: { [weak self] in self?.showSettingsWindow() })
+                onSettings: { [weak self] in self?.showSettingsWindow() },
+                onAccounts: { [weak self] in self?.showAccountsWindow() },
+                onQuit: { NSApp.terminate(nil) })
         }
         detailWindowController?.present(centeredOn: statusItem)
         NSApp.activate(ignoringOtherApps: true)
@@ -375,13 +414,29 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func makePanelViewController(maxHeight: CGFloat? = nil) -> PanelHostingController? {
+    func showAccountsWindow(firstRun: Bool = false) {
+        guard let model else { return }
+        closePanel()
+        if accountsWindowController == nil {
+            accountsWindowController = AccountsWindowController(model: model) { [weak self] in
+                self?.showDetailWindow()
+            }
+        }
+        accountsWindowController?.show(firstRun: firstRun)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func makePanelViewController(maxHeight: CGFloat? = nil,
+                                 refreshOnAppear: Bool = true) -> PanelHostingController? {
         guard let model else { return nil }
         return PanelHostingController(
             model: model,
             preferences: DetailPreferences.shared,
             maxHeight: maxHeight,
-            onSettings: { [weak self] in self?.showSettingsWindow() })
+            refreshOnAppear: refreshOnAppear,
+            onSettings: { [weak self] in self?.showSettingsWindow() },
+            onAccounts: { [weak self] in self?.showAccountsWindow() },
+            onQuit: { NSApp.terminate(nil) })
     }
 
     // MARK: - Panel geometry
@@ -389,8 +444,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// The panel's content size for the current display preferences.
     static func panelSize(for preferences: DetailPreferences,
                           visibleFrame: CGRect? = nil) -> NSSize {
-        let preferredHeight = DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
-                                                          showCommandCode: preferences.showCommandCode)
+        let preferredHeight = UsagePanelView.preferredHeight(for: preferences)
         return NSSize(width: DetailPageLayout.pageWidth,
                       height: DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                               visibleFrame: visibleFrame))
@@ -465,11 +519,17 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
     init(model: UsageViewModel,
          preferences: DetailPreferences,
          maxHeight: CGFloat? = nil,
-         onSettings: (() -> Void)?) {
+         refreshOnAppear: Bool = true,
+         onSettings: (() -> Void)?,
+         onAccounts: (() -> Void)? = nil,
+         onQuit: (() -> Void)? = nil) {
         let view = UsagePanelView(model: model,
                                   preferences: preferences,
                                   maxHeight: maxHeight,
-                                  onSettings: onSettings)
+                                  refreshOnAppear: refreshOnAppear,
+                                  onSettings: onSettings,
+                                  onAccounts: onAccounts,
+                                  onQuit: onQuit)
         super.init(rootView: view)
     }
 
@@ -490,16 +550,20 @@ final class DetailWindowController: NSWindowController {
     private var preferenceObserver: AnyCancellable?
 
     init(model: UsageViewModel,
-         onSettings: (() -> Void)?) {
+         onSettings: (() -> Void)?,
+         onAccounts: (() -> Void)? = nil,
+         onQuit: (() -> Void)? = nil) {
         let preferences = DetailPreferences.shared
         let preferredHeight = UsagePanelView.preferredHeight(for: preferences)
-        let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
+        let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000,
                                                         visibleFrame: NSScreen.main?.visibleFrame)
         let panel = UsagePanelView(model: model,
                                    preferences: preferences,
                                    maxHeight: maxHeight,
-                                   onSettings: onSettings)
-        let height = maxHeight
+                                   onSettings: onSettings,
+                                   onAccounts: onAccounts,
+                                   onQuit: onQuit)
+        let height = min(preferredHeight, maxHeight)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0,
                                                   width: DetailPageLayout.pageWidth,
                                                   height: height),
@@ -723,7 +787,9 @@ final class PopoverDismissMonitor {
     var isInstalled: Bool { localMonitor != nil || globalMonitor != nil }
 
     /// Installs both monitors. Idempotent, so a re-open cannot stack a second pair.
-    func install(popover: NSPopover, statusButton: NSButton?, onDismiss: @escaping () -> Void) {
+    func install(popover: NSPopover, statusButton: NSButton?,
+                 onStatusButtonDown: @escaping () -> Void = {},
+                 onDismiss: @escaping () -> Void) {
         guard !isInstalled else { return }
         installCount += 1
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown]
@@ -732,6 +798,7 @@ final class PopoverDismissMonitor {
             MainActor.assumeIsolated {
                 let target = Self.target(for: event, popover: popover, statusButton: statusButton)
                 if target == .outside { onDismiss() }
+                if target == .statusItemButton { onStatusButtonDown() }
             }
             // Returning the event unchanged is what lets the click do its original job.
             return event

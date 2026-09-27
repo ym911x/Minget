@@ -94,6 +94,30 @@ final class JSONRPCTransportTests: XCTestCase {
             sys.stdout.flush()
     """
 
+    static let loginServer = """
+    import sys, json
+    def send(value):
+        sys.stdout.write(json.dumps(value) + "\\n")
+        sys.stdout.flush()
+    for raw in sys.stdin:
+        try:
+            msg = json.loads(raw)
+        except Exception:
+            continue
+        method = msg.get("method")
+        mid = msg.get("id")
+        if method == "initialize":
+            send({"id": mid, "result": {}})
+        elif method == "account/login/start":
+            if msg.get("params", {}).get("type") != "chatgpt":
+                send({"id": mid, "error": {"code": -1, "message": "wrong type"}})
+            else:
+                send({"id": mid, "result": {"type": "chatgpt", "loginId": "login-1", "authUrl": "https://chatgpt.com/auth"}})
+                send({"method": "account/login/completed", "params": {"loginId": "login-1", "success": True, "error": None}})
+        elif method == "account/login/cancel":
+            send({"id": mid, "result": {}})
+    """
+
     static let rateLimitsResult: [String: Any] = [
         "rateLimitsByLimitId": [
             "codex": [
@@ -163,6 +187,24 @@ final class JSONRPCTransportTests: XCTestCase {
     }
 
     // MARK: - End to end
+
+    func testManagedLoginRPCAndCompletionNotification() throws {
+        let transport = try makeClient(Self.loginServer)
+        let client = CodexAppServerClient(transport: transport)
+        defer { client.stop() }
+        try client.handshake(timeout: 5)
+        let completed = expectation(description: "login completion")
+        client.setLoginCompletionHandler { id, success in
+            XCTAssertEqual(id, "login-1")
+            XCTAssertTrue(success)
+            completed.fulfill()
+        }
+        let started = try client.startManagedLogin(timeout: 5)
+        XCTAssertEqual(started.id, "login-1")
+        XCTAssertEqual(started.authorizationURL.host, "chatgpt.com")
+        wait(for: [completed], timeout: 5)
+        XCTAssertNoThrow(try client.cancelManagedLogin(id: "login-1", timeout: 5))
+    }
 
     func testHandshakeAndRateLimitsAcrossSplitWritesAndNoise() throws {
         let client = try makeClient(Self.noisyServer)

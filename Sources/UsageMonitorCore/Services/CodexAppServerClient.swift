@@ -17,6 +17,18 @@ public protocol CodexAppServerProviding: AnyObject {
     /// Declared as a requirement so a conforming type's own implementation is the one
     /// dispatched (a protocol-extension default would silently shadow test stubs).
     func readAccount(timeout: TimeInterval) throws -> CodexAccount?
+    func startManagedLogin(timeout: TimeInterval) throws -> ManagedLoginStart
+    func cancelManagedLogin(id: String, timeout: TimeInterval) throws
+    func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void)
+}
+
+public struct ManagedLoginStart: Sendable {
+    public let id: String
+    public let authorizationURL: URL
+    public init(id: String, authorizationURL: URL) {
+        self.id = id
+        self.authorizationURL = authorizationURL
+    }
 }
 
 extension CodexAppServerProviding {
@@ -25,6 +37,13 @@ extension CodexAppServerProviding {
     /// Default for stubs and older fakes: no account identity is available, so the panel
     /// shows 账号信息暂不可用 rather than guessing.
     public func readAccount(timeout: TimeInterval) throws -> CodexAccount? { return nil }
+    public func startManagedLogin(timeout: TimeInterval) throws -> ManagedLoginStart {
+        throw UsageError.rpcFailed(.other)
+    }
+    public func cancelManagedLogin(id: String, timeout: TimeInterval) throws {
+        throw UsageError.rpcFailed(.other)
+    }
+    public func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void) {}
 }
 
 public final class CodexAppServerClient: CodexAppServerProviding {
@@ -47,6 +66,8 @@ public final class CodexAppServerClient: CodexAppServerProviding {
     private let parser = UsageParser()
     private var handshakeComplete = false
     private let handshakeLock = NSLock()
+    private let loginHandlerLock = NSLock()
+    private var loginCompletionHandler: ((String, Bool) -> Void)?
 
     public init(transport: JSONRPCClient, clientName: String = "UsageMonitor", clientVersion: String = "1.0.0") {
         self.transport = transport
@@ -127,5 +148,41 @@ public final class CodexAppServerClient: CodexAppServerProviding {
         handshakeLock.lock()
         handshakeComplete = false
         handshakeLock.unlock()
+    }
+
+    public func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void) {
+        loginHandlerLock.lock()
+        loginCompletionHandler = handler
+        loginHandlerLock.unlock()
+        transport.onNotification = { [weak self] message in
+            guard (message["method"] as? String) == "account/login/completed",
+                  let params = message["params"] as? [String: Any],
+                  let id = params["loginId"] as? String,
+                  let success = params["success"] as? Bool else { return }
+            guard let self else { return }
+            self.loginHandlerLock.lock()
+            let callback = self.loginCompletionHandler
+            self.loginHandlerLock.unlock()
+            callback?(id, success)
+        }
+    }
+
+    public func startManagedLogin(timeout: TimeInterval = 10) throws -> ManagedLoginStart {
+        let response = try transport.request(method: "account/login/start",
+                                             params: ["type": "chatgpt", "useHostedLoginSuccessPage": true],
+                                             timeout: timeout)
+        guard let result = response.resultObject,
+              let id = result["loginId"] as? String,
+              let rawURL = result["authUrl"] as? String,
+              let url = URL(string: rawURL),
+              url.scheme == "https",
+              ["chatgpt.com", "auth.openai.com"].contains(url.host ?? "") else {
+            throw UsageError.rpcFailed(.malformedResponse)
+        }
+        return ManagedLoginStart(id: id, authorizationURL: url)
+    }
+
+    public func cancelManagedLogin(id: String, timeout: TimeInterval = 5) throws {
+        _ = try transport.request(method: "account/login/cancel", params: ["loginId": id], timeout: timeout)
     }
 }

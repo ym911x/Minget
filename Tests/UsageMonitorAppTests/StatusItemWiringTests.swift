@@ -120,20 +120,21 @@ final class StatusItemWiringTests: XCTestCase {
     /// The panel's preferred size follows the 1.4.1 single-column page; a short screen caps the
     /// viewport while the page itself supplies the scroll region.
     func testPanelSizeMatchesThePreferredPageSizes() {
-        let defaults = UserDefaults(suiteName: "UsageMonitorAppTests.PanelSize." + UUID().uuidString)!
-        defer { defaults.removePersistentDomain(forName: "UsageMonitorAppTests.PanelSize") }
+        let suiteName = "UsageMonitorAppTests.PanelSize." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
         let preferences = DetailPreferences(defaults: defaults)
 
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 801))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 837))
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 721))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 757))
 
         preferences.showCommandCode = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 432))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 468))
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 512))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 548))
     }
 
     /// The hosting controller and the popover must be given the same size before `show`, so

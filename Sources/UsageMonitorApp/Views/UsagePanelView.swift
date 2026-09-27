@@ -13,6 +13,8 @@ enum DetailPageLayout {
     static let margin: CGFloat = 12
     static let contentWidth: CGFloat = 416
     static let headerHeight: CGFloat = 36
+    static let tabHeight: CGFloat = 34
+    static let footerHeight: CGFloat = 36
     /// The gap between the header and cards, and between cards.
     static let rowSpacing: CGFloat = 8
 
@@ -81,27 +83,38 @@ struct UsagePanelView: View {
     @ObservedObject private var preferences: DetailPreferences
     @ObservedObject private var displayNames: DisplayNamePreferences
     var onSettings: (() -> Void)?
+    var onAccounts: (() -> Void)?
+    var onQuit: (() -> Void)?
     private let maxHeight: CGFloat?
+    private let refreshOnAppear: Bool
 
     init(model: UsageViewModel,
          preferences: DetailPreferences = .shared,
          displayNames: DisplayNamePreferences? = nil,
          maxHeight: CGFloat? = nil,
-         onSettings: (() -> Void)? = nil) {
+         refreshOnAppear: Bool = true,
+         onSettings: (() -> Void)? = nil,
+         onAccounts: (() -> Void)? = nil,
+         onQuit: (() -> Void)? = nil) {
         self.model = model
         _preferences = ObservedObject(wrappedValue: preferences)
         _displayNames = ObservedObject(wrappedValue: displayNames ?? model.displayNames)
         self.maxHeight = maxHeight
+        self.refreshOnAppear = refreshOnAppear
         self.onSettings = onSettings
+        self.onAccounts = onAccounts
+        self.onQuit = onQuit
     }
 
     var body: some View {
         let preferred = Self.preferredHeight(for: preferences)
         let viewport = min(preferred, maxHeight ?? preferred)
-        let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight)
+        let tabHeight = preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0
+        let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
 
         VStack(alignment: .leading, spacing: 0) {
             header
+            if preferences.displayMode == .byProvider { providerTabs }
             if viewport < preferred {
                 ScrollView(.vertical, showsIndicators: true) {
                     cardStack
@@ -110,29 +123,33 @@ struct UsagePanelView: View {
             } else {
                 cardStack
             }
+            Spacer(minLength: 0)
+            footer
         }
         .padding(DetailPageLayout.margin)
         .frame(width: DetailPageLayout.pageWidth, height: viewport, alignment: .top)
         .background(.regularMaterial)
-        .onAppear { model.panelWillOpen() }
+        .onAppear { if refreshOnAppear { model.panelWillOpen() } }
     }
 
     @ViewBuilder
     private var cardStack: some View {
         VStack(alignment: .leading, spacing: DetailPageLayout.rowSpacing) {
-            ForEach(model.profileStates) { state in
-                CodexProfileCard(state: state,
-                                 displayName: displayNames.displayName(for: state.profile.id)) {
-                    model.fire(profileID: state.profile.id)
+            if preferences.effectiveTab == .all || preferences.effectiveTab == .chatGPT {
+                ForEach(model.profileStates) { state in
+                    CodexProfileCard(state: state,
+                                     displayName: displayNames.displayName(for: state.profile.id)) {
+                        model.fire(profileID: state.profile.id)
+                    }
                 }
             }
-            if preferences.showDeepSeek {
+            if preferences.showDeepSeek && (preferences.effectiveTab == .all || preferences.effectiveTab == .deepSeek) {
                 DeepSeekOverviewCard(report: report(for: .deepseek),
                                      status: model.deepSeekStatus,
                                      displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
                                      openSettings: { onSettings?() })
             }
-            if preferences.showCommandCode {
+            if preferences.showCommandCode && (preferences.effectiveTab == .all || preferences.effectiveTab == .commandCode) {
                 CommandCodeOverviewCard(report: report(for: .commandcode),
                                         displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
                                         fireState: model.commandCodeFireState,
@@ -144,8 +161,54 @@ struct UsagePanelView: View {
     }
 
     static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
-        DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
-                                    showCommandCode: preferences.showCommandCode)
+        let allHeight = DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
+                                                   showCommandCode: preferences.showCommandCode)
+        let cardsHeight: CGFloat
+        switch preferences.effectiveTab {
+        case .all: cardsHeight = allHeight
+        case .chatGPT: cardsHeight = DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false)
+        case .deepSeek: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.deepSeekCardHeight
+        case .commandCode: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.commandCodeCardHeight
+        }
+        return cardsHeight + DetailPageLayout.footerHeight + (preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0)
+    }
+
+    private var providerTabs: some View {
+        Picker("查看供应商", selection: Binding(get: { preferences.effectiveTab }, set: { preferences.selectedTab = $0 })) {
+            ForEach(preferences.visibleTabs, id: \.self) { tab in
+                Text(tabTitle(tab)).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(height: DetailPageLayout.tabHeight)
+        .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
+        .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
+    }
+
+    private func normalizeTab() {
+        if preferences.selectedTab != preferences.effectiveTab { preferences.selectedTab = .all }
+    }
+
+    private func tabTitle(_ tab: DetailPreferences.ProviderTab) -> String {
+        switch tab {
+        case .all: return "全部"
+        case .chatGPT: return "ChatGPT"
+        case .deepSeek: return "DeepSeek"
+        case .commandCode: return "Command Code"
+        }
+    }
+
+    private var footer: some View {
+        HStack(spacing: 12) {
+            Button("管理账号") { onAccounts?() }
+            Spacer()
+            Button("设置") { onSettings?() }
+            Button("退出明明有数") { onQuit?() }
+        }
+        .buttonStyle(.borderless)
+        .font(.system(size: 11))
+        .frame(height: DetailPageLayout.footerHeight)
     }
 
     private var preferredHeight: CGFloat {
@@ -203,7 +266,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {

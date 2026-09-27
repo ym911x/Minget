@@ -47,6 +47,7 @@ struct MingetSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     menuBarGroup
+                    detailDisplayGroup
                     displayNameGroup
                     FireScheduleSettingsView(preferences: model.fireSchedules,
                                              displayNames: displayNames)
@@ -77,6 +78,18 @@ struct MingetSettingsView: View {
     }
 
     // MARK: - Menu bar source
+
+    private var detailDisplayGroup: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("详情页显示").font(.system(size: 13, weight: .semibold))
+            Picker("详情页模式", selection: $preferences.displayMode) {
+                Text("全部显示").tag(DetailPreferences.DisplayMode.all)
+                Text("按供应商切换").tag(DetailPreferences.DisplayMode.byProvider)
+            }
+            .pickerStyle(.radioGroup)
+        }
+        .settingsGroupBackground()
+    }
 
     private var menuBarGroup: some View {
         VStack(alignment: .leading, spacing: 6) {
