@@ -11,7 +11,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## v1.4.3 Codex 启动兼容性
 
-本机已安装严格签名的 1.4.3；GitHub 发布核验状态见验收台账。修复官方桌面 App 路径变化和 Finder 环境缺少 Node 导致的双账号用量读取失败。
+已发布：[Minget v1.4.3](https://github.com/ym911x/Minget/releases/tag/v1.4.3)。本机已安装严格签名版本，公开分发继续采用源码。修复官方桌面 App 路径变化和 Finder 环境缺少 Node 导致的双账号用量读取失败。
 
 - 自动识别系统及用户 Applications 下的官方 App 新旧布局，优先使用内置原生 Codex。
 - Node CLI 使用绝对 Node 路径及解析后的入口，读取与授权点火共用启动描述；候选程序先进行有超时的本地版本探测，失败回退，显式覆盖不回退。
