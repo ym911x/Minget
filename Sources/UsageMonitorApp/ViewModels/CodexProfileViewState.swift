@@ -58,6 +58,30 @@ public struct CodexProfileViewState: Identifiable, Equatable {
     }
 
     public var id: String { profile.id }
+    public var failure: UsageError? {
+        switch display {
+        case .live: return nil
+        case .stale(_, let error), .unavailable(let error): return error
+        }
+    }
+    public var failureText: String? {
+        failure.map { UsageFormatting.errorText($0).components(separatedBy: "\n")[0] }
+    }
+    public var recoveryHint: String? {
+        switch failure {
+        case .codexNodeUnavailable?: return "请安装 Node，或安装官方 Codex 桌面应用，然后刷新。"
+        case .codexCLINotFound?: return "请安装官方 Codex 桌面应用或 CLI，然后刷新。"
+        case .appServerStartupFailed?: return "请检查 Codex 安装是否完整，然后刷新。"
+        case .codexNotSignedIn?: return "请登录此隔离账号，然后刷新。"
+        default: return nil
+        }
+    }
+    public var accountPlaceholder: String {
+        switch failure {
+        case .codexCLINotFound?, .codexNodeUnavailable?, .appServerStartupFailed?: return "本机 Codex 无法启动"
+        default: return "账号暂不可用"
+        }
+    }
     public var snapshot: UsageSnapshot? { display.snapshot }
     public var isStale: Bool { display.isStale }
 

@@ -9,6 +9,15 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
 
+## v1.4.3 Codex 启动兼容性
+
+本机已安装严格签名的 1.4.3；GitHub 发布核验状态见验收台账。修复官方桌面 App 路径变化和 Finder 环境缺少 Node 导致的双账号用量读取失败。
+
+- 自动识别系统及用户 Applications 下的官方 App 新旧布局，优先使用内置原生 Codex。
+- Node CLI 使用绝对 Node 路径及解析后的入口，读取与授权点火共用启动描述；候选程序先进行有超时的本地版本探测，失败回退，显式覆盖不回退。
+- 缓存及无数据状态均显示具体故障；设置页区分未安装、缺少 Node、启动失败和未登录，并给出处理说明。
+- 本机 Finder 精简环境下，两个真实隔离账号读取成功；备用 Node CLI 路径亦通过真实只读核验。第二台 Mac 未实测；真实界面的连续点击和关闭重开验收待补，详见 [验收台账](docs/versions/1.4.3/ACCEPTANCE.md)。
+
 ## v1.4.2 刷新调度与外部脚本模板
 
 已发布：[Minget v1.4.2](https://github.com/ym911x/Minget/releases/tag/v1.4.2)。本机已安装签名版本；公开分发继续采用源码。

@@ -184,6 +184,8 @@ public enum UsageFormatting {
         switch error {
         case .codexCLINotFound:
             return "未找到 Codex 命令行\nCodex CLI not found"
+        case .codexNodeUnavailable:
+            return "缺少 Node 运行环境\nNode runtime unavailable"
         case .codexNotSignedIn:
             return "Codex 未登录\nCodex is not signed in"
         case .appServerStartupFailed:

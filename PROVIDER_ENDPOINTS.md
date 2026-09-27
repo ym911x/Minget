@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-23
-适用版本：1.4.2
+更新日期：2026-09-27
+适用版本：1.4.3
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -15,7 +15,9 @@
 
 ## Codex
 
-1.3.0 起应用同时维护两个隔离的 ChatGPT 账号 Profile。每个 Profile 拥有一个独立的长生命周期 `codex app-server` 子进程，子进程环境为当前环境的副本并只覆盖该 Profile 的 `CODEX_HOME`（`~/.codex-minget-a`、`~/.codex-minget-b`，按当前用户主目录解析）。Minget 不打开、不列出、不解析、不复制这两个目录的内容，也不读取其中任何文件。
+1.3.0 起应用同时维护两个隔离的 ChatGPT 账号 Profile。每个 Profile 拥有一个独立的长生命周期 `codex app-server` 子进程，子进程环境保留当前环境并覆盖该 Profile 的 `CODEX_HOME`；1.4.3 对 Node CLI 额外补齐其运行 PATH，以绝对 Node 程序及解析后的 CLI 入口启动（`~/.codex-minget-a`、`~/.codex-minget-b`，按当前用户主目录解析）。Minget 不打开、不列出、不解析、不复制这两个目录的内容，也不读取其中任何文件。
+
+1.4.3 读取与授权点火共用 `CodexLaunch`：先查找系统与用户 Applications 的官方原生 Codex（包含嵌套 `codex-cli/CodexCLI.app/Contents/MacOS/codex`），再查找旧布局和已有 CLI。候选执行 `--version`，每项最多 2 秒，自有进程组超时终止并回收；输出丢弃，仅读取退出状态。Node shebang 只读取程序入口前 256 字节，不涉及配置或认证。显式路径覆盖不回退，连接重建重新解析。2026-09-27 本机原生与 Node CLI 均已真实只读验证；缺少依赖和换机组合由隔离测试覆盖，第二台 Mac 未实测。
 
 ### `account/rateLimits/read`
 

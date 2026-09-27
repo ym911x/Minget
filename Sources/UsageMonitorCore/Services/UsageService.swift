@@ -164,10 +164,10 @@ public final class UsageService: @unchecked Sendable {
         let childEnvironment = Self.childEnvironment(base: environment, codexHome: codexHome)
         self.init(
             factory: {
-                let executable = try CodexLocator().locate(environment: environment)
-                return CodexAppServerClient(transport: JSONRPCClient(executableURL: executable,
-                                                                     arguments: ["app-server"],
-                                                                     environment: childEnvironment))
+                let launch = try CodexLocator().resolve(environment: childEnvironment)
+                return CodexAppServerClient(transport: JSONRPCClient(executableURL: launch.executableURL,
+                                                                     arguments: launch.argumentPrefix + ["app-server"],
+                                                                     environment: launch.environment))
             },
             cache: cache,
             profileID: profileID
@@ -950,7 +950,7 @@ extension UsageError {
     /// `codex` missing or not signed in cannot be fixed by relaunching the child.
     public var isRestartable: Bool {
         switch self {
-        case .codexCLINotFound, .codexNotSignedIn, .windowUnavailable:
+        case .codexCLINotFound, .codexNodeUnavailable, .codexNotSignedIn, .windowUnavailable:
             return false
         case .appServerStartupFailed, .rpcFailed:
             return !isShutdown

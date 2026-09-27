@@ -1,0 +1,78 @@
+== signing identity: Minget Local Signing ==
+== swift build (release) ==
+Building for production...
+[Planning deferred tasks]
+[26 / 43]
+[27 / 44] UsageMonitorCore
+[40 / 83]
+[46 / 83]
+[48 / 83]
+[53 / 83]
+[57 / 83]
+[61 / 83]
+[64 / 83]
+[65 / 83]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+132 |         // C `Boolean`, so the round trip is done in `Bool`.
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+    |                          `- warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+136 |         return {
+
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+    |             `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+136 |         return {
+137 |             guard readStatus == errSecSuccess else {
+
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+138 |                 // The previous state could not be read: restore the documented default
+139 |                 // instead of leaving interaction disabled.
+140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
+    |                     `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
+    |                 `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+144 |         }
+145 |     }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[67 / 83] UsageMonitorCore
+[75 / 85] UsageMonitorCLI-product
+[94 / 116]
+[99 / 116]
+[103 / 116]
+[108 / 116]
+[109 / 116] UsageMonitorCLI-product
+[111 / 116]
+[112 / 116] UsageMonitorApp-product
+[114 / 116] UsageMonitorApp-product
+[115 / 116] UsageMonitorApp-product
+Build complete! (13.31秒)
+== staging /tmp/minget-143-staging/Minget.app ==
+== codesign (Minget Local Signing) ==
+/tmp/minget-143-staging/Minget.app: replacing existing signature
+== strict verification in staging ==
+--prepared:/private/tmp/minget-143-staging/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-143-staging/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-143-staging/Minget.app: valid on disk
+/tmp/minget-143-staging/Minget.app: satisfies its Designated Requirement
+/tmp/minget-143-staging/Minget.app/Contents/Info.plist: OK
+== install to /tmp/minget-143-review/Minget.app ==
+--prepared:/private/tmp/minget-143-review/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-143-review/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-143-review/Minget.app: valid on disk
+/tmp/minget-143-review/Minget.app: satisfies its Designated Requirement
+== archive copy to /tmp/minget-143-archive/Minget.app ==
+/tmp/minget-143-archive/Minget.app: valid on disk
+/tmp/minget-143-archive/Minget.app: satisfies its Designated Requirement
+built:   /tmp/minget-143-review/Minget.app
+archive: /tmp/minget-143-archive/Minget.app

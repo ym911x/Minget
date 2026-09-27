@@ -27,7 +27,7 @@ struct ErrorStateView: View {
 
     private var header: String {
         switch error {
-        case .codexCLINotFound: return "数据不可用"
+        case .codexCLINotFound, .codexNodeUnavailable: return "本机 Codex 不可用"
         case .codexNotSignedIn: return "数据不可用"
         case .appServerStartupFailed: return "数据不可用"
         case .rpcFailed: return "数据不可用"
@@ -45,6 +45,7 @@ struct ErrorStateView: View {
     private var hint: String {
         switch error {
         case .codexCLINotFound: return "请确认已安装 ChatGPT/Codex 桌面应用或 codex CLI。"
+        case .codexNodeUnavailable: return "请安装 Node，或安装包含 Codex 的官方桌面应用，然后刷新。"
         case .codexNotSignedIn: return "请在 Codex 中登录后再试。"
         case .appServerStartupFailed, .rpcFailed: return "可点击“立即刷新”重试。"
         case .windowUnavailable: return "服务端未返回该窗口数据。"

@@ -1,0 +1,8 @@
+mode: production service (no mock data)
+codex executable: /Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex
+handshake: initialize + initialized ok
+source: codex app-server (live)
+fetchedAt: 2026-09-27 07:55:31 +08:00
+rpc duration: 2.30s
+result: PASS
+child cleanup: verified (pid 54604 no longer exists, reaped)

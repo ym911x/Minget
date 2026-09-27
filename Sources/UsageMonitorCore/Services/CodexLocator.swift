@@ -7,6 +7,8 @@ import Foundation
 public struct CodexLocator: Sendable {
     public init() {}
 
+    /// Legacy path-only API. Production consumers use resolve() so Node arguments and
+    /// environment cannot be lost. Kept for callers that only inspect installation paths.
     public func locate(environment: [String: String] = ProcessInfo.processInfo.environment,
                        fileManager: FileManager = .default) throws -> URL {
         if let override = environment["USAGE_MONITOR_CODEX_PATH"], !override.isEmpty {
@@ -25,16 +27,46 @@ public struct CodexLocator: Sendable {
         throw UsageError.codexCLINotFound(searchedPaths: searched)
     }
 
+    /// Every newly created connection resolves and probes afresh; failures are local
+    /// startup categories, never account or network failures.
+    public func resolve(environment: [String: String] = ProcessInfo.processInfo.environment,
+                        candidatePaths: [String]? = nil, nodePaths: [String]? = nil,
+                        probeTimeout: TimeInterval = 2) throws -> CodexLaunch {
+        let override = environment["USAGE_MONITOR_CODEX_PATH"].flatMap { $0.isEmpty ? nil : $0 }
+        let paths = override.map { [$0] } ?? candidatePaths ?? Self.candidatePaths(environment: environment)
+        var failure: UsageError = .codexCLINotFound(searchedPaths: paths)
+        var seen = Set<String>()
+        for path in paths {
+            let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+            guard seen.insert(url.path).inserted,
+                  isUsableExecutable(url, fileManager: .default) else { continue }
+            do {
+                let launch = try CodexLaunch.prepare(url, environment: environment, nodePaths: nodePaths)
+                guard launch.probe(timeout: probeTimeout) else {
+                    throw UsageError.appServerStartupFailed(.launchFailed)
+                }
+                return launch
+            } catch let error as UsageError {
+                failure = error
+                if override != nil { throw error }
+            }
+        }
+        throw failure
+    }
+
     static func candidatePaths(environment: [String: String]) -> [String] {
-        var paths = [
-            "/Applications/ChatGPT.app/Contents/Resources/codex",  // observed install (IMPLEMENTATION_PLAN.md)
-            "/Applications/Codex.app/Contents/Resources/codex",
-            "~/Applications/ChatGPT.app/Contents/Resources/codex",
-            "~/.local/bin/codex",
-            "/opt/homebrew/bin/codex",
-            "/usr/local/bin/codex",
-            "/usr/bin/codex",
-        ]
+        var paths: [String] = []
+        var wrappers: [String] = []
+        for root in ["/Applications", "~/Applications"] {
+            for app in ["ChatGPT", "Codex"] {
+                let resources = "\(root)/\(app).app/Contents/Resources"
+                paths += ["\(resources)/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+                          "\(resources)/codex"]
+                wrappers.append("\(resources)/codex-cli/bin/codex")
+            }
+        }
+        paths += wrappers
+        paths += ["~/.local/bin/codex", "/opt/homebrew/bin/codex", "/usr/local/bin/codex", "/usr/bin/codex"]
         if let pathEnv = environment["PATH"], !pathEnv.isEmpty {
             for entry in pathEnv.split(separator: ":") {
                 paths.append("\(entry)/codex")

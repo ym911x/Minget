@@ -23,18 +23,18 @@ struct UsageMonitorCLI {
         print("mode: production service (no mock data)")
 
         // 1. Locate codex, exactly as the app does.
-        let executable: URL
+        let launch: CodexLaunch
         do {
-            executable = try CodexLocator().locate()
+            launch = try CodexLocator().resolve()
         } catch let error as UsageError {
             fail(2, error)
         } catch {
             print("result: FAIL"); print("error: \(error)"); exit(2)
         }
-        print("codex executable: \(executable.path)")
+        print("codex executable: \(launch.executableURL.path)")
 
         // 2. One child process, owned and reaped by this run.
-        let transport = JSONRPCClient(executableURL: executable, arguments: ["app-server"])
+        let transport = JSONRPCClient(executableURL: launch.executableURL, arguments: launch.argumentPrefix + ["app-server"], environment: launch.environment)
         let client = CodexAppServerClient(transport: transport)
         var childPID: pid_t = -1
         transport.onExit = { status in

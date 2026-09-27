@@ -39,7 +39,8 @@ public final class ChatGPTFireService: @unchecked Sendable {
 
     public typealias Locator = ([String: String]) throws -> URL
 
-    private let locator: Locator
+    private let locator: Locator?
+    private let launchResolver: (([String: String]) throws -> CodexLaunch)?
     private let environment: [String: String]
     private let timeout: TimeInterval
     private let terminateGrace: TimeInterval
@@ -51,9 +52,8 @@ public final class ChatGPTFireService: @unchecked Sendable {
     private var runningProfiles: Set<String> = []
     private var activeProcesses: [String: Process] = [:]
 
-    public init(locator: @escaping Locator = { environment in
-                    try CodexLocator().locate(environment: environment)
-                },
+    public init(locator: Locator? = nil,
+                launchResolver: (([String: String]) throws -> CodexLaunch)? = nil,
                 environment: [String: String] = ProcessInfo.processInfo.environment,
                 timeout: TimeInterval = ChatGPTFireService.defaultTimeout,
                 terminateGrace: TimeInterval = ChatGPTFireService.defaultTerminateGrace,
@@ -61,6 +61,7 @@ public final class ChatGPTFireService: @unchecked Sendable {
                 model: String = ChatGPTFireService.modelName,
                 fileManager: FileManager = .default) {
         self.locator = locator
+        self.launchResolver = launchResolver
         self.environment = environment
         self.timeout = timeout
         self.terminateGrace = terminateGrace
@@ -122,9 +123,20 @@ public final class ChatGPTFireService: @unchecked Sendable {
             lock.unlock()
         }
 
-        let executable: URL
+        let launch: CodexLaunch
+        let childEnvironment = UsageService.childEnvironment(base: environment, codexHome: profile.codexHomeURL())
         do {
-            executable = try locator(environment)
+            if let launchResolver {
+                launch = try launchResolver(childEnvironment)
+            } else if let locator {
+                launch = CodexLaunch(executableURL: try locator(environment), environment: childEnvironment)
+            } else {
+                launch = try CodexLocator().resolve(environment: childEnvironment)
+            }
+        } catch UsageError.codexNodeUnavailable {
+            return .launchFailed
+        } catch UsageError.appServerStartupFailed {
+            return .launchFailed
         } catch {
             Diagnostics.log("fire: codex CLI unavailable")
             return .codexCLINotFound
@@ -139,11 +151,10 @@ public final class ChatGPTFireService: @unchecked Sendable {
         }
 
         let process = Process()
-        process.executableURL = executable
-        process.arguments = Self.arguments(workingDirectory: workingDirectory, model: model)
+        process.executableURL = launch.executableURL
+        process.arguments = launch.argumentPrefix + Self.arguments(workingDirectory: workingDirectory, model: model)
         process.currentDirectoryURL = workingDirectory
-        process.environment = UsageService.childEnvironment(base: environment,
-                                                            codexHome: profile.codexHomeURL())
+        process.environment = launch.environment
         process.standardInput = FileHandle.nullDevice
 
         // Drain and discard. A child that fills a pipe it is still writing to would block

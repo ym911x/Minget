@@ -1,0 +1,8 @@
+mode: production service (no mock data)
+codex executable: /opt/homebrew/bin/node
+handshake: initialize + initialized ok
+source: codex app-server (live)
+fetchedAt: 2026-09-27 07:55:31 +08:00
+rpc duration: 1.83s
+result: PASS
+child cleanup: verified (pid 54607 no longer exists, reaped)

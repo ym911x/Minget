@@ -136,7 +136,8 @@ struct CodexProfileCard: View {
                         .lineLimit(1)
                         .accessibilityLabel(identityLabel)
                 }
-                Text(state.displayEmail ?? "账号暂不可用")
+                Text(state.failureText ?? state.displayEmail ?? state.accountPlaceholder)
+                    .help(state.failure.map { UsageFormatting.errorText($0) } ?? "")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

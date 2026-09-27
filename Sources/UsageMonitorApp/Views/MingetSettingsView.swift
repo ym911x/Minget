@@ -220,8 +220,8 @@ struct MingetSettingsView: View {
             ForEach(Array(model.profileStates.enumerated()), id: \.element.id) { index, state in
                 if index > 0 { Divider().padding(.vertical, 6) }
                 ServiceStatusRow(title: displayNames.displayName(for: state.profile.id),
-                                 subtitle: state.connectionText,
-                                 detail: "CODEX_HOME \(state.profile.codexHomeDisplaySuffix)")
+                                 subtitle: state.failureText ?? state.connectionText,
+                                 detail: state.recoveryHint ?? "CODEX_HOME \(state.profile.codexHomeDisplaySuffix)")
             }
             Divider().padding(.vertical, 6)
             ServiceStatusRow(title: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek), subtitle: providerStatus(.deepseek),
@@ -292,7 +292,7 @@ struct MingetSettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.3"
     }
 }
 

@@ -1,0 +1,18 @@
+{
+  "version": "1.4.3",
+  "installedApp": "$HOME/Applications/Minget.app",
+  "backupApp": "$HOME/Applications/Minget-1.4.2-backup-20260927-075450/Minget.app",
+  "architecture": "arm64",
+  "signingIdentity": "Minget Local Signing",
+  "files": {
+    "UsageMonitor": {
+      "sha256": "756e1434617fe5dfe2cae92bc473f75a16b61538f1f103570733683d06b822ad",
+      "matchesVerifiedBuild": true
+    },
+    "MingetCLI": {
+      "sha256": "dab3d3db9404b2223def452e4a9aaa735c3745891c63ec5fab88d799c038c361",
+      "matchesVerifiedBuild": true
+    }
+  },
+  "pathNormalization": "Public paths use $HOME; hashes retain the actual verified installation values."
+}

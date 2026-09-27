@@ -44,6 +44,7 @@ public enum UsageError: Error, Equatable, Sendable {
     /// A. Codex CLI not found on disk. Local paths only, never credential material.
     case codexCLINotFound(searchedPaths: [String])
     /// B. Codex is installed but has no signed-in account.
+    case codexNodeUnavailable
     case codexNotSignedIn
     /// C. `codex app-server` could not be started / died during handshake.
     case appServerStartupFailed(RPCFailureReason)
@@ -67,6 +68,8 @@ public enum UsageError: Error, Equatable, Sendable {
         switch self {
         case .codexCLINotFound(let paths):
             return "codexCLINotFound(searched \(paths.count) paths)"
+        case .codexNodeUnavailable:
+            return "codexNodeUnavailable"
         case .codexNotSignedIn:
             return "codexNotSignedIn"
         case .appServerStartupFailed(let reason):

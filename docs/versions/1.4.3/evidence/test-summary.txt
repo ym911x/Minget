@@ -1,0 +1,9 @@
+	 Executed 391 tests, with 0 failures (0 unexpected) in 27.233 (27.256) seconds
+Test Suite 'All tests' passed at 2026-09-27 07:57:07.277.
+	 Executed 391 tests, with 0 failures (0 unexpected) in 27.233 (27.257) seconds
+$PROJECT_ROOT/Tests/UsageMonitorAppTests/CommandCodeAccessibilityTests.swift:154: -[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction] : Test skipped - not executed: this process is AX-trusted but exposes no accessibility windows (kAXWindows returned none while NSApp has 2 window(s)), so there is no tree to walk. An XCTest runner is not a GUI app. Use the standalone harness in IMPLEMENTATION_REPORT.md §10, or VoiceOver, to re-verify R1.
+Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction]' skipped (0.332 seconds).
+	 Executed 2 tests, with 1 test skipped and 0 failures (0 unexpected) in 0.417 (0.417) seconds
+	 Executed 160 tests, with 1 test skipped and 0 failures (0 unexpected) in 18.247 (18.261) seconds
+Test Suite 'All tests' passed at 2026-09-27 07:57:25.609.
+	 Executed 160 tests, with 1 test skipped and 0 failures (0 unexpected) in 18.247 (18.261) seconds
