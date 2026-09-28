@@ -1169,7 +1169,10 @@ enum CommandCodeCardPresentation {
 
     static func percent(_ value: Decimal?) -> String {
         guard let value else { return "—" }
-        return NSDecimalNumber(decimal: value).stringValue + "%"
+        var source = value
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &source, 2, .plain)
+        return NSDecimalNumber(decimal: rounded).stringValue + "%"
     }
 }
 

@@ -506,6 +506,8 @@ final class DetailPanelLayoutTests: XCTestCase {
         XCTAssertEqual(lines[1], "请求 — · 成功 — · 失败 — · 成功率 —")
         XCTAssertEqual(CommandCodeCardPresentation.periodText(nil), "统计暂不可用")
         XCTAssertEqual(CommandCodeCardPresentation.label(.billingPeriod), "本月")
+        XCTAssertEqual(CommandCodeCardPresentation.percent(dec("99.81873111782478")), "99.82%")
+        XCTAssertEqual(CommandCodeCardPresentation.percent(dec("100")), "100%")
     }
 
     /// A missing summary and an unnamed statistic period are different facts and must not share
