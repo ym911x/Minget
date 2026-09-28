@@ -67,7 +67,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private var detailWindowController: DetailWindowController?
     private var settingsWindowController: SettingsWindowController?
     private var accountsWindowController: AccountsWindowController?
-    private var statusClickShouldCloseUntil = Date.distantPast
 
     private var model: UsageViewModel?
     private var stateMachine = MenuBarSpaceStateMachine()
@@ -118,8 +117,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         button.setAccessibilityLabel("明明有数 · Minget 菜单栏")
 
-        // We own dismissal so a status-button mouse-down cannot auto-close the popover
-        // before its mouse-up action and immediately re-open it on the same click.
+        // We own dismissal so a status-button click cannot auto-close the popover and
+        // immediately re-open it on the same event.
         popover.behavior = .applicationDefined
         popover.animates = false
         popover.delegate = self
@@ -132,7 +131,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         button.target = self
         button.action = #selector(statusItemClicked(_:))
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        button.sendAction(on: [.leftMouseDown, .rightMouseDown])
 
         // Measure before the first paint. `apply` then sizes the item from the real label
         // content instead of from the per-mode fallback, and the first geometry check has a
@@ -296,11 +295,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Internal (not private) so the wiring tests can pin the button to this action.
     @objc func statusItemClicked(_ sender: Any?) {
-        if Date() < statusClickShouldCloseUntil {
-            statusClickShouldCloseUntil = .distantPast
-            closePanel()
-            return
-        }
+        Diagnostics.log("status action shown=\(popover.isShown)")
         togglePanel()
     }
 
@@ -313,9 +308,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// typable (Round 7 requirement 4).
     func togglePanel() {
         if popover.isShown {
+            Diagnostics.log("status toggle closing")
             popover.performClose(nil)
             return
         }
+        Diagnostics.log("status toggle opening")
         guard let button = statusItem?.button, let buttonWindow = button.window else {
             showDetailWindow()
             return
@@ -354,9 +351,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // versions; this makes the outside-click behaviour explicit and testable
         // (v1.0.2 requirement 4).
         dismissMonitor.install(popover: popover, statusButton: button,
-                               onStatusButtonDown: { [weak self] in
-                                   self?.statusClickShouldCloseUntil = Date().addingTimeInterval(1)
-                               }, onDismiss: { [weak self] in self?.closePanel() })
+                               onDismiss: { [weak self] in
+                                   Diagnostics.log("status monitor outside close")
+                                   self?.closePanel()
+                               })
     }
 
     func closePanel() {
@@ -378,12 +376,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// Every close path ends here, including the ones AppKit starts itself (escape key, app
     /// deactivation, a click on another window), so no monitor outlives the popover.
     func popoverDidClose(_ notification: Notification) {
-        if let event = NSApp.currentEvent,
-           event.type == .leftMouseDown || event.type == .rightMouseDown,
-           PopoverDismissMonitor.target(for: event, popover: popover,
-                                           statusButton: statusItem?.button) == .statusItemButton {
-            statusClickShouldCloseUntil = Date().addingTimeInterval(1)
-        }
+        Diagnostics.log("status popover did close")
         dismissMonitor.stop()
     }
 
@@ -769,11 +762,10 @@ extension MenuBarLabelMetrics {
 ///
 /// v1.5.0 owns dismissal explicitly because AppKit's transient auto-close can run before
 /// the status button's mouse-up action, making one click close and immediately reopen it:
-/// - a local monitor sees clicks inside this app, so a click on the panel's own controls, on
-///   the status item button, or on a sheet presented by the panel keeps the popover open,
-/// - a global monitor sees clicks in other applications and on the desktop; it dismisses
-///   unless the pointer is on the status button,
-/// - Escape and application deactivation also dismiss,
+/// - a local monitor dismisses clicks elsewhere inside this app and clicks on the popover
+///   arrow where it overlaps the status button; an actual button click uses its action,
+/// - application deactivation dismisses clicks in other apps and on the desktop,
+/// - Escape also dismisses,
 /// - the returned event is never consumed, so the click still reaches its original target.
 ///
 /// The monitors exist only while the popover is on screen, and every stop path removes them.
@@ -781,7 +773,6 @@ extension MenuBarLabelMetrics {
 final class PopoverDismissMonitor {
 
     private var localMonitor: Any?
-    private var globalMonitor: Any?
     private var escapeMonitor: Any?
     private var resignObserver: NSObjectProtocol?
 
@@ -791,12 +782,11 @@ final class PopoverDismissMonitor {
 
     /// Introspection for the wiring tests.
     var isInstalled: Bool {
-        localMonitor != nil || globalMonitor != nil || escapeMonitor != nil || resignObserver != nil
+        localMonitor != nil || escapeMonitor != nil || resignObserver != nil
     }
 
     /// Installs the dismissal watchers. Idempotent across repeated presentations.
     func install(popover: NSPopover, statusButton: NSButton?,
-                 onStatusButtonDown: @escaping () -> Void = {},
                  onDismiss: @escaping () -> Void) {
         guard !isInstalled else { return }
         installCount += 1
@@ -805,21 +795,16 @@ final class PopoverDismissMonitor {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
             MainActor.assumeIsolated {
                 let target = Self.target(for: event, popover: popover, statusButton: statusButton)
+                Diagnostics.log("status local down event=\(event.eventNumber) target=\(target)")
                 if target == .outside { onDismiss() }
-                if target == .statusItemButton { onStatusButtonDown() }
-            }
-            // Returning the event unchanged is what lets the click do its original job.
-            return event
-        }
-
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { _ in
-            MainActor.assumeIsolated {
-                if let frame = Self.frame(of: statusButton), frame.contains(NSEvent.mouseLocation) {
-                    onStatusButtonDown()
-                } else {
+                if target == .statusItemButton && event.window !== statusButton?.window {
+                    // The popover arrow can cover part of the menu bar button. In that
+                    // overlap, the button receives no action and we must close directly.
                     onDismiss()
                 }
             }
+            // Returning the event unchanged is what lets the click do its original job.
+            return event
         }
 
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -840,11 +825,9 @@ final class PopoverDismissMonitor {
     /// Removes every watcher. Safe to call more than once, and from any close path.
     func stop() {
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
-        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         localMonitor = nil
-        globalMonitor = nil
         escapeMonitor = nil
         resignObserver = nil
     }

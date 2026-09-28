@@ -9,8 +9,8 @@ import CoreGraphics
 public enum PopoverClickTarget: Equatable, Sendable {
     /// Inside the popover: keep it open, the click belongs to its content.
     case popoverContent
-    /// On the status item's button: keep it open and let the button's own action decide, so
-    /// the toggle click cannot be both a dismissal and a re-open.
+    /// In the status item's button rectangle. A real button click uses its action; if
+    /// the popover arrow covers the button, the local monitor closes the popover.
     case statusItemButton
     /// Anywhere else: dismiss, without consuming the event.
     case outside
@@ -28,13 +28,13 @@ public enum PopoverDismissDecision {
     public static func target(clickPoint: CGPoint,
                               popoverFrame: CGRect?,
                               statusButtonFrame: CGRect?) -> PopoverClickTarget {
-        // The popover is checked first: an oversized status item frame that overlaps the
-        // popover must not turn a click inside the content into a dismissal.
-        if let popoverFrame, popoverFrame.contains(clickPoint) {
-            return .popoverContent
-        }
+        // The arrow at the top of an NSPopover can overlap the menu bar. Prioritize the
+        // real status-button rectangle so this region still toggles the panel closed.
         if let statusButtonFrame, statusButtonFrame.contains(clickPoint) {
             return .statusItemButton
+        }
+        if let popoverFrame, popoverFrame.contains(clickPoint) {
+            return .popoverContent
         }
         return .outside
     }

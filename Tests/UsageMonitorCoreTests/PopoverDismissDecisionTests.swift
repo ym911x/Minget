@@ -47,14 +47,17 @@ final class PopoverDismissDecisionTests: XCTestCase {
                                                      statusButtonFrame: buttonFrame), .outside)
     }
 
-    func testThePopoverWinsWhenTheFramesOverlap() {
-        // Defensive: an oversized status item frame must not turn a click on the panel's own
-        // controls into a dismissal.
-        let overlappingButton = popoverFrame.insetBy(dx: -40, dy: -40)
-        let insidePanel = CGPoint(x: popoverFrame.midX, y: popoverFrame.midY)
-        XCTAssertEqual(PopoverDismissDecision.target(clickPoint: insidePanel,
-                                                     popoverFrame: popoverFrame,
-                                                     statusButtonFrame: overlappingButton), .popoverContent)
+    func testTheStatusButtonWinsWhereThePopoverArrowOverlapsIt() {
+        // A real popover arrow can rise into the menu-bar button. AppKit may send the
+        // mouse-down to the popover window there, so the monitor must close it itself.
+        let arrowFrame = CGRect(x: 1400, y: 960, width: 120, height: 28)
+        let overlap = CGPoint(x: 1460, y: 982)
+        XCTAssertEqual(PopoverDismissDecision.target(clickPoint: overlap,
+                                                     popoverFrame: arrowFrame,
+                                                     statusButtonFrame: buttonFrame), .statusItemButton)
+        XCTAssertEqual(PopoverDismissDecision.target(clickPoint: CGPoint(x: 1460, y: 965),
+                                                     popoverFrame: arrowFrame,
+                                                     statusButtonFrame: buttonFrame), .popoverContent)
     }
 
     func testFrameEdgesUseTheStandardHalfOpenConvention() {
