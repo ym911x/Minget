@@ -30,6 +30,7 @@ struct AccountManagementView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
                                 Text(model.displayNames.displayName(for: state.profile.id)).font(.headline)
+                                Text("ChatGPT").font(.system(size: 10)).foregroundStyle(.secondary)
                                 Spacer()
                                 if model.activeLoginProfile == state.profile.id {
                                     Button("取消登录") { model.cancelChatGPTLogin() }
@@ -71,9 +72,15 @@ struct AccountManagementView: View {
     private func providerRow(_ platform: ProviderPlatform, title: String,
                              form: ConnectionFormState) -> some View {
         let report = model.providerReports.first { $0.platform == platform }
+        let serviceID = platform == .deepseek
+            ? DisplayNamePreferences.ServiceID.deepSeek : DisplayNamePreferences.ServiceID.commandCode
+        let accountName = model.displayNames.displayName(for: serviceID)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text(title).font(.headline)
+                if accountName != title {
+                    Text(accountName).font(.system(size: 10)).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button(form.isExpanded ? "收起" : "连接或管理") { form.toggle() }
             }
@@ -89,9 +96,11 @@ struct AccountManagementView: View {
     private func providerStatus(_ report: ProviderReport?) -> String {
         guard let report else { return "正在检查连接状态…" }
         switch report.connection {
-        case .connected: return report.isLive ? "连接成功，额度已更新" : "已保存，正在读取额度…"
-        case .stale: return "已连接，显示上次数据"
-        case .connecting: return "正在读取额度…"
+        case .connected:
+            if report.isLive { return "连接成功，额度已更新" }
+            return report.lastSuccessAt == nil ? "已保存，正在读取额度…" : "已连接，上次额度可用"
+        case .stale: return "上次额度可用，当前读取失败"
+        case .connecting: return report.lastSuccessAt == nil ? "正在读取额度…" : "正在读取额度，显示上次数据"
         case .notConfigured: return "未连接"
         case .authSuspended, .needsAuthorization: return "需要重新连接"
         case .unavailable, .unverified: return report.error?.displayText ?? "额度暂不可用"

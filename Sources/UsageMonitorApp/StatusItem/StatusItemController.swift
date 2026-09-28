@@ -94,6 +94,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     var isMonitorRunning: Bool { monitor != nil }
     /// Introspection for the wiring tests: the popover is on screen.
     var isPopoverShown: Bool { popover.isShown }
+    /// The click-toggle contract requires explicit dismissal rather than AppKit auto-close.
+    var popoverBehavior: NSPopover.Behavior { popover.behavior }
     /// Introspection for the wiring tests: the outside-click monitor is installed.
     var isDismissMonitorInstalled: Bool { dismissMonitor.isInstalled }
 
@@ -116,7 +118,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         button.setAccessibilityLabel("明明有数 · Minget 菜单栏")
 
-        popover.behavior = .transient
+        // We own dismissal so a status-button mouse-down cannot auto-close the popover
+        // before its mouse-up action and immediately re-open it on the same click.
+        popover.behavior = .applicationDefined
         popover.animates = false
         popover.delegate = self
         detailPreferenceObserver = DetailPreferences.shared.objectWillChange
@@ -763,13 +767,13 @@ extension MenuBarLabelMetrics {
 
 /// Closes the popover when the click lands outside it, without swallowing the click.
 ///
-/// v1.0.2 requirement 4. `.transient` is kept, but its behaviour around accessory apps and
-/// the menu bar is not reliable enough to be the only mechanism, so this adds an explicit
-/// rule on top:
+/// v1.5.0 owns dismissal explicitly because AppKit's transient auto-close can run before
+/// the status button's mouse-up action, making one click close and immediately reopen it:
 /// - a local monitor sees clicks inside this app, so a click on the panel's own controls, on
 ///   the status item button, or on a sheet presented by the panel keeps the popover open,
-/// - a global monitor sees clicks in other applications and on the desktop, which always
-///   dismiss,
+/// - a global monitor sees clicks in other applications and on the desktop; it dismisses
+///   unless the pointer is on the status button,
+/// - Escape and application deactivation also dismiss,
 /// - the returned event is never consumed, so the click still reaches its original target.
 ///
 /// The monitors exist only while the popover is on screen, and every stop path removes them.
@@ -778,15 +782,19 @@ final class PopoverDismissMonitor {
 
     private var localMonitor: Any?
     private var globalMonitor: Any?
+    private var escapeMonitor: Any?
+    private var resignObserver: NSObjectProtocol?
 
-    /// How many times monitors were actually installed. A second `install` while the popover
-    /// is already open must not add a second pair (v1.0.2 §6.3.5); the wiring tests read this.
+    /// How many times the dismissal watchers were installed. An already-open popover must
+    /// not stack another set of watchers; the wiring tests read this.
     private(set) var installCount = 0
 
     /// Introspection for the wiring tests.
-    var isInstalled: Bool { localMonitor != nil || globalMonitor != nil }
+    var isInstalled: Bool {
+        localMonitor != nil || globalMonitor != nil || escapeMonitor != nil || resignObserver != nil
+    }
 
-    /// Installs both monitors. Idempotent, so a re-open cannot stack a second pair.
+    /// Installs the dismissal watchers. Idempotent across repeated presentations.
     func install(popover: NSPopover, statusButton: NSButton?,
                  onStatusButtonDown: @escaping () -> Void = {},
                  onDismiss: @escaping () -> Void) {
@@ -805,16 +813,40 @@ final class PopoverDismissMonitor {
         }
 
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { _ in
+            MainActor.assumeIsolated {
+                if let frame = Self.frame(of: statusButton), frame.contains(NSEvent.mouseLocation) {
+                    onStatusButtonDown()
+                } else {
+                    onDismiss()
+                }
+            }
+        }
+
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.keyCode == 53 else { return event }
+            MainActor.assumeIsolated { onDismiss() }
+            return nil
+        }
+
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: NSApp,
+            queue: .main
+        ) { _ in
             MainActor.assumeIsolated { onDismiss() }
         }
     }
 
-    /// Removes both monitors. Safe to call more than once, and from any close path.
+    /// Removes every watcher. Safe to call more than once, and from any close path.
     func stop() {
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         localMonitor = nil
         globalMonitor = nil
+        escapeMonitor = nil
+        resignObserver = nil
     }
 
     /// Resolves an AppKit event into the pure click target. Window coordinates are converted
