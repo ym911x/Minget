@@ -328,6 +328,31 @@ final class MenuBarLabelWiringTests: XCTestCase {
 
     // MARK: §8.1.11 Dismiss-monitor lifecycle
 
+    func testStatusButtonDeactivationDoesNotCloseBeforeTheButtonAction() throws {
+        let monitor = PopoverDismissMonitor()
+        let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 140, height: 24),
+                              styleMask: .borderless, backing: .buffered, defer: false)
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 140, height: 24))
+        window.contentView?.addSubview(button)
+        let frame = try XCTUnwrap(PopoverDismissMonitor.frame(of: button))
+        var pointer = NSPoint(x: frame.midX, y: frame.midY)
+        var dismissals = 0
+        monitor.install(popover: NSPopover(), statusButton: button,
+                        mouseLocation: { pointer }) { dismissals += 1 }
+        defer { monitor.stop() }
+
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApp)
+        XCTAssertEqual(dismissals, 0, "button action must see the still-open popover")
+
+        pointer = NSPoint(x: frame.maxX + 100, y: frame.minY - 100)
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApp)
+        XCTAssertEqual(dismissals, 1, "a click in another app must still dismiss")
+
+        monitor.stop()
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApp)
+        XCTAssertEqual(dismissals, 1, "closing must remove the observer")
+    }
+
     func testDismissMonitorInstallIsIdempotentAndStopIsRepeatable() {
         let monitor = PopoverDismissMonitor()
         let popover = NSPopover()

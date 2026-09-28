@@ -295,7 +295,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Internal (not private) so the wiring tests can pin the button to this action.
     @objc func statusItemClicked(_ sender: Any?) {
-        Diagnostics.log("status action shown=\(popover.isShown)")
+        Diagnostics.log("status action shown=\(popover.isShown) time=\(ProcessInfo.processInfo.systemUptime) type=\(NSApp.currentEvent?.type.rawValue ?? 0)")
         togglePanel()
     }
 
@@ -775,6 +775,7 @@ final class PopoverDismissMonitor {
     private var localMonitor: Any?
     private var escapeMonitor: Any?
     private var resignObserver: NSObjectProtocol?
+    private var workspaceObserver: NSObjectProtocol?
 
     /// How many times the dismissal watchers were installed. An already-open popover must
     /// not stack another set of watchers; the wiring tests read this.
@@ -782,11 +783,12 @@ final class PopoverDismissMonitor {
 
     /// Introspection for the wiring tests.
     var isInstalled: Bool {
-        localMonitor != nil || escapeMonitor != nil || resignObserver != nil
+        localMonitor != nil || escapeMonitor != nil || resignObserver != nil || workspaceObserver != nil
     }
 
     /// Installs the dismissal watchers. Idempotent across repeated presentations.
     func install(popover: NSPopover, statusButton: NSButton?,
+                 mouseLocation: @escaping () -> NSPoint = { NSEvent.mouseLocation },
                  onDismiss: @escaping () -> Void) {
         guard !isInstalled else { return }
         installCount += 1
@@ -818,7 +820,29 @@ final class PopoverDismissMonitor {
             object: NSApp,
             queue: .main
         ) { _ in
-            MainActor.assumeIsolated { onDismiss() }
+            MainActor.assumeIsolated {
+                // macOS can temporarily deactivate an accessory app while forwarding a
+                // status-button click. Let the button action perform the only toggle.
+                if Self.frame(of: statusButton)?.contains(mouseLocation()) == true {
+                    Diagnostics.log("status resign over button: awaiting button action")
+                    return
+                }
+                Diagnostics.log("status resign outside button: dismiss")
+                onDismiss()
+            }
+        }
+
+        // Cmd-Tab must still dismiss when the pointer happens to remain over our button.
+        workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { notification in
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.activationPolicy == .regular,
+                  app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+            MainActor.assumeIsolated {
+                Diagnostics.log("status another application activated: dismiss")
+                onDismiss()
+            }
         }
     }
 
@@ -827,9 +851,11 @@ final class PopoverDismissMonitor {
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        if let workspaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(workspaceObserver) }
         localMonitor = nil
         escapeMonitor = nil
         resignObserver = nil
+        workspaceObserver = nil
     }
 
     /// Resolves an AppKit event into the pure click target. Window coordinates are converted
