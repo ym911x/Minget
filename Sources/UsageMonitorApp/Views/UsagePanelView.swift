@@ -107,7 +107,7 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        let preferred = Self.preferredHeight(for: preferences)
+        let preferred = Self.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count)
         let viewport = min(preferred, maxHeight ?? preferred)
         let tabHeight = preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0
         let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
@@ -143,6 +143,19 @@ struct UsagePanelView: View {
                     }
                 }
             }
+            if preferences.showGoogle && (preferences.effectiveTab == .all || preferences.effectiveTab == .google) {
+                if model.google.accounts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Google / Antigravity").font(.headline)
+                        Text(model.google.feedback).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Button("管理连接") { onAccounts?() }
+                        Spacer()
+                    }.padding(12).frame(height: AntigravityOverviewCard.height)
+                }
+                ForEach(model.google.accounts) { state in
+                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account))
+                }
+            }
             if preferences.showDeepSeek && (preferences.effectiveTab == .all || preferences.effectiveTab == .deepSeek) {
                 DeepSeekOverviewCard(report: report(for: .deepseek),
                                      status: model.deepSeekStatus,
@@ -160,14 +173,16 @@ struct UsagePanelView: View {
         .padding(.top, DetailPageLayout.rowSpacing)
     }
 
-    static func preferredHeight(for preferences: DetailPreferences) -> CGFloat {
+    static func preferredHeight(for preferences: DetailPreferences, googleAccountCount: Int = 2) -> CGFloat {
+        let googleHeight = CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + DetailPageLayout.rowSpacing)
         let allHeight = DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
                                                    showCommandCode: preferences.showCommandCode)
         let cardsHeight: CGFloat
         switch preferences.effectiveTab {
-        case .all: cardsHeight = allHeight
+        case .all: cardsHeight = allHeight + (preferences.showGoogle ? googleHeight : 0)
         case .chatGPT: cardsHeight = DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false)
         case .deepSeek: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.deepSeekCardHeight
+        case .google: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing + googleHeight
         case .commandCode: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.commandCodeCardHeight
         }
         return cardsHeight + DetailPageLayout.footerHeight + (preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0)
@@ -184,6 +199,7 @@ struct UsagePanelView: View {
         .frame(height: DetailPageLayout.tabHeight)
         .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
         .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
+        .onChange(of: preferences.showGoogle) { _ in normalizeTab() }
     }
 
     private func normalizeTab() {
@@ -196,6 +212,7 @@ struct UsagePanelView: View {
         case .chatGPT: return "ChatGPT"
         case .deepSeek: return "DeepSeek"
         case .commandCode: return "Command Code"
+        case .google: return "Google"
         }
     }
 
@@ -266,7 +283,7 @@ struct UsagePanelView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.0"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -275,7 +292,7 @@ struct UsagePanelView: View {
     }
 
     private var isAnyRefreshInFlight: Bool {
-        model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing
+        model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing || model.google.isRefreshing
     }
 
     /// The global line aggregates every visible source: both ChatGPT profiles and every
@@ -299,10 +316,11 @@ struct UsagePanelView: View {
             case .notConfigured, .connecting, .connected: return false
             }
         }
-        if hasCodexProblem || model.isStale || hasProviderProblem { return "部分数据未更新" }
+        if hasCodexProblem || model.isStale || hasProviderProblem || (preferences.showGoogle && model.google.accounts.contains { $0.isCached || $0.failure != nil }) { return "部分数据未更新" }
 
         var dates: [Date] = model.codexSnapshotDates
         dates.append(contentsOf: visibleReports.compactMap(\.lastSuccessAt))
+        if preferences.showGoogle { dates.append(contentsOf: model.google.accounts.compactMap { $0.snapshot?.fetchedAt }) }
         guard let fetchedAt = dates.min() else { return "等待更新" }
         return UsageFormatting.updatedText(fetchedAt: fetchedAt)
     }

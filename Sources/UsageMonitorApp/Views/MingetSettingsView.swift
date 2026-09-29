@@ -52,6 +52,7 @@ struct MingetSettingsView: View {
                     FireScheduleSettingsView(preferences: model.fireSchedules,
                                              displayNames: displayNames)
                     serviceGroup
+                    AntigravityConnectionView(google: model.google, preferences: preferences)
 
                     DisclosureGroup("高级诊断") {
                         VStack(alignment: .leading, spacing: 8) {
@@ -87,6 +88,8 @@ struct MingetSettingsView: View {
                 Text("按供应商切换").tag(DetailPreferences.DisplayMode.byProvider)
             }
             .pickerStyle(.radioGroup)
+            Toggle("显示 Google 额度卡片", isOn: $preferences.showGoogle)
+                .font(.system(size: 11))
         }
         .settingsGroupBackground()
     }
@@ -103,10 +106,19 @@ struct MingetSettingsView: View {
                 }
                 Text(displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek))
                     .tag(MenuBarPreferences.Selection.deepSeek)
+                ForEach(model.google.accounts) { state in
+                    Text(model.google.displayName(state.account) + " · Google")
+                        .tag(MenuBarPreferences.Selection.google(state.id))
+                }
+                if case .google(let id) = menuBarPreferences.selection,
+                   !model.google.accounts.contains(where: { $0.id == id }) {
+                    Text("Google 账号暂不可用").tag(MenuBarPreferences.Selection.google(id))
+                }
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
 
+            googleGroupPicker
             deepSeekCurrencyRow
             lowUsageRefreshSettings
 
@@ -116,6 +128,27 @@ struct MingetSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .settingsGroupBackground()
+    }
+
+
+    @ViewBuilder
+    private var googleGroupPicker: some View {
+        if case .google(let id) = menuBarPreferences.selection {
+            let groups = model.google.accounts.first { $0.id == id }?.snapshot?.groups ?? []
+            let selected = menuBarPreferences.googleGroupIDs[id]
+            Picker("模型或额度组", selection: Binding<String?>(
+                get: { menuBarPreferences.googleGroupIDs[id] },
+                set: { menuBarPreferences.googleGroupIDs[id] = $0 })) {
+                Text("请选择额度组").tag(Optional<String>.none)
+                ForEach(groups) { group in Text(group.label).tag(Optional(group.id)) }
+                if let selected, !groups.contains(where: { $0.id == selected }) {
+                    Text("所选额度组已不可用").tag(Optional(selected))
+                }
+            }
+            .font(.system(size: 11))
+            Text("Google 额度每 5 分钟刷新，支持手动刷新。")
+                .font(.system(size: 10)).foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder

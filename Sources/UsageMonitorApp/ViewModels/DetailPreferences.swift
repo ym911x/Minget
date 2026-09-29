@@ -9,7 +9,7 @@ import Combine
 final class DetailPreferences: ObservableObject {
 
     enum DisplayMode: String, CaseIterable { case all, byProvider }
-    enum ProviderTab: String, CaseIterable { case all, chatGPT, deepSeek, commandCode }
+    enum ProviderTab: String, CaseIterable { case all, chatGPT, deepSeek, commandCode, google }
 
     static let shared = DetailPreferences()
 
@@ -22,6 +22,12 @@ final class DetailPreferences: ObservableObject {
 
     private let defaults: UserDefaults
 
+    @Published var showGoogle: Bool {
+        didSet {
+            defaults.set(showGoogle, forKey: "detail.showGoogle")
+            if !showGoogle && selectedTab == .google { selectedTab = .all }
+        }
+    }
     @Published var showDeepSeek: Bool {
         didSet {
             defaults.set(showDeepSeek, forKey: Key.showDeepSeek)
@@ -44,17 +50,19 @@ final class DetailPreferences: ObservableObject {
     var effectiveTab: ProviderTab {
         guard displayMode == .byProvider else { return .all }
         switch selectedTab {
-        case .deepSeek where !showDeepSeek, .commandCode where !showCommandCode: return .all
+        case .google where !showGoogle, .deepSeek where !showDeepSeek, .commandCode where !showCommandCode: return .all
         default: return selectedTab
         }
     }
 
     var visibleTabs: [ProviderTab] {
-        [.all, .chatGPT] + (showDeepSeek ? [.deepSeek] : []) + (showCommandCode ? [.commandCode] : [])
+        [.all, .chatGPT] + (showDeepSeek ? [.deepSeek] : []) + (showCommandCode ? [.commandCode] : []) + (showGoogle ? [.google] : [])
     }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let showG = defaults.object(forKey: "detail.showGoogle") as? Bool ?? false
+        self.showGoogle = showG
         let showDS = defaults.object(forKey: Key.showDeepSeek) as? Bool ?? true
         let showCC = defaults.object(forKey: Key.showCommandCode) as? Bool ?? true
         self.showDeepSeek = showDS
@@ -62,6 +70,6 @@ final class DetailPreferences: ObservableObject {
         self.displayMode = DisplayMode(rawValue: defaults.string(forKey: Key.displayMode) ?? "") ?? .all
         let savedTab = ProviderTab(rawValue: defaults.string(forKey: Key.selectedTab) ?? "") ?? .all
         self.selectedTab = (savedTab == .deepSeek && !showDS)
-            || (savedTab == .commandCode && !showCC) ? .all : savedTab
+            || (savedTab == .commandCode && !showCC) || (savedTab == .google && !showG) ? .all : savedTab
     }
 }

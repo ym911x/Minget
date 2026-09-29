@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-27
-适用版本：1.5.0
+更新日期：2026-09-29
+适用版本：1.6.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -12,6 +12,18 @@
 | A | 在本机真实服务或真实账号上完成验证 |
 | B | 有服务商公开文档或官方部署代码支持，且由自动化测试固定请求和响应结构 |
 | C | 仅由自动化测试或第三方资料支持，尚未完成真实账号验证 |
+
+## Google / Antigravity（1.6.0）
+
+兼容代码依据：CLIProxyAPI v7.3.18 的 internal/api/handlers/management/api_tools.go、auth_files.go，CPA Manager Plus v1.14.1 的 apps/web/src/utils/quota/builders.ts 和 types/quota.ts。当前验证为 C，真实双账号尚待应用内连接核对。控制台内部协议，非 Google 公开稳定 API。
+
+- 本机默认 origin：http://127.0.0.1:8317，只允许 literal 127.0.0.1、HTTP、可选合法端口，禁止 userinfo/query/fragment/额外 path。管理密钥由用户主动输入，只进 Keychain antigravity.management-key。
+- GET /v0/management/auth-files：只保留 provider=antigravity 的稳定 ID、auth_index、label/email/project_id 和启停状态。不使用授权文件下载接口。
+- POST /v0/management/api-call：固定 auth_index、POST、Content-Type、User-Agent、Bearer $TOKEN$ 和 project 请求体。占位符由 CPA 替换，Minget 不取得 Google OAuth token。
+- 上游仅允许 daily-cloudcode-pa.googleapis.com、daily-cloudcode-pa.sandbox.googleapis.com、cloudcode-pa.googleapis.com 下的 /v1internal:retrieveUserQuotaSummary 和 /v1internal:fetchAvailableModels，按该顺序查询。401/429/重定向状态不继续回退；其他不支持响应可按固定列表回退。禁止用户任意转发目标及代理覆盖。
+- 外层及上游 status_code 都检查。只有明确认识的 groups/buckets 或 models/quotaInfo 响应生成归属快照；remainingFraction 只接受有限 0...1 数字，缺失/布尔/越界为未知，0 保留。重置时间仅解析服务端 ISO 日期，未知周期不补造；逐模型不合并共享池。
+- Minget 的 URLSession 拒绝全部重定向，使用 ephemeral session，无 Cookie/cache。外部 CPA 的 Google token 刷新和上游 HTTP 行为由 CPA 负责；当前 api-call 默认 Go 客户端会处理上游重定向，Minget 无法独立验证其未跳转。没有因此修改既有代理或读取 token。
+- 五分钟节流、手动强制、唤醒补刷；账号以完成顺序发布。连接代次和账号 ID/email/project identity 隔离缓存，不记录原始响应、Key 或 token。成功发现账号列表后清除已删除/身份更换缓存；新连接/断开清空本应用 Google 缓存。后台 Keychain 禁止 UI，拒绝被记住。
 
 ## Codex
 

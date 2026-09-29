@@ -153,7 +153,7 @@ cat > "$STAGING_CONTENTS/Info.plist" <<PLIST
     <key>LSUIElement</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHumanReadableUsageDescription</key>
-    <string>Reads Codex account usage via the local codex app-server. No credentials are read, stored or transmitted.</string>
+    <string>Reads isolated Codex profiles and read-only provider usage. User-provided provider keys are stored in macOS Keychain; Google authorization stays in the local proxy.</string>
 </dict>
 </plist>
 PLIST
@@ -169,6 +169,10 @@ Runs one long-lived `codex app-server` child per ChatGPT profile — two profile
 each with its own CODEX_HOME and its own child process — and reads account rate
 limits over stdio JSON-RPC. Both profiles refresh in parallel. Only normalized
 usage numbers are cached.
+
+Google / Antigravity quotas are read through a fixed local-proxy query. Provider
+keys supplied in the app are stored in macOS Keychain. Google OAuth stays in CPA.
+Launch with --show-accounts to open the connection form.
 
 Contents/MacOS/MingetCLI is the QA smoke diagnostic:
   Minget.app/Contents/MacOS/MingetCLI

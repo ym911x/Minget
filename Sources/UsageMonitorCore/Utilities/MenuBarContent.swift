@@ -38,6 +38,7 @@ public struct MenuBarContent: Equatable, Sendable {
     public let weekly: ResetTimeProgress
     /// The numbers come from the cache, so the rows are drawn dimmer.
     public let isCached: Bool
+    public var quotaDescription: String? = nil
 
     public init(mode: MenuBarSpaceMode,
                 text: String,
@@ -68,9 +69,10 @@ public struct MenuBarContent: Equatable, Sendable {
         var parts = ["明明有数 · Minget 菜单栏"]
         if attention == .warning { parts.append("异常提示") }
         parts.append(text)
+        if let quotaDescription { parts.append(quotaDescription) }
         if showsTimeBars {
-            parts.append(fiveHour.stateText(windowName: UsageFormatting.windowName(.fiveHour)))
-            parts.append(weekly.stateText(windowName: UsageFormatting.windowName(.weekly)))
+            if fiveHour.segmentCount > 0 { parts.append(fiveHour.stateText(windowName: UsageFormatting.windowName(.fiveHour))) }
+            if weekly.segmentCount > 0 { parts.append(weekly.stateText(windowName: UsageFormatting.windowName(.weekly))) }
         }
         return parts.joined(separator: "，")
     }
@@ -104,6 +106,7 @@ public enum MenuBarSource: Equatable, Sendable {
                  display: UsageDisplay,
                  connectionState: UsageService.ConnectionState)
     case deepSeek(MenuBarDeepSeekContent)
+    case antigravity(shortLabel: String, group: AntigravityQuotaGroup?, isCached: Bool, missingGroup: Bool = false)
 }
 
 /// The only place the menu bar's text, warning marker and time rows are decided.
@@ -128,6 +131,8 @@ public enum MenuBarContentBuilder {
                                   weekly: rows.weekly,
                                   isCached: display.isStale)
 
+        case .antigravity(let label, let group, let cached, let missingGroup):
+            return googleContent(label: label, group: group, cached: cached, missingGroup: missingGroup, now: now, mode: mode)
         case .deepSeek(let content):
             return MenuBarContent(mode: mode,
                                   text: text(for: mode, content: content),
@@ -139,6 +144,33 @@ public enum MenuBarContentBuilder {
                                   weekly: ResetTimeProgress(state: .invalid, fills: []),
                                   isCached: content.isCached)
         }
+    }
+
+
+    private static func googleContent(label: String, group: AntigravityQuotaGroup?, cached: Bool,
+                                      missingGroup: Bool, now: Date, mode: MenuBarSpaceMode) -> MenuBarContent {
+        let empty = ResetTimeProgress(state: .invalid, fills: [])
+        let five = group?.buckets.first { $0.kind == .fiveHour }
+        let week = group?.buckets.first { $0.kind == .weekly }
+        let buckets: [AntigravityQuotaBucket] = {
+            if let five, let week { return [five, week] }
+            return group?.buckets.prefix(1).map { $0 } ?? []
+        }()
+        let name = group.map { String($0.label.prefix(12)) } ?? (missingGroup ? "额度组不可用" : "请选择额度组")
+        let values = buckets.map { bucket in
+            let window = bucket.kind == .fiveHour ? "5H" : bucket.kind == .weekly ? "W" : bucket.label
+            let value = bucket.remainingFraction.map { String(format: "%.0f%%", $0 * 100) } ?? "?"
+            return mode == .full && bucket.kind != .unknown ? window + " " + value : value
+        }.joined(separator: " | ")
+        let text = label + " " + name + (values.isEmpty ? "" : " " + values)
+        let fiveProgress = buckets.first { $0.kind == .fiveHour }.map { ResetTimeModel.progress(expected: .fiveHour, window: $0.rateLimitWindow, now: now) } ?? empty
+        let weekProgress = buckets.first { $0.kind == .weekly }.map { ResetTimeModel.progress(expected: .weekly, window: $0.rateLimitWindow, now: now) } ?? empty
+        var content = MenuBarContent(mode: mode, text: text,
+            attention: cached || group == nil || buckets.contains(where: { $0.remainingFraction == nil }) ? .warning : .none,
+            showsTimeBars: !buckets.isEmpty && buckets.allSatisfy { $0.kind != .unknown },
+            fiveHour: fiveProgress, weekly: weekProgress, isCached: cached)
+        content.quotaDescription = group?.buckets.map { $0.label + " " + $0.percentageText + "，" + $0.resetText(now: now) }.joined(separator: "；")
+        return content
     }
 
     /// `A 5H 78% | W 42%` (full) or `A 78% 42%` (compact).

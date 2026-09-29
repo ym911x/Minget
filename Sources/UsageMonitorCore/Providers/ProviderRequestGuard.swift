@@ -209,7 +209,7 @@ public final class URLSessionProviderTransport: NSObject, ProviderTransport, @un
 
     /// - Parameter protocolClasses: test seam. A registered `URLProtocol` lets the
     ///   redirect and response behaviour be exercised without a live network.
-    public init(timeout: TimeInterval = 15, protocolClasses: [AnyClass]? = nil) {
+    public init(timeout: TimeInterval = 15, protocolClasses: [AnyClass]? = nil, refuseAllRedirects: Bool = false) {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = timeout
         configuration.timeoutIntervalForResource = timeout
@@ -219,7 +219,7 @@ public final class URLSessionProviderTransport: NSObject, ProviderTransport, @un
         configuration.urlCache = nil
         configuration.waitsForConnectivity = false
         if let protocolClasses { configuration.protocolClasses = protocolClasses }
-        let delegate = RedirectGuardDelegate()
+        let delegate = RedirectGuardDelegate(refuseAllRedirects: refuseAllRedirects)
         self.delegate = delegate
         self.session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
         super.init()
@@ -245,6 +245,8 @@ public final class URLSessionProviderTransport: NSObject, ProviderTransport, @un
 /// "refused" flag would leak one request's refusal into an unrelated later failure —
 /// exactly the misclassification this class exists to prevent.
 final class RedirectGuardDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private let refuseAllRedirects: Bool
+    init(refuseAllRedirects: Bool = false) { self.refuseAllRedirects = refuseAllRedirects; super.init() }
 
     /// Outcome of one task, built from the delegate callbacks and handed to exactly one
     /// awaiting `send`.
@@ -297,7 +299,7 @@ final class RedirectGuardDelegate: NSObject, URLSessionDataDelegate, @unchecked 
             completionHandler(nil)
             return
         }
-        if let target = request.url, ProviderRequestGuard.isCrossDomainRedirect(from: origin, to: target) {
+        if refuseAllRedirects || request.url.map({ ProviderRequestGuard.isCrossDomainRedirect(from: origin, to: $0) }) != false {
             markRefused(task)
             // Handing back nil ends the redirect; the task then completes normally with
             // the 3xx response, and `didCompleteWithError` reports the refusal instead.

@@ -107,6 +107,7 @@ public enum MenuBarRefreshPolicy {
 
         let trigger: MenuBarRefreshTrigger?
         switch selection {
+        case .google: return .inactive
         case .profile:
             trigger = chatGPTTrigger(snapshot: profileSnapshot,
                                      fiveHourThresholdPercent: settings.chatGPTFiveHourThresholdPercent,

@@ -248,6 +248,7 @@ public struct ProviderReport: Equatable, Sendable {
 public enum ProviderCredentialKey: String, CaseIterable, Sendable {
     case deepseekAPIKey = "deepseek.api-key"
     case commandCodeAPIKey = "commandcode.api-key"
+    case antigravityManagementKey = "antigravity.management-key"
 }
 
 /// What a reader knows about its own credential, from memory only.

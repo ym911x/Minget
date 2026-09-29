@@ -69,6 +69,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private var accountsWindowController: AccountsWindowController?
 
     private var model: UsageViewModel?
+    private var lastGoogleAccountCount = 0
     private var stateMachine = MenuBarSpaceStateMachine()
     /// Widths the two modes were last measured at. `private(set)` so the wiring tests can
     /// prove the item is sized from a measurement rather than from the per-mode fallback.
@@ -151,7 +152,14 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         model.objectWillChange
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.noteContentMayHaveChanged() }
+                    MainActor.assumeIsolated {
+                        self?.noteContentMayHaveChanged()
+                        if let self, let count = self.model?.google.accounts.count,
+                           count != self.lastGoogleAccountCount {
+                            self.lastGoogleAccountCount = count
+                            self.resizeVisiblePanel()
+                        }
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -319,7 +327,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
         let screen = buttonWindow.screen ?? NSScreen.main
         let preferences = DetailPreferences.shared
-        let size = Self.panelSize(for: preferences, visibleFrame: screen?.visibleFrame)
+        let size = Self.panelSize(for: preferences, visibleFrame: screen?.visibleFrame, googleAccountCount: model?.google.accounts.count ?? 0)
 
         // A short screen is handled by the page's scroll region. Only an unavailable width
         // still requires the regular detail window fallback.
@@ -365,7 +373,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func resizeVisiblePanel() {
         guard popover.isShown, let button = statusItem?.button else { return }
         let frame = button.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
-        let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame)
+        let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame, googleAccountCount: model?.google.accounts.count ?? 0)
         let screenHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000, visibleFrame: frame)
         guard let controller = makePanelViewController(maxHeight: screenHeight, refreshOnAppear: false) else { return }
         controller.preferredContentSize = size
@@ -440,8 +448,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// The panel's content size for the current display preferences.
     static func panelSize(for preferences: DetailPreferences,
-                          visibleFrame: CGRect? = nil) -> NSSize {
-        let preferredHeight = UsagePanelView.preferredHeight(for: preferences)
+                          visibleFrame: CGRect? = nil, googleAccountCount: Int = 2) -> NSSize {
+        let preferredHeight = UsagePanelView.preferredHeight(for: preferences, googleAccountCount: googleAccountCount)
         return NSSize(width: DetailPageLayout.pageWidth,
                       height: DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                               visibleFrame: visibleFrame))
@@ -545,13 +553,16 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
 final class DetailWindowController: NSWindowController {
 
     private var preferenceObserver: AnyCancellable?
+    private var googleLayoutObserver: AnyCancellable?
+    private let model: UsageViewModel
 
     init(model: UsageViewModel,
          onSettings: (() -> Void)?,
          onAccounts: (() -> Void)? = nil,
          onQuit: (() -> Void)? = nil) {
+        self.model = model
         let preferences = DetailPreferences.shared
-        let preferredHeight = UsagePanelView.preferredHeight(for: preferences)
+        let preferredHeight = UsagePanelView.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count)
         let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000,
                                                         visibleFrame: NSScreen.main?.visibleFrame)
         let panel = UsagePanelView(model: model,
@@ -571,6 +582,10 @@ final class DetailWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: panel)
         super.init(window: window)
+        googleLayoutObserver = model.google.$accounts.map(\.count).removeDuplicates()
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { self?.applyPreferredContentSize() }
+            }
 
         // `objectWillChange` fires before the new value lands, so the resize is deferred one
         // runloop turn; reading the preference inside the sink would use the old value.
@@ -584,7 +599,7 @@ final class DetailWindowController: NSWindowController {
 
     private func applyPreferredContentSize() {
         guard let window else { return }
-        let preferredHeight = UsagePanelView.preferredHeight(for: DetailPreferences.shared)
+        let preferredHeight = UsagePanelView.preferredHeight(for: DetailPreferences.shared, googleAccountCount: model.google.accounts.count)
         let height = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                      visibleFrame: NSScreen.main?.visibleFrame)
         window.setContentSize(NSSize(width: DetailPageLayout.pageWidth, height: height))

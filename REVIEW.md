@@ -1,9 +1,7 @@
 # 当前审核状态
 
-当前开发版本：1.5.0。Codex 已实现详情页切换、首次连接引导与账号管理、官方 ChatGPT 登录接线、底部操作和菜单栏重复点击处理。完整自动测试、Release 构建、严格签名、本机备份安装及退出子进程回收已通过。本机既有双账号的真实额度缓存已在签名版运行期间更新；新账号浏览器授权和菜单栏真实交互尚待验收，第二台 Mac 未实测。未推送或发布 v1.5.0，公开最新版本仍为 1.4.3。
+当前开发版本：1.6.0。基于未发布 1.5.0 接入本机 Google / Antigravity 额度。实现、581 项自动测试与签名安装完成（零失败、1 项环境跳过）；真实服务等待在应用内提供管理密钥，不把合成数据写成真实额度。1.5.0 已有验收边界保留在其版本目录，未推送或发布。
 
-- [实施报告](docs/versions/1.5.0/IMPLEMENTATION_REPORT.md)
-- [审核](docs/versions/1.5.0/REVIEW.md)
-- [验收台账](docs/versions/1.5.0/ACCEPTANCE.md)
-
-1.4.3 的审核及发布证据保留在 [1.4.3 版本目录](docs/versions/1.4.3/)；冻结 v1.0 基线保持原样。
+- [实施报告](docs/versions/1.6.0/IMPLEMENTATION_REPORT.md)
+- [审核](docs/versions/1.6.0/REVIEW.md)
+- [验收台账](docs/versions/1.6.0/ACCEPTANCE.md)

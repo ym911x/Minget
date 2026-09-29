@@ -60,6 +60,8 @@ public final class UsageViewModel: ObservableObject {
     let menuBarPreferences: MenuBarPreferences
     /// Local display metadata shared by the detail and settings surfaces.
     let displayNames: DisplayNamePreferences
+    let google: AntigravityModel
+    private var googleObserver: AnyCancellable?
     private let fireService: ChatGPTFireService
     private let commandCodeFireService: CommandCodeFireService
     let fireSchedules: FireSchedulePreferences
@@ -150,6 +152,7 @@ public final class UsageViewModel: ObservableObject {
 
     /// Designated initializer: the production composition path.
     public init(coordinator: CodexProfilesCoordinator,
+                google: AntigravityModel? = nil,
                 providerEngine: ProviderRefreshEngine,
                 menuBarPreferences: MenuBarPreferences = .shared,
                 displayNames: DisplayNamePreferences = .shared,
@@ -165,6 +168,7 @@ public final class UsageViewModel: ObservableObject {
                 fireRetryDelay: TimeInterval = 5,
                 clockInterval: TimeInterval = 30) {
         self.coordinator = coordinator
+        self.google = google ?? AntigravityModel(credentials: InMemoryCredentialStore(), defaults: UserDefaults(suiteName: "minget-unconnected-google")!)
         self.providerEngine = providerEngine
         self.menuBarPreferences = menuBarPreferences
         self.displayNames = displayNames
@@ -248,6 +252,13 @@ public final class UsageViewModel: ObservableObject {
             return .chatGPT(shortLabel: fallback?.profile.shortLabel ?? "",
                             display: fallback?.display ?? .unavailable(.rpcFailed(.other)),
                             connectionState: fallback?.connectionState ?? .idle)
+        case .google(let id):
+            let state = google.accounts.first { $0.id == id }
+            let groupID = menuBarPreferences.googleGroupIDs[id]
+            let group = state?.snapshot?.groups.first { $0.id == groupID }
+            let position = google.accounts.firstIndex { $0.id == id }.map { $0 + 1 }
+            return .antigravity(shortLabel: position.map { "G\($0)" } ?? "G",
+                                group: group, isCached: state?.isCached ?? true, missingGroup: groupID != nil && group == nil)
         case .deepSeek:
             return .deepSeek(deepSeekMenuBarContent())
         }
@@ -269,6 +280,7 @@ public final class UsageViewModel: ObservableObject {
         let selectedSnapshot: UsageSnapshot?
         let normalInterval: TimeInterval
         switch menuBarPreferences.selection {
+        case .google: return .inactive
         case .profile(let profileID):
             selectedSnapshot = profileState(profileID)?.snapshot
             normalInterval = currentCodexInterval
@@ -352,6 +364,10 @@ public final class UsageViewModel: ObservableObject {
     public func start() {
         Diagnostics.log("viewmodel start")
         isStopped = false
+        googleObserver = google.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.tick += 1 }
+        }
+        google.start()
         scheduleTimers()
         observeClockChanges()
         observeMenuBarPreferences()
@@ -454,6 +470,8 @@ public final class UsageViewModel: ObservableObject {
             return
         }
         isStopped = true
+        google.stop()
+        googleObserver?.cancel(); googleObserver = nil
         activeLoginProfile = nil
         loginAttemptID = nil
         isRefreshing = false
@@ -507,6 +525,7 @@ public final class UsageViewModel: ObservableObject {
             .autoconnect()
             .sink { [weak self] _ in
                 self?.refreshProviders(force: false)
+                self?.google.refresh(force: false)
                 self?.refreshDeepSeekStatus(force: false)
             }
         rescheduleMenuBarRefreshTimer()
@@ -583,6 +602,7 @@ public final class UsageViewModel: ObservableObject {
               currentMenuBarRefreshDecision.isAccelerated else { return }
 
         switch menuBarPreferences.selection {
+        case .google: return
         case .profile(let profileID):
             guard let runtime = coordinator.runtime(for: profileID),
                   !runtime.state().isFetching else { return }
@@ -640,6 +660,7 @@ public final class UsageViewModel: ObservableObject {
     /// read only rate limits; only an unhealthy client falls back to the ordinary full read.
     /// Neither route re-opens the failure budget.
     func refreshAfterWake(now: Date = Date()) {
+        if !isStopped { google.refresh(force: false, now: now, afterWake: true) }
         guard !isStopped, !isRefreshing else { return }
         if let lastScheduled = lastScheduledCodexRefreshAt,
            Self.isInsideWakeCooldown(now: now, previous: lastScheduled) {
@@ -691,6 +712,7 @@ public final class UsageViewModel: ObservableObject {
     /// rule, ChatGPT at 30 seconds per profile and the providers at 60 seconds.
     public func panelWillOpen() {
         guard !isStopped else { return }
+        google.refresh(force: false)
         panelWillOpenCodex()
         panelWillOpenProviders()
         refreshDeepSeekStatus(force: false)
@@ -808,6 +830,7 @@ public final class UsageViewModel: ObservableObject {
     /// re-opens the Codex failure budget.
     public func refreshNow() {
         guard !isStopped else { return }
+        google.refresh(force: true)
         refresh(resetFailureBudget: true)
         for report in providerReports {
             refreshProvider(report.platform, force: true)

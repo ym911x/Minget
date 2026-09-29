@@ -67,7 +67,7 @@ struct ResetTimeBarsView: View {
     /// unknown is carried by that row's fainter track and, exhaustively, by the accessibility
     /// text. Recorded as a deviation in the 1.0.2 implementation report.
     private var needsStateBadge: Bool {
-        needsBadge(fiveHour) || needsBadge(weekly)
+        (fiveHour.segmentCount > 0 && needsBadge(fiveHour)) || (weekly.segmentCount > 0 && needsBadge(weekly))
     }
 
     private var stateBadge: some View {

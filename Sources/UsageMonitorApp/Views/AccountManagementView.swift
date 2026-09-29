@@ -50,6 +50,7 @@ struct AccountManagementView: View {
                         }.connectionCard()
                     }
 
+                    AntigravityConnectionView(google: model.google)
                     providerRow(.deepseek, title: "DeepSeek", form: deepSeekForm)
                     providerRow(.commandcode, title: "Command Code", form: commandCodeForm)
                 }
@@ -65,7 +66,8 @@ struct AccountManagementView: View {
     }
 
     private var hasConnectedSource: Bool {
-        model.profileStates.contains { !$0.isStale && $0.snapshot != nil }
+        model.google.accounts.contains { !$0.isCached && $0.snapshot != nil }
+        || model.profileStates.contains { !$0.isStale && $0.snapshot != nil }
         || model.providerReports.contains { $0.connection == .connected && $0.isLive }
     }
 

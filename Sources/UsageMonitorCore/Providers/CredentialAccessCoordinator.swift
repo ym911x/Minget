@@ -31,6 +31,7 @@ public final class CredentialAccessCoordinator: @unchecked Sendable {
     private let store: ProviderCredentialStoring
     /// Serial executor for every keychain call in this process.
     private let queue: DispatchQueue
+    private static let sharedQueue = DispatchQueue(label: "local.usagemonitor.credential-access")
     private let lock = NSLock()
 
     private var phases: [ProviderCredentialKey: ProviderCredentialPhase] = [:]
@@ -45,9 +46,9 @@ public final class CredentialAccessCoordinator: @unchecked Sendable {
     public var onPhaseChange: (() -> Void)?
 
     public init(store: ProviderCredentialStoring,
-                queue: DispatchQueue = DispatchQueue(label: "local.usagemonitor.credential-access")) {
+                queue: DispatchQueue? = nil) {
         self.store = store
-        self.queue = queue
+        self.queue = queue ?? Self.sharedQueue
     }
 
     // MARK: - Memory state (callable from any thread, never touches the keychain)

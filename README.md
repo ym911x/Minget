@@ -7,7 +7,15 @@
 **你的 AI 使用，心里有数。**<br>
 *Your AI usage, at a glance.*
 
-Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek 与 Command Code 的额度、余额和使用状态。
+Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 与本机 Antigravity Google 账号 的额度、余额和使用状态。
+
+## v1.6.0 Google / Antigravity 额度（本机开发版）
+
+通过本机 CLIProxyAPI 接入 Google 账号，详情显示各额度组或模型的剩余百分比与重置时间，菜单栏可选择账号与额度组。沿用现有 1.5.0 单列卡片、供应商切换、账号管理和菜单栏样式。
+
+在“管理账号 → Google / Antigravity → 连接或管理”输入 http://127.0.0.1:8317 和管理密钥，点击“保存并连接”。密钥仅存 macOS Keychain，不自动读取磁盘密钥或 Google 授权文件。连接后，在设置选择 Google 菜单栏来源及模型/额度组；Google 卡片显示开关独立于菜单栏来源。
+
+默认五分钟刷新，支持手动刷新与唤醒补刷；未知字段不补零，过期窗口不自动恢复额度，离线旧数据标记缓存。首次连接的真实服务验证和签名版界面验收见 [1.6.0 验收台账](docs/versions/1.6.0/ACCEPTANCE.md)。未公开发布。
 
 ## 开发中：v1.5.0
 

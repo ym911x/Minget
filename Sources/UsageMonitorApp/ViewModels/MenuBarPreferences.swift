@@ -18,12 +18,14 @@ public final class MenuBarPreferences: ObservableObject {
     public enum Selection: Equatable, Hashable, Codable, Sendable {
         case profile(String)
         case deepSeek
+        case google(String)
 
         /// The exact string written to `UserDefaults`.
         public var storageValue: String {
             switch self {
             case .profile(let id): return id
             case .deepSeek: return Self.deepSeekStorageValue
+            case .google(let id): return "antigravity:" + Data(id.utf8).base64EncodedString()
             }
         }
 
@@ -33,6 +35,11 @@ public final class MenuBarPreferences: ObservableObject {
         /// An unknown id yields nil so the caller can fall back to the documented default
         /// instead of displaying an account that does not exist.
         public init?(storageValue: String, knownProfileIDs: [String]) {
+            if storageValue.hasPrefix("antigravity:"),
+               let data = Data(base64Encoded: String(storageValue.dropFirst(12))),
+               let id = String(data: data, encoding: .utf8), !id.isEmpty {
+                self = .google(id); return
+            }
             if storageValue == Self.deepSeekStorageValue { self = .deepSeek; return }
             guard knownProfileIDs.contains(storageValue) else { return nil }
             self = .profile(storageValue)
@@ -56,6 +63,9 @@ public final class MenuBarPreferences: ObservableObject {
     public static let defaultDeepSeekBalanceThresholdCNYText = "15.00"
     public static let supportedRefreshIntervalSeconds = [15, 30, 60]
 
+    @Published public var googleGroupIDs: [String: String] {
+        didSet { defaults.set(googleGroupIDs, forKey: "menubar.googleGroups.v1") }
+    }
     private let defaults: UserDefaults
     public let knownProfileIDs: [String]
 
@@ -131,6 +141,7 @@ public final class MenuBarPreferences: ObservableObject {
                 knownProfileIDs: [String] = ChatGPTAccountProfile.defaults.map(\.id)) {
         self.defaults = defaults
         self.knownProfileIDs = knownProfileIDs
+        self.googleGroupIDs = defaults.dictionary(forKey: "menubar.googleGroups.v1") as? [String: String] ?? [:]
 
         let fallback = Selection.profile(knownProfileIDs.first ?? ChatGPTAccountProfile.chatGPTA.id)
         // A missing or corrupt value falls back to account A. The app never scans the user's
@@ -207,6 +218,8 @@ public final class MenuBarPreferences: ObservableObject {
         switch selection {
         case .deepSeek:
             return "DeepSeek"
+        case .google:
+            return "Google"
         case .profile(let id):
             return profiles.first { $0.id == id }?.displayName ?? id
         }

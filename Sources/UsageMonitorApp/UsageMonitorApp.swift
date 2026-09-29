@@ -37,6 +37,7 @@ final class AppContainer {
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, commandCode], cache: providerCache)
         displayNames = .shared
         model = UsageViewModel(coordinator: codexProfiles,
+                               google: AntigravityModel(credentials: credentials),
                                providerEngine: providerEngine,
                                menuBarPreferences: menuBarPreferences,
                                displayNames: displayNames,
@@ -89,10 +90,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let model = AppLifecycle.model
             model.start()
             AppLifecycle.statusItem.install(model: model)
-            if showFirstRun {
+            if showFirstRun || ProcessInfo.processInfo.arguments.contains("--show-accounts") {
                 FirstRunGate.markPresented()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    MainActor.assumeIsolated { AppLifecycle.statusItem.showAccountsWindow(firstRun: true) }
+                    MainActor.assumeIsolated { AppLifecycle.statusItem.showAccountsWindow(firstRun: showFirstRun) }
                 }
             }
 
