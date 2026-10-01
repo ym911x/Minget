@@ -1,0 +1,15 @@
+{
+  "version": "1.6.2",
+  "installed_path": "/Users/yuyimeng/Applications/Minget.app",
+  "backup": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-1.6.2-20261001-164733/Minget.app",
+  "backup_executable_sha256": "fe341c32cfc417aa21bec558cafd2c08bb2c85632eeb5bc8b04bfb0ff50ef440",
+  "executable_sha256": "9d2b438968666cb535392faeb42774b8d8b2691cf03dc08969661a1db4c5bfb0",
+  "source_base": "91f5ee4",
+  "branch": "codex/minget-1-6-2",
+  "signature": "Minget Local Signing; strict deep verification passed",
+  "source_sha256": {
+    "Sources/UsageMonitorApp/Views/SharedQuotaViews.swift": "c444e9b13009a0bbd13764e4d50bad709b069afcd81e59a015abec97f34313a8",
+    "Sources/UsageMonitorApp/Views/UsagePanelView.swift": "36d98686a2c84c67fcce843d070918c8379e0886b04e542ad970acb69a530117",
+    "VERSION": "a2d5e268fe70979caccd895156b3d33bd61a3cc7e660ab7a5b07066849b3e248"
+  }
+}

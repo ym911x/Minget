@@ -1,0 +1,146 @@
+Building for debugging...
+[2 / 5] UsageMonitorApp-product
+[3 / 6] UsageMonitorApp-product
+[5 / 9] UsageMonitorApp
+[6 / 10] UsageMonitorApp
+[10 / 15] UsageMonitorApp-product
+[12 / 16] UsageMonitorApp-product
+[15 / 19] UsageMonitorApp
+[18 / 19] UsageMonitorAppTests-product
+Build complete! (4.11秒)
+Test Suite 'Selected tests' started at 2026-10-01 16:44:56.408.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-01 16:44:56.408.
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-01 16:44:56.408.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 16:44:56.409.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'Selected tests' started at 2026-10-01 16:44:56.460.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-01 16:44:56.460.
+Test Suite 'DetailPanelLayoutTests' started at 2026-10-01 16:44:56.460.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardHeightsAreTheSpecifiedOnes]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardHeightsAreTheSpecifiedOnes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsFitTheirFixedFramesWithoutClipping]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsFitTheirFixedFramesWithoutClipping]' passed (0.043 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardSizesMatchTheSpecification]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardSizesMatchTheSpecification]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsShareOneColumnAndNeverOverlap]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsShareOneColumnAndNeverOverlap]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeKeepsThreeQuotaRowsAndTwoGroupedSummaryLines]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeKeepsThreeQuotaRowsAndTwoGroupedSummaryLines]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeQuotaTextUsesTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeQuotaTextUsesTheFixedWording]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeRailsAreFiveSevenAndContinuous]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeRailsAreFiveSevenAndContinuous]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeTextUsesTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeTextUsesTheFixedWording]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTrackShowsRemainingNotUsage]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTrackShowsRemainingNotUsage]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testComponentCacheWordingCarriesItsOwnSuccessTime]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testComponentCacheWordingCarriesItsOwnSuccessTime]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageAddsOneScrollRegionWhenViewportIsShort]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageAddsOneScrollRegionWhenViewportIsShort]' passed (0.048 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageKeepsOneContentScrollRegionAcrossServices]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageKeepsOneContentScrollRegionAcrossServices]' passed (0.049 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testEachWindowBlockHasASegmentedResetRailOfTheRightSize]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testEachWindowBlockHasASegmentedResetRailOfTheRightSize]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testFireDialogCopyIsTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testFireDialogCopyIsTheFixedWording]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingSummaryAndUnknownPeriodAreWordedDifferently]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingSummaryAndUnknownPeriodAreWordedDifferently]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingValuesNeverBecomeZero]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingValuesNeverBecomeZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMonthlyProgressIsNotInventedWithoutAStartDate]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMonthlyProgressIsNotInventedWithoutAStartDate]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMoreThanThreeCurrenciesPutTheOverflowInTheThirdSlot]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMoreThanThreeCurrenciesPutTheOverflowInTheThirdSlot]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testPageIsASingleFourHundredFortyPointColumn]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testPageIsASingleFourHundredFortyPointColumn]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testRemainingIsDerivedFromLimitMinusUsedWhenTheServiceOmitsIt]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testRemainingIsDerivedFromLimitMinusUsedWhenTheServiceOmitsIt]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testSettingsPageUsesOneBoundedScrollRegionForExtensibleSchedules]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testSettingsPageUsesOneBoundedScrollRegionForExtensibleSchedules]' passed (0.062 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheAccessibilityValueRepeatsTheCacheSemantics]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheAccessibilityValueRepeatsTheCacheSemantics]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeights]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeights]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeightsMatchTheRowArithmetic]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeightsMatchTheRowArithmetic]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheHeaderSubtitleFollowsTheConnectionAndPlanMatrix]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheHeaderSubtitleFollowsTheConnectionAndPlanMatrix]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheRemainingTrackShrinksAsCreditIsConsumed]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheRemainingTrackShrinksAsCreditIsConsumed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoFireButtonsNeverShareState]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoFireButtonsNeverShareState]' passed (0.878 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoProfileCardsReadTheirOwnSnapshots]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoProfileCardsReadTheirOwnSnapshots]' passed (0.004 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnknownArrivedAndCachedStatesRenderAsSpecified]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnknownArrivedAndCachedStatesRenderAsSpecified]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnnamedCurrencyBucketSortsLast]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnnamedCurrencyBucketSortsLast]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUpToThreeCurrenciesAreAllShown]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUpToThreeCurrenciesAreAllShown]' passed (0.000 seconds).
+Test Suite 'DetailPanelLayoutTests' passed at 2026-10-01 16:44:57.554.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 1.092 (1.094) seconds
+Test Suite 'Interface161Tests' started at 2026-10-01 16:44:57.554.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testLegacyAllMigrationIsIdempotentAndLeavesSourcePreferencesUntouched]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testLegacyAllMigrationIsIdempotentAndLeavesSourcePreferencesUntouched]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testMissingQuotaDoesNotEraseKnownResetOrInventRenewal]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testMissingQuotaDoesNotEraseKnownResetOrInventRenewal]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testPrimaryQuotaSelectionDoesNotSubstituteSharedGroupOrDependOnOrder]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testPrimaryQuotaSelectionDoesNotSubstituteSharedGroupOrDependOnOrder]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testSixAccountOverviewFitsWhileSmallScreenIsCapped]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testSixAccountOverviewFitsWhileSmallScreenIsCapped]' passed (0.002 seconds).
+Test Suite 'Interface161Tests' passed at 2026-10-01 16:44:57.558.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'OverviewPresentationTests' started at 2026-10-01 16:44:57.558.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testBalancesRetainCurrenciesAndCreditAmountDoesNotInventLimit]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testBalancesRetainCurrenciesAndCreditAmountDoesNotInventLimit]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testCodexOverviewAgreesWithDetailForZeroMissingAndExpiredReset]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testCodexOverviewAgreesWithDetailForZeroMissingAndExpiredReset]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testExportOverviewExamples]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testExportOverviewExamples]' passed (0.125 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testGeminiMissingQuotaRetainsKnownTimeAndNeverUsesSharedPool]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testGeminiMissingQuotaRetainsKnownTimeAndNeverUsesSharedPool]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testOverviewColorsFollowDetailThresholdsAndRejectUnknownValues]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testOverviewColorsFollowDetailThresholdsAndRejectUnknownValues]' passed (0.000 seconds).
+Test Suite 'OverviewPresentationTests' passed at 2026-10-01 16:44:57.684.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.125 (0.126) seconds
+Test Suite 'StatusItemWiringTests' started at 2026-10-01 16:44:57.684.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' passed (0.009 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeStaysStableAcrossServicePreferences]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeStaysStableAcrossServicePreferences]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' passed (0.009 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' passed (0.009 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' passed (0.022 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' passed (0.047 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' passed (0.007 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure]' passed (0.982 seconds).
+Test Suite 'StatusItemWiringTests' passed at 2026-10-01 16:44:58.795.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 1.110 (1.111) seconds
+Test Suite 'UsageMonitorAppTests.xctest' passed at 2026-10-01 16:44:58.795.
+	 Executed 56 tests, with 0 failures (0 unexpected) in 2.332 (2.334) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 16:44:58.795.
+	 Executed 56 tests, with 0 failures (0 unexpected) in 2.332 (2.335) seconds

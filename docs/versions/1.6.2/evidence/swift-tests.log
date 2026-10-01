@@ -1,0 +1,1457 @@
+Building for debugging...
+Build complete! (0.20秒)
+Test Suite 'All tests' started at 2026-10-01 16:45:34.593.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-01 16:45:34.594.
+Test Suite 'AntigravityCLIProcessTests' started at 2026-10-01 16:45:34.594.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testAuthenticationWaitIsStoppedBeforeTotalTimeout]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testAuthenticationWaitIsStoppedBeforeTotalTimeout]' passed (0.361 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testFixedArgumentsIsolatedEnvironmentAndParsedReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testFixedArgumentsIsolatedEnvironmentAndParsedReport]' passed (0.356 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testNonZeroExitCannotPublishAValidLookingReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testNonZeroExitCannotPublishAValidLookingReport]' passed (0.379 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testOutputLimitAndCancellation]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testOutputLimitAndCancellation]' passed (0.405 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRejectsMissingDirectories]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRejectsMissingDirectories]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testTotalTimeoutCoversWaitingBeforeAnyReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testTotalTimeoutCoversWaitingBeforeAnyReport]' passed (0.153 seconds).
+Test Suite 'AntigravityCLIProcessTests' passed at 2026-10-01 16:45:36.249.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.655 (1.656) seconds
+Test Suite 'AntigravityCLIReportTests' started at 2026-10-01 16:45:36.249.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testReadsExactFractionsAndBothWindowsWithoutParsingRoundedText]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testReadsExactFractionsAndBothWindowsWithoutParsingRoundedText]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsAmbiguousBucketIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsAmbiguousBucketIdentity]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsDuplicateGroupAndOversizedOutput]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsDuplicateGroupAndOversizedOutput]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsModelResponsesErrorsAndMissingCommand]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testRejectsModelResponsesErrorsAndMissingCommand]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testZeroMissingAndInvalidFieldsRemainDistinct]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIReportTests testZeroMissingAndInvalidFieldsRemainDistinct]' passed (0.000 seconds).
+Test Suite 'AntigravityCLIReportTests' passed at 2026-10-01 16:45:36.253.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'AntigravityIdentityAndProfileTests' started at 2026-10-01 16:45:36.253.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testANSIScreenRewritesRowsAndHandlesChunkCompletion]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testANSIScreenRewritesRowsAndHandlesChunkCompletion]' passed (0.004 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testAuthenticationURLRejectsUnexpectedHostsAndRedactsQuery]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testAuthenticationURLRejectsUnexpectedHostsAndRedactsQuery]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testCleanupRejectsSymlinkAndDoesNotTouchOutsideData]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testCleanupRejectsSymlinkAndDoesNotTouchOutsideData]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testIdentityAllowsObservedOfficialPlanSuffixOnlyOnHeaderRow]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testIdentityAllowsObservedOfficialPlanSuffixOnlyOnHeaderRow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testIdentityRequiresPinnedOfficialHeaderAndAdjacentRow]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testIdentityRequiresPinnedOfficialHeaderAndAdjacentRow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testProfileCommitDuplicateAndReplacementAreTransactional]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityIdentityAndProfileTests testProfileCommitDuplicateAndReplacementAreTransactional]' passed (0.006 seconds).
+Test Suite 'AntigravityIdentityAndProfileTests' passed at 2026-10-01 16:45:36.264.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.011 (0.012) seconds
+Test Suite 'AntigravityLoginFlowTests' started at 2026-10-01 16:45:36.264.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testEveryProfilePathIsAbsoluteAndSharedBetweenLoginAndQuery]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testEveryProfilePathIsAbsoluteAndSharedBetweenLoginAndQuery]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt]' started.
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:48: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt] : Test skipped - Explicit official CLI synthetic input probe
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt]' skipped (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized]' started.
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:36: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized] : Test skipped - Explicit official CLI login probe; no credential input
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized]' skipped (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress]' started.
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:67: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress] : Test skipped - Explicit official CLI cancellation probe
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress]' skipped (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOnboardingAfterCodeDoesNotDisplayEchoOrWrappedFragments]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOnboardingAfterCodeDoesNotDisplayEchoOrWrappedFragments]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRateLimitErrorIsClassifiedWithoutInventingRetryDuration]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRateLimitErrorIsClassifiedWithoutInventingRetryDuration]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait]' started.
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:84: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait] : Test skipped - Explicit official CLI read-only probe
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait]' skipped (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testThemeTrustAndUnknownPrompt]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testThemeTrustAndUnknownPrompt]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testUnpreparedProfileCannotCommit]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testUnpreparedProfileCannotCommit]' passed (0.000 seconds).
+Test Suite 'AntigravityLoginFlowTests' passed at 2026-10-01 16:45:36.267.
+	 Executed 9 tests, with 4 tests skipped and 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'AntigravityLoginSessionTests' started at 2026-10-01 16:45:36.267.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testAlternateScreenDoesNotRetainTrustPromptOverIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testAlternateScreenDoesNotRetainTrustPromptOverIdentity]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testCodeSubmissionAllowsSubsequentTermsAndNeverDisplaysCode]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testCodeSubmissionAllowsSubsequentTermsAndNeverDisplaysCode]' passed (0.215 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testCodeSubmissionDoesNotDependOnTerminalCRTranslation]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testCodeSubmissionDoesNotDependOnTerminalCRTranslation]' passed (0.172 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testFailureContextContainsOnlyKnownLabels]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testFailureContextContainsOnlyKnownLabels]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testLongCodeIsDeliveredCompletelyWithoutEcho]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testLongCodeIsDeliveredCompletelyWithoutEcho]' passed (0.180 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testOfficialColorSchemePromptIsOnboardingAndBareDigitsAreNotHTTPStatus]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testOfficialColorSchemePromptIsOnboardingAndBareDigitsAreNotHTTPStatus]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testRejectedCodeFailsWithoutCommittingIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testRejectedCodeFailsWithoutCommittingIdentity]' passed (0.182 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testSubmissionStallHasSeparateTimeout]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testSubmissionStallHasSeparateTimeout]' passed (0.273 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTerminalPreviousLineAndEraseBeforeCursorRemoveStaleCheckbox]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTerminalPreviousLineAndEraseBeforeCursorRemoveStaleCheckbox]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTermsFooterDistinguishesPreviousFromDone]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTermsFooterDistinguishesPreviousFromDone]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTermsOptionalCollectionIsNotMislabelledAsAgreement]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTermsOptionalCollectionIsNotMislabelledAsAgreement]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTimeoutAndCancellationReapSession]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testTimeoutAndCancellationReapSession]' passed (0.112 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testUnknownPromptStopsInsteadOfSendingInput]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testUnknownPromptStopsInsteadOfSendingInput]' passed (0.039 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testUnrecognizedAuthenticationURLCannotAcceptCode]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityLoginSessionTests testUnrecognizedAuthenticationURLCannotAcceptCode]' passed (0.137 seconds).
+Test Suite 'AntigravityLoginSessionTests' passed at 2026-10-01 16:45:37.582.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 1.313 (1.315) seconds
+Test Suite 'AntigravityProviderTests' started at 2026-10-01 16:45:37.582.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testAuthenticationThrottlingAndRedirectDoNotTriggerFallback]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testAuthenticationThrottlingAndRedirectDoNotTriggerFallback]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testDiscoveryFiltersProviderAndUsesPublicMetadataOnly]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testDiscoveryFiltersProviderAndUsesPublicMetadataOnly]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testFractionsPreserveZeroAndMissingAndRejectIllegalValues]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testFractionsPreserveZeroAndMissingAndRejectIllegalValues]' passed (0.004 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGoogleMenuBarShowsOnlyReportedPeriods]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGoogleMenuBarShowsOnlyReportedPeriods]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGoogleTransportRejectsEvenSameOriginRedirects]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGoogleTransportRejectsEvenSameOriginRedirects]' passed (0.003 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGroupsKeepAllPeriodsAndFractionalResetDates]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testGroupsKeepAllPeriodsAndFractionalResetDates]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testMissingSelectedGroupStaysUnavailable]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testMissingSelectedGroupStaysUnavailable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testModelResponseDoesNotInventSharedGroupsOrPeriods]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testModelResponseDoesNotInventSharedGroupsOrPeriods]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testOnlyLiteralLoopbackHTTPOriginIsAllowed]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testOnlyLiteralLoopbackHTTPOriginIsAllowed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testQuotaForwardingHasFixedQueryAndTokenPlaceholder]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testQuotaForwardingHasFixedQueryAndTokenPlaceholder]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testReachedResetNeverRefillsQuota]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testReachedResetNeverRefillsQuota]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testSeparateCoordinatorsSerializeProcessWideKeychainPolicy]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testSeparateCoordinatorsSerializeProcessWideKeychainPolicy]' passed (0.065 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testUnconfirmedPayloadsFailClosed]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testUnconfirmedPayloadsFailClosed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testUnsupportedSummaryFallsBackToModelQuery]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityProviderTests testUnsupportedSummaryFallsBackToModelQuery]' passed (0.001 seconds).
+Test Suite 'AntigravityProviderTests' passed at 2026-10-01 16:45:37.661.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.078 (0.079) seconds
+Test Suite 'ChatGPTFireServiceTests' started at 2026-10-01 16:45:37.661.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testArgumentsAreTheFixedVerifiedList]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testArgumentsAreTheFixedVerifiedList]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testASecondRequestForTheSameProfileReturnsAlreadyRunning]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testASecondRequestForTheSameProfileReturnsAlreadyRunning]' passed (0.543 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testEachProfilePassesItsOwnCodexHomeToTheChild]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testEachProfilePassesItsOwnCodexHomeToTheChild]' passed (0.615 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testMissingCLIIsReportedAndNoProcessStarts]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testMissingCLIIsReportedAndNoProcessStarts]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testNonZeroExitIsReportedAsAFailure]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testNonZeroExitIsReportedAsAFailure]' passed (0.489 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllIsIdempotentAndSafeWithNothingRunning]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllIsIdempotentAndSafeWithNothingRunning]' passed (0.277 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllLeavesUnrelatedProcessesAlone]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllLeavesUnrelatedProcessesAlone]' passed (0.067 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllTerminatesEveryRunningFireChild]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testStopAllTerminatesEveryRunningFireChild]' passed (0.284 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testSuccessfulRequestReportsSuccess]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testSuccessfulRequestReportsSuccess]' passed (0.281 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testTimeoutTerminatesTheChildAndReportsTimeout]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testTimeoutTerminatesTheChildAndReportsTimeout]' passed (6.098 seconds).
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testTwoProfilesCanFireAtTheSameTime]' started.
+Test Case '-[UsageMonitorCoreTests.ChatGPTFireServiceTests testTwoProfilesCanFireAtTheSameTime]' passed (0.390 seconds).
+Test Suite 'ChatGPTFireServiceTests' passed at 2026-10-01 16:45:46.707.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 9.045 (9.046) seconds
+Test Suite 'CodexAccountTests' started at 2026-10-01 16:45:46.707.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAccountReadIsSentWithRefreshTokenFalse]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAccountReadIsSentWithRefreshTokenFalse]' passed (0.054 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAccountSwitchThroughTheServiceChangesTheServedCache]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAccountSwitchThroughTheServiceChangesTheServedCache]' passed (0.003 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAPIKeyAccountHasNoEmail]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testAPIKeyAccountHasNoEmail]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testCacheAccountIDPrefersTheEmailAndRejectsBlanks]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testCacheAccountIDPrefersTheEmailAndRejectsBlanks]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testCacheIsIsolatedPerAccount]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testCacheIsIsolatedPerAccount]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testChatgptAccountWithEmailIsParsed]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testChatgptAccountWithEmailIsParsed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testEmailMayBeNull]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testEmailMayBeNull]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testFailureServesTheCurrentAccountCacheAndNotAnotherAccounts]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testFailureServesTheCurrentAccountCacheAndNotAnotherAccounts]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testLastKnownAccountIsRememberedAcrossRuns]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testLastKnownAccountIsRememberedAcrossRuns]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testLegacyUnattributedCacheIsNeverServedToAKnownAccount]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testLegacyUnattributedCacheIsNeverServedToAKnownAccount]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testMissingAccountYieldsNil]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testMissingAccountYieldsNil]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testSuccessfulReadWritesOnlyTheAccountScopedStore]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testSuccessfulReadWritesOnlyTheAccountScopedStore]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testUnknownAccountNeverResolvesToAnything]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testUnknownAccountNeverResolvesToAnything]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testUnknownAccountTypeIsReportedAsUnknownNotGuessed]' started.
+Test Case '-[UsageMonitorCoreTests.CodexAccountTests testUnknownAccountTypeIsReportedAsUnknownNotGuessed]' passed (0.000 seconds).
+Test Suite 'CodexAccountTests' passed at 2026-10-01 16:45:46.774.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.066 (0.067) seconds
+Test Suite 'CodexLaunchTests' started at 2026-10-01 16:45:46.774.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testBrokenCandidateFallsBackButOverrideDoesNot]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testBrokenCandidateFallsBackButOverrideDoesNot]' passed (0.415 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testFireUsesLaunchPrefixAndSeparateProfileEnvironments]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testFireUsesLaunchPrefixAndSeparateProfileEnvironments]' passed (0.832 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingCLIDoesNotConsultHostInstallations]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingCLIDoesNotConsultHostInstallations]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingNodeRecoversThroughManualRefreshWithSameService]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingNodeRecoversThroughManualRefreshWithSameService]' passed (0.516 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNativeStartsWithFinderEnvironmentAndPreservesProfile]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNativeStartsWithFinderEnvironmentAndPreservesProfile]' passed (0.026 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNewResolutionSeesReplacedInstallation]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNewResolutionSeesReplacedInstallation]' passed (0.273 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeMissingHasSpecificCategory]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeMissingHasSpecificCategory]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeWrapperUsesAbsoluteNodeAndResolvedEntry]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeWrapperUsesAbsoluteNodeAndResolvedEntry]' passed (0.358 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testOfficialLayoutsAndNativePriority]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testOfficialLayoutsAndNativePriority]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutAlsoKillsWrapperDescendant]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutAlsoKillsWrapperDescendant]' passed (1.082 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutReapsOwnedProcess]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutReapsOwnedProcess]' passed (1.015 seconds).
+Test Suite 'CodexLaunchTests' passed at 2026-10-01 16:45:51.295.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 4.520 (4.521) seconds
+Test Suite 'CodexProfileIdentityTests' started at 2026-10-01 16:45:51.295.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testAccountReplacementReplacesTheConfirmedIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testAccountReplacementReplacesTheConfirmedIdentity]' passed (0.006 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testConfirmationOnReplacementConnectionInvalidatesOldIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testConfirmationOnReplacementConnectionInvalidatesOldIdentity]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testConfirmationReadLeavesTheIdentityStateUntouched]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testConfirmationReadLeavesTheIdentityStateUntouched]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testIdentityStartsUnavailableBeforeAnyFetch]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testIdentityStartsUnavailableBeforeAnyFetch]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testLiveReadWithoutIdentityDowngradesToPreviousOnTheSameConnection]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testLiveReadWithoutIdentityDowngradesToPreviousOnTheSameConnection]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testReplacementConnectionInvalidatesIdentityWhenIdentityReadFails]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testReplacementConnectionInvalidatesIdentityWhenIdentityReadFails]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testRetryLadderChildRelaunchInvalidatesPreviousIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testRetryLadderChildRelaunchInvalidatesPreviousIdentity]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testSignOutInvalidatesTheStoredIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testSignOutInvalidatesTheStoredIdentity]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testSuccessfulFetchConfirmsTheIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfileIdentityTests testSuccessfulFetchConfirmsTheIdentity]' passed (0.001 seconds).
+Test Suite 'CodexProfileIdentityTests' passed at 2026-10-01 16:45:51.313.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.017 (0.018) seconds
+Test Suite 'CodexProfilesCoordinatorTests' started at 2026-10-01 16:45:51.313.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testAutomaticRetryDatesExcludeProfilesRequiringManualAction]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testAutomaticRetryDatesExcludeProfilesRequiringManualAction]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testBothProfilesCanBeInFlightAtTheSameTime]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testBothProfilesCanBeInFlightAtTheSameTime]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testDefaultProfilesAreTheTwoFixedAccountsInOrder]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testDefaultProfilesAreTheTwoFixedAccountsInOrder]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testEachProfileKeepsItsOwnRetryLadder]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testEachProfileKeepsItsOwnRetryLadder]' passed (0.007 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testOneProfileFailingDoesNotBlockTheOther]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testOneProfileFailingDoesNotBlockTheOther]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testResolvedCodexHomeIsRelativeToTheProvidedHomeDirectory]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testResolvedCodexHomeIsRelativeToTheProvidedHomeDirectory]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testStopDrainsEveryOwnedChild]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testStopDrainsEveryOwnedChild]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testTwoProfilesLaunchChildrenWithTheirOwnCodexHome]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testTwoProfilesLaunchChildrenWithTheirOwnCodexHome]' passed (0.627 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testUnknownProfileIsReportedWithoutCrashing]' started.
+Test Case '-[UsageMonitorCoreTests.CodexProfilesCoordinatorTests testUnknownProfileIsReportedWithoutCrashing]' passed (0.003 seconds).
+Test Suite 'CodexProfilesCoordinatorTests' passed at 2026-10-01 16:45:51.956.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.643 (0.643) seconds
+Test Suite 'CommandCodeFireServiceTests' started at 2026-10-01 16:45:51.956.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testArgumentsAreFixedMinimalAndDisableAutoUpdate]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testArgumentsAreFixedMinimalAndDisableAutoUpdate]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testLocatorIncludesHomebrewAndHonoursOverride]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testLocatorIncludesHomebrewAndHonoursOverride]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testMissingCredentialAndMissingCLIAreSeparate]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testMissingCredentialAndMissingCLIAreSeparate]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testNonZeroExitIsFixedFailure]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testNonZeroExitIsFixedFailure]' passed (0.224 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testOfficialMaxTurnsExitMeansTheSingleRequestRan]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testOfficialMaxTurnsExitMeansTheSingleRequestRan]' passed (0.334 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testSparseGUIPathCanResolveNodeBesideTheLocatedCLI]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testSparseGUIPathCanResolveNodeBesideTheLocatedCLI]' passed (0.389 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testStopTerminatesTheOwnedChild]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testStopTerminatesTheOwnedChild]' passed (0.491 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testStopWhileLocatorIsPendingPreventsALateLaunch]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testStopWhileLocatorIsPendingPreventsALateLaunch]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testSuccessfulFireUsesOnlyTheCommandCodeKeyAndDiscardsOutput]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testSuccessfulFireUsesOnlyTheCommandCodeKeyAndDiscardsOutput]' passed (0.486 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testTimeoutTerminatesOnlyOwnedChild]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeFireServiceTests testTimeoutTerminatesOnlyOwnedChild]' passed (1.807 seconds).
+Test Suite 'CommandCodeFireServiceTests' passed at 2026-10-01 16:45:55.691.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 3.734 (3.735) seconds
+Test Suite 'CommandCodeProviderTests' started at 2026-10-01 16:45:55.691.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testABillingPeriodStartEqualToTheEndIsRejected]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testABillingPeriodStartEqualToTheEndIsRejected]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAMissingSubscriptionLeavesBothBoundsAbsent]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAMissingSubscriptionLeavesBothBoundsAbsent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAReversedBillingPeriodIsRejectedAsUnusable]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAReversedBillingPeriodIsRejectedAsUnusable]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAutomaticRefreshReusesAuxiliaryPayloadsInsideFifteenMinutes]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAutomaticRefreshReusesAuxiliaryPayloadsInsideFifteenMinutes]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAuxiliaryCacheNeverCrossesCredentialBoundaries]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAuxiliaryCacheNeverCrossesCredentialBoundaries]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAuxiliaryComponentsExpireIndependently]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testAuxiliaryComponentsExpireIndependently]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testBillingPeriodStartIsParsedWhenTheServiceReportsIt]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testBillingPeriodStartIsParsedWhenTheServiceReportsIt]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testBillingPeriodStartStaysAbsentWhenTheServiceOmitsIt]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testBillingPeriodStartStaysAbsentWhenTheServiceOmitsIt]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testClockRollbackDoesNotTreatFutureAuxiliaryTimestampsAsReusable]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testClockRollbackDoesNotTreatFutureAuxiliaryTimestampsAsReusable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testCreditsUnauthorizedStillSuspendsTheCredential]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testCreditsUnauthorizedStillSuspendsTheCredential]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFailedAuxiliaryReadDoesNotStartTheReuseWindow]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFailedAuxiliaryReadDoesNotStartTheReuseWindow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFailedForcedComponentKeepsOldValueAndDoesNotAdvanceSuccessTime]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFailedForcedComponentKeepsOldValueAndDoesNotAdvanceSuccessTime]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFingerprintIsStableAndNeverContainsTheKey]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testFingerprintIsStableAndNeverContainsTheKey]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testForcedReadBypassesTheAuxiliaryReuseWindow]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testForcedReadBypassesTheAuxiliaryReuseWindow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testMalformedSummaryJSONKeepsTheCreditsWindows]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testMalformedSummaryJSONKeepsTheCreditsWindows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testMissingSummaryMetricsAndBadWindowsFailClosed]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testMissingSummaryMetricsAndBadWindowsFailClosed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testModelPathsAndUnlistedPathsAreLocallyRefused]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testModelPathsAndUnlistedPathsAreLocallyRefused]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testPartialAuxiliaryFailureRetriesOnlyTheMissingComponent]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testPartialAuxiliaryFailureRetriesOnlyTheMissingComponent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testProviderUsageDecodesCacheWrittenBeforeComponentFreshness]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testProviderUsageDecodesCacheWrittenBeforeComponentFreshness]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testReadsOnlyTheThreeUsageEndpointsWithBearerAuthentication]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testReadsOnlyTheThreeUsageEndpointsWithBearerAuthentication]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSubscriptionFailureDoesNotDiscardCreditsAndSummary]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSubscriptionFailureDoesNotDiscardCreditsAndSummary]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryFailureKeepsCreditsLiveAndReportsNoStatistics]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryFailureKeepsCreditsLiveAndReportsNoStatistics]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryFailureKeepsTheMonthlyRemainingWithoutFabricatingUsedOrLimit]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryFailureKeepsTheMonthlyRemainingWithoutFabricatingUsedOrLimit]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryUnauthorizedDoesNotDiscardCredits]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testSummaryUnauthorizedDoesNotDiscardCredits]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testUnauthorizedRequiredEndpointSuspendsCredential]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testUnauthorizedRequiredEndpointSuspendsCredential]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testUnsupportedCreditsStructureFailsClosedEvenWithAHealthySummary]' started.
+Test Case '-[UsageMonitorCoreTests.CommandCodeProviderTests testUnsupportedCreditsStructureFailsClosedEvenWithAHealthySummary]' passed (0.000 seconds).
+Test Suite 'CommandCodeProviderTests' passed at 2026-10-01 16:45:55.701.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'DeepSeekProviderTests' started at 2026-10-01 16:45:55.701.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests test401MapsToInvalidCredential]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests test401MapsToInvalidCredential]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testAccountFingerprintIsStableAndNotTheKey]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testAccountFingerprintIsStableAndNotTheKey]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testBearerCredentialIsSentOnTheBalanceRequest]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testBearerCredentialIsSentOnTheBalanceRequest]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testDeletingTheKeyLeavesNothingBehind]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testDeletingTheKeyLeavesNothingBehind]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testDifferentCurrenciesAreReportedSeparatelyAndNeverSummed]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testDifferentCurrenciesAreReportedSeparatelyAndNeverSummed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithBusinessErrorPayloadIsNeverABalance]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithBusinessErrorPayloadIsNeverABalance]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithMissingAmountsIsUnexpectedResponseNotZero]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithMissingAmountsIsUnexpectedResponseNotZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithUnrecognisedPayloadIsUnexpectedResponseNotZero]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testHTTP200WithUnrecognisedPayloadIsUnexpectedResponseNotZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNetworkFailureIsMappedToAFixedCategory]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNetworkFailureIsMappedToAFixedCategory]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNoCredentialIsReportedNotFaked]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNoCredentialIsReportedNotFaked]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNonParsableAmountIsOmittedNotZeroed]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testNonParsableAmountIsOmittedNotZeroed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testServerErrorStatusIsReported]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testServerErrorStatusIsReported]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testSuccessfulBalanceIsParsedPerCurrency]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekProviderTests testSuccessfulBalanceIsParsedPerCurrency]' passed (0.000 seconds).
+Test Suite 'DeepSeekProviderTests' passed at 2026-10-01 16:45:55.703.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'DeepSeekStatusProviderTests' started at 2026-10-01 16:45:55.703.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testHistoricalOutageTextDoesNotOverrideHealthyHeadline]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testHistoricalOutageTextDoesNotOverrideHealthyHeadline]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testHTMLScriptsAndTagsAreRemovedBeforeParsing]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testHTMLScriptsAndTagsAreRemovedBeforeParsing]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testIncidentHeadlinesMapToDegradedOrOutage]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testIncidentHeadlinesMapToDegradedOrOutage]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testNonSuccessResponseIsNotPresentedAsOperational]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testNonSuccessResponseIsNotPresentedAsOperational]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testOfficialHealthyHeadlineMapsToOperational]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testOfficialHealthyHeadlineMapsToOperational]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testReaderUsesOfficialStatusPageWithoutAuthorization]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testReaderUsesOfficialStatusPageWithoutAuthorization]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testUnknownTextStaysUnknown]' started.
+Test Case '-[UsageMonitorCoreTests.DeepSeekStatusProviderTests testUnknownTextStaysUnknown]' passed (0.000 seconds).
+Test Suite 'DeepSeekStatusProviderTests' passed at 2026-10-01 16:45:55.704.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'DiagnosticsRedactionTests' started at 2026-10-01 16:45:55.704.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testCredentialShapedRunsAreRedacted]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testCredentialShapedRunsAreRedacted]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testErrorCodeConversionNeverTraps]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testErrorCodeConversionNeverTraps]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testErrorTextForServerErrorsContainsNoUpstreamText]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testErrorTextForServerErrorsContainsNoUpstreamText]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testKeyedPairsAreRedacted]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testKeyedPairsAreRedacted]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testLogWritesRedactedLinesOnly]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testLogWritesRedactedLinesOnly]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testServerErrorMessageNeverEntersUsageError]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testServerErrorMessageNeverEntersUsageError]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testSignInShapedServerErrorsMapToNotSignedIn]' started.
+Test Case '-[UsageMonitorCoreTests.DiagnosticsRedactionTests testSignInShapedServerErrorsMapToNotSignedIn]' passed (0.000 seconds).
+Test Suite 'DiagnosticsRedactionTests' passed at 2026-10-01 16:45:55.706.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'FireDriftTests' started at 2026-10-01 16:45:55.706.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testBoundary59Versus60StillClassifiesBySixty]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testBoundary59Versus60StillClassifiesBySixty]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testDisplayTextUsesFixedChineseUnits]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testDisplayTextUsesFixedChineseUnits]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testFreshRuntimeStartsWithNoHistory]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testFreshRuntimeStartsWithNoHistory]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testHistoryEntryLinesCarryTimeResultAndDrift]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testHistoryEntryLinesCarryTimeResultAndDrift]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testRuntimeKeepsOnlyTheLastThreeFinishes]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testRuntimeKeepsOnlyTheLastThreeFinishes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testShiftNeedsBothSidesAndNeverGoesNegative]' started.
+Test Case '-[UsageMonitorCoreTests.FireDriftTests testShiftNeedsBothSidesAndNeverGoesNegative]' passed (0.000 seconds).
+Test Suite 'FireDriftTests' passed at 2026-10-01 16:45:55.707.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'JSONRPCTransportTests' started at 2026-10-01 16:45:55.707.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testChildExitFailsPendingRequestInsteadOfHanging]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testChildExitFailsPendingRequestInsteadOfHanging]' passed (0.018 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testChildReceivesTheConfiguredEnvironmentOverride]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testChildReceivesTheConfiguredEnvironmentOverride]' passed (0.071 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerDropsOversizedLineInsteadOfGrowingWithoutBound]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerDropsOversizedLineInsteadOfGrowingWithoutBound]' passed (0.023 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerEmitsMultipleMessagesFromSingleChunk]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerEmitsMultipleMessagesFromSingleChunk]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerHandlesUTF8CharacterSplitAcrossChunks]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerHandlesUTF8CharacterSplitAcrossChunks]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerReassemblesMessageSplitAcrossChunks]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerReassemblesMessageSplitAcrossChunks]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerRejectsNonJSONLines]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testFramerRejectsNonJSONLines]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testHandshakeAndRateLimitsAcrossSplitWritesAndNoise]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testHandshakeAndRateLimitsAcrossSplitWritesAndNoise]' passed (0.147 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testMalformedChildOutputYieldsRPCFailedNotCrash]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testMalformedChildOutputYieldsRPCFailedNotCrash]' passed (0.401 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testManagedLoginRPCAndCompletionNotification]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testManagedLoginRPCAndCompletionNotification]' passed (0.047 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testNonJSONOutputDoesNotBreakSubsequentRequests]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testNonJSONOutputDoesNotBreakSubsequentRequests]' passed (0.256 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testRequestTimesOutAndThrowsUsageError]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testRequestTimesOutAndThrowsUsageError]' passed (0.555 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testStopTerminatesOwnedChildAndReapsIt]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testStopTerminatesOwnedChildAndReapsIt]' passed (0.628 seconds).
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testTwoTransportsReceiveDifferentCodexHomes]' started.
+Test Case '-[UsageMonitorCoreTests.JSONRPCTransportTests testTwoTransportsReceiveDifferentCodexHomes]' passed (0.100 seconds).
+Test Suite 'JSONRPCTransportTests' passed at 2026-10-01 16:45:57.953.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 2.245 (2.246) seconds
+Test Suite 'MenuBarContentTests' started at 2026-10-01 16:45:57.954.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testAccessibilityTextNamesEachRowState]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testAccessibilityTextNamesEachRowState]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testAccountBIsDistinguishableFromAccountA]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testAccountBIsDistinguishableFromAccountA]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testArrivingAtTheResetTimeAddsNoSecondWarning]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testArrivingAtTheResetTimeAddsNoSecondWarning]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedDataWarnsExactlyOnceAndInFront]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedDataWarnsExactlyOnceAndInFront]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedDeepSeekKeepsItsAmountAndAddsTheWarning]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedDeepSeekKeepsItsAmountAndAddsTheWarning]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedFlagDrivesTheDimmerRows]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCachedFlagDrivesTheDimmerRows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testChangingOnlyTheWeeklyResetLeavesTheHourRowAlone]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testChangingOnlyTheWeeklyResetLeavesTheHourRowAlone]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testChatGPTWithNoDataUsesTheFixedPlaceholderPerMode]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testChatGPTWithNoDataUsesTheFixedPlaceholderPerMode]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCompactModeUsesTheFixedLabelFormatAndKeepsBothRows]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testCompactModeUsesTheFixedLabelFormatAndKeepsBothRows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekAccessibilityTextCarriesNoWindowRows]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekAccessibilityTextCarriesNoWindowRows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekAmountIsAlwaysShownWithTwoDecimals]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekAmountIsAlwaysShownWithTwoDecimals]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekCompactModeUsesTheFixedFormat]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekCompactModeUsesTheFixedFormat]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekFullModeUsesTheFixedFormatAndNoTimeBars]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekFullModeUsesTheFixedFormatAndNoTimeBars]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekSizeSignatureFollowsTheAmountAndTheCode]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekSizeSignatureFollowsTheAmountAndTheCode]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekWithoutACurrencyKeepsThePositionUnnamed]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekWithoutACurrencyKeepsThePositionUnnamed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekWithoutAnyBalanceShowsThePlaceholderAndWarns]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDeepSeekWithoutAnyBalanceShowsThePlaceholderAndWarns]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDefiniteReadFailureWithoutCacheWarnsOnce]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testDefiniteReadFailureWithoutCacheWarnsOnce]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testFullModeTextCarriesTheAccountLabelAndBothNumbers]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testFullModeTextCarriesTheAccountLabelAndBothNumbers]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testInvalidTimingShowsADimRowRatherThanAnInventedCountdown]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testInvalidTimingShowsADimRowRatherThanAnInventedCountdown]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testLiveDataHasNoWarningAtAll]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testLiveDataHasNoWarningAtAll]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNoDataNeverSilentlySwitchesAccount]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNoDataNeverSilentlySwitchesAccount]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNoSnapshotLeavesQuotaAsPlaceholderAndBothRowsUnknown]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNoSnapshotLeavesQuotaAsPlaceholderAndBothRowsUnknown]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNotYetLoadedDoesNotClaimAFailure]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testNotYetLoadedDoesNotClaimAFailure]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testPartialWindowAvailabilityDoesNotAddExtraWarnings]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testPartialWindowAvailabilityDoesNotAddExtraWarnings]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testQuotaPercentChangesLeaveBothRowsAlone]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testQuotaPercentChangesLeaveBothRowsAlone]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverFallsBackToCNYThenUSDThenAscendingCode]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverFallsBackToCNYThenUSDThenAscendingCode]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverIgnoresASavedCurrencyThatIsNoLongerReported]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverIgnoresASavedCurrencyThatIsNoLongerReported]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPrefersAvailableOverTotalAndNeverInventsZero]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPrefersAvailableOverTotalAndNeverInventsZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPrefersTheSavedCurrencyWhenItIsStillPresent]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPrefersTheSavedCurrencyWhenItIsStillPresent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPutsAnUnnamedBucketLastAndStillReportsItsAmount]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testResolverPutsAnUnnamedBucketLastAndStillReportsItsAmount]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testSizeSignatureChangesWhenTheTextOrWarningChanges]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testSizeSignatureChangesWhenTheTextOrWarningChanges]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testSizeSignatureIgnoresTheCountdown]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testSizeSignatureIgnoresTheCountdown]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testUnchangedQuotaWithANewResetTimeStillMovesTheRow]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarContentTests testUnchangedQuotaWithANewResetTimeStillMovesTheRow]' passed (0.000 seconds).
+Test Suite 'MenuBarContentTests' passed at 2026-10-01 16:45:57.958.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'MenuBarSpaceStateTests' started at 2026-10-01 16:45:57.958.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testFailedGrowthAttemptShrinksBackAndBlocksAgain]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testFailedGrowthAttemptShrinksBackAndBlocksAgain]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testGrowsBackOnlyAfterEnoughCleanObservations]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testGrowsBackOnlyAfterEnoughCleanObservations]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemBelowTheMenuBarBandIsOutsideTheVisibleArea]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemBelowTheMenuBarBandIsOutsideTheVisibleArea]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemPushedOffTheScreenIsOutsideTheVisibleArea]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemPushedOffTheScreenIsOutsideTheVisibleArea]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemRightOfTheNotchIsVisible]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemRightOfTheNotchIsVisible]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemUnderTheNotchIsOccluded]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testItemUnderTheNotchIsOccluded]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testMissingFrameMeansTheSystemHidTheItem]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testMissingFrameMeansTheSystemHidTheItem]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testModeOrderingIsLinear]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testModeOrderingIsLinear]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNoMeasuredBaselineIsNotTruncation]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNoMeasuredBaselineIsNotTruncation]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNoNotchOnARegularDisplay]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNoNotchOnARegularDisplay]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNotchSpanComesFromTheAuxiliaryAreas]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testNotchSpanComesFromTheAuxiliaryAreas]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testRepeatedSpaceEventsDoNotSkipTheConfirmationWindow]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testRepeatedSpaceEventsDoNotSkipTheConfirmationWindow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testScreenChangeReEnablesGrowth]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testScreenChangeReEnablesGrowth]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testShrinkingBlocksGrowthUntilASpaceEvent]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testShrinkingBlocksGrowthUntilASpaceEvent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testShrinksToCompactAndNeverDropsTheSecondQuota]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testShrinksToCompactAndNeverDropsTheSecondQuota]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testStaysAtFullWhileThereIsRoom]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testStaysAtFullWhileThereIsRoom]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testTruncationIsDetectedFromTheRequestedWidth]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testTruncationIsDetectedFromTheRequestedWidth]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testTruncationStepsDownInsteadOfShowingCutOffContent]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testTruncationStepsDownInsteadOfShowingCutOffContent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testWakeReEnablesGrowth]' started.
+Test Case '-[UsageMonitorCoreTests.MenuBarSpaceStateTests testWakeReEnablesGrowth]' passed (0.000 seconds).
+Test Suite 'MenuBarSpaceStateTests' passed at 2026-10-01 16:45:57.961.
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'PopoverDismissDecisionTests' started at 2026-10-01 16:45:57.961.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testAMissingPopoverFrameMakesEverythingOutside]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testAMissingPopoverFrameMakesEverythingOutside]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testAnItemWithoutAWindowDoesNotSwallowTheClick]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testAnItemWithoutAWindowDoesNotSwallowTheClick]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickInsideThePopoverKeepsItOpen]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickInsideThePopoverKeepsItOpen]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnAnotherApplicationsWindowDismisses]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnAnotherApplicationsWindowDismisses]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnAnotherMenuBarItemDismisses]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnAnotherMenuBarItemDismisses]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnTheDesktopDismisses]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnTheDesktopDismisses]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnTheStatusItemButtonIsNotTreatedAsAnOutsideClick]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testClickOnTheStatusItemButtonIsNotTreatedAsAnOutsideClick]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testFrameEdgesUseTheStandardHalfOpenConvention]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testFrameEdgesUseTheStandardHalfOpenConvention]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testJustOutsideThePopoverDismisses]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testJustOutsideThePopoverDismisses]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testTheStatusButtonWinsWhereThePopoverArrowOverlapsIt]' started.
+Test Case '-[UsageMonitorCoreTests.PopoverDismissDecisionTests testTheStatusButtonWinsWhereThePopoverArrowOverlapsIt]' passed (0.000 seconds).
+Test Suite 'PopoverDismissDecisionTests' passed at 2026-10-01 16:45:57.962.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'ProviderModelsTests' started at 2026-10-01 16:45:57.962.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testAmountTextKeepsTwoDecimalsByDefault]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testAmountTextKeepsTwoDecimalsByDefault]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceDetailOmitsPartsTheProviderDidNotReport]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceDetailOmitsPartsTheProviderDidNotReport]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceTextAlwaysShowsTheProviderCurrencyCode]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceTextAlwaysShowsTheProviderCurrencyCode]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceTextPrefersTheAvailableAmount]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceTextPrefersTheAvailableAmount]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceWithoutACurrencyShowsNoInventedCode]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testBalanceWithoutACurrencyShowsNoInventedCode]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalFromJSONNumberUsesTheSenderValue]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalFromJSONNumberUsesTheSenderValue]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalParsesMoneyStringsExactly]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalParsesMoneyStringsExactly]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalRejectsBooleansAndOtherTypes]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalRejectsBooleansAndOtherTypes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalRejectsNonMoneyTextInsteadOfProducingZero]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testDecimalRejectsNonMoneyTextInsteadOfProducingZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testLabelledAmountsAppearWithTheirOwnSemantics]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testLabelledAmountsAppearWithTheirOwnSemantics]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testOverviewBalanceUsesFieldSemanticsAndCNYSymbol]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testOverviewBalanceUsesFieldSemanticsAndCNYSymbol]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceDecodesEntriesWrittenByOlderBuilds]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceDecodesEntriesWrittenByOlderBuilds]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceRoundTripsAvailableAndLabelledAmounts]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceRoundTripsAvailableAndLabelledAmounts]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceRoundTripsExactly]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceRoundTripsExactly]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceWithUnparsableAmountYieldsNilNotZero]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testPersistedBalanceWithUnparsableAmountYieldsNilNotZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testProviderFailureCategoriesCarryNoUpstreamText]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testProviderFailureCategoriesCarryNoUpstreamText]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testReportMarkedCachedDowngradesConnectedToStale]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderModelsTests testReportMarkedCachedDowngradesConnectedToStale]' passed (0.000 seconds).
+Test Suite 'ProviderModelsTests' passed at 2026-10-01 16:45:57.965.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'ProviderRefreshEngineTests' started at 2026-10-01 16:45:57.965.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testASupersededFailureCannotSuspendANewerCredential]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testASupersededFailureCannotSuspendANewerCredential]' passed (0.180 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testASupersededReadCannotOverwriteANewerCredential]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testASupersededReadCannotOverwriteANewerCredential]' passed (0.183 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testAuthenticationFailureSuspendsAutomaticRefresh]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testAuthenticationFailureSuspendsAutomaticRefresh]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testCacheIsIsolatedPerAccount]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testCacheIsIsolatedPerAccount]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testConcurrentRefreshesAreCoalescedIntoOneRequest]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testConcurrentRefreshesAreCoalescedIntoOneRequest]' passed (0.107 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testDisconnectClearsCredentialAndCache]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testDisconnectClearsCredentialAndCache]' passed (0.004 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testDisconnectDuringCommitCannotResurrectCache]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testDisconnectDuringCommitCannotResurrectCache]' passed (0.306 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testFailureKeepsTheLastSuccessfulValueAndMarksItStale]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testFailureKeepsTheLastSuccessfulValueAndMarksItStale]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testFailureWithNoPreviousSuccessIsUnavailableWithNoAmounts]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testFailureWithNoPreviousSuccessIsUnavailableWithNoAmounts]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testManualForceArrivingDuringAutomaticReadGetsAFullFollowUp]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testManualForceArrivingDuringAutomaticReadGetsAFullFollowUp]' passed (0.057 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testManualRefreshStillWorksWhileSuspended]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testManualRefreshStillWorksWhileSuspended]' passed (0.005 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testNothingIsCachedWhenTheAccountIsUnknown]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testNothingIsCachedWhenTheAccountIsUnknown]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testProviderCacheIsolatesAccounts]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testProviderCacheIsolatesAccounts]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testProviderCacheRejectsAnEmptyAccountIdentifier]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testProviderCacheRejectsAnEmptyAccountIdentifier]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testReconnectClearsTheSuspensionAndReadsImmediately]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testReconnectClearsTheSuspensionAndReadsImmediately]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testRefreshIsSkippedWhenNotConfigured]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testRefreshIsSkippedWhenNotConfigured]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testUsageSurvivesAPostSuccessCacheReadFailure]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testUsageSurvivesAPostSuccessCacheReadFailure]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testUsageSurvivesThePostRefreshReportPublication]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRefreshEngineTests testUsageSurvivesThePostRefreshReportPublication]' passed (0.001 seconds).
+Test Suite 'ProviderRefreshEngineTests' passed at 2026-10-01 16:45:58.820.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.854 (0.855) seconds
+Test Suite 'ProviderRequestGuardTests' started at 2026-10-01 16:45:58.820.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testAnUnrelatedNetworkFailureIsNotMisclassifiedAfterARefusal]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testAnUnrelatedNetworkFailureIsNotMisclassifiedAfterARefusal]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testARefusedRedirectDoesNotPolluteOtherTasks]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testARefusedRedirectDoesNotPolluteOtherTasks]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientRefusesAPathPointingAtAnotherHost]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientRefusesAPathPointingAtAnotherHost]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientRefusesAPathThatIsNotAllowListedWithoutCallingTheTransport]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientRefusesAPathThatIsNotAllowListedWithoutCallingTheTransport]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientSendsTheCredentialHeaderOnlyOnTheConfiguredOrigin]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testClientSendsTheCredentialHeaderOnlyOnTheConfiguredOrigin]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testCrossHostRedirectIsRefused]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testCrossHostRedirectIsRefused]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testDeepSeekClientMayOnlyAskForTheBalancePath]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testDeepSeekClientMayOnlyAskForTheBalancePath]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testModelEndpointBlockIsIndependentOfTheAllowList]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testModelEndpointBlockIsIndependentOfTheAllowList]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testModelEndpointsAreBlocked]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testModelEndpointsAreBlocked]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testPathsOutsideTheAllowListAreRefused]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testPathsOutsideTheAllowListAreRefused]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testRedirectWithoutAnOriginIsRefused]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testRedirectWithoutAnOriginIsRefused]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testSameOriginRedirectIsAllowed]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testSameOriginRedirectIsAllowed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportFollowsASameOriginRedirect]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportFollowsASameOriginRedirect]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportRefusesACrossDomainRedirectEndToEnd]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportRefusesACrossDomainRedirectEndToEnd]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportReturnsAPlainResponse]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testTransportReturnsAPlainResponse]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLErrorsMapToFixedCategories]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLErrorsMapToFixedCategories]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLSessionDelegateAllowsASameOriginRedirect]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLSessionDelegateAllowsASameOriginRedirect]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLSessionDelegateRefusesACrossDomainRedirectAndReportsIt]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRequestGuardTests testURLSessionDelegateRefusesACrossDomainRedirectAndReportsIt]' passed (0.000 seconds).
+Test Suite 'ProviderRequestGuardTests' passed at 2026-10-01 16:45:58.825.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'ProviderRetirementMigrationTests' started at 2026-10-01 16:45:58.825.
+Test Case '-[UsageMonitorCoreTests.ProviderRetirementMigrationTests testFailureDoesNotClearPreferencesAndRetries]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRetirementMigrationTests testFailureDoesNotClearPreferencesAndRetries]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.ProviderRetirementMigrationTests testSuccessfulMigrationRemovesRawGLMCacheKeepsDeepSeekAndIsIdempotent]' started.
+Test Case '-[UsageMonitorCoreTests.ProviderRetirementMigrationTests testSuccessfulMigrationRemovesRawGLMCacheKeepsDeepSeekAndIsIdempotent]' passed (0.002 seconds).
+Test Suite 'ProviderRetirementMigrationTests' passed at 2026-10-01 16:45:58.828.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'ResetTimeProgressTests' started at 2026-10-01 16:45:58.828.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testConfiguredToleranceIsSixtySeconds]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testConfiguredToleranceIsSixtySeconds]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testDurationTextNeverRoundsAWholeMinuteIntoAnHour]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testDurationTextNeverRoundsAWholeMinuteIntoAnHour]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testDurationThatDoesNotMatchTheRowIsInvalid]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testDurationThatDoesNotMatchTheRowIsInvalid]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testExpiredResetIsArrivedAndFullyEmpty]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testExpiredResetIsArrivedAndFullyEmpty]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testExpiredWindowIsNeverRefilledLocally]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testExpiredWindowIsNeverRefilledLocally]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testFiveHourRowHasFiveSegments]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testFiveHourRowHasFiveSegments]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testFiveHourRowMatchesTheSpecTable]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testFiveHourRowMatchesTheSpecTable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testMissingResetDateIsUnknownNotEmpty]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testMissingResetDateIsUnknownNotEmpty]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testMissingWindowIsUnknownWithAnEmptyRowOfTheRightLength]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testMissingWindowIsUnknownWithAnEmptyRowOfTheRightLength]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testNonFiniteInputsAreInvalidAndNeverProduceNaN]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testNonFiniteInputsAreInvalidAndNeverProduceNaN]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testNoSegmentIsEverUpwardRounded]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testNoSegmentIsEverUpwardRounded]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testOneMissingWindowDoesNotAffectTheOtherRow]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testOneMissingWindowDoesNotAffectTheOtherRow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testProgressIsRecomputedFromAbsoluteTime]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testProgressIsRecomputedFromAbsoluteTime]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testQuotaPercentNeverInfluencesTheTimeRow]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testQuotaPercentNeverInfluencesTheTimeRow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testResetBeyondTheWindowIsClampedWithinTheToleranceOnly]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testResetBeyondTheWindowIsClampedWithinTheToleranceOnly]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testRowsAreComputedIndependentlyFromTheSameNow]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testRowsAreComputedIndependentlyFromTheSameNow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testStateTextNamesTheStateWithoutClaimingARenewal]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testStateTextNamesTheStateWithoutClaimingARenewal]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testUnknownWindowKindHasNoRowAtAll]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testUnknownWindowKindHasNoRowAtAll]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWakeAfterSleepJumpsStraightToTheRealRemainingTime]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWakeAfterSleepJumpsStraightToTheRealRemainingTime]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWeeklyRowMatchesTheSpecTable]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWeeklyRowMatchesTheSpecTable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWeeklyWindowIsInvalidInTheFiveHourRowAndViceVersa]' started.
+Test Case '-[UsageMonitorCoreTests.ResetTimeProgressTests testWeeklyWindowIsInvalidInTheFiveHourRowAndViceVersa]' passed (0.000 seconds).
+Test Suite 'ResetTimeProgressTests' passed at 2026-10-01 16:45:58.831.
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'ShutdownDrainTests' started at 2026-10-01 16:45:58.831.
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testParentExitRightAfterShutdownLeavesNoChildSurvivor]' started.
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testParentExitRightAfterShutdownLeavesNoChildSurvivor]' passed (0.338 seconds).
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testServiceStopDuringChildLaunchLeavesNoSurvivor]' started.
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testServiceStopDuringChildLaunchLeavesNoSurvivor]' passed (0.040 seconds).
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testStopDuringLaunchStillTerminatesTheChild]' started.
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testStopDuringLaunchStillTerminatesTheChild]' passed (0.021 seconds).
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testStopReturnsOnlyAfterInFlightFetchCompletes]' started.
+Test Case '-[UsageMonitorCoreTests.ShutdownDrainTests testStopReturnsOnlyAfterInFlightFetchCompletes]' passed (2.004 seconds).
+Test Suite 'ShutdownDrainTests' passed at 2026-10-01 16:46:01.235.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 2.404 (2.404) seconds
+Test Suite 'UsageCacheTests' started at 2026-10-01 16:46:01.235.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testCacheKeysCannotCollideBetweenPairs]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testCacheKeysCannotCollideBetweenPairs]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testClearingOneProfileLeavesTheOtherIntact]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testClearingOneProfileLeavesTheOtherIntact]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testExternalAccountSwitchReplacesTheProfileAttribution]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testExternalAccountSwitchReplacesTheProfileAttribution]' passed (0.003 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testLastKnownAccountIsRememberedPerProfile]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testLastKnownAccountIsRememberedPerProfile]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testLegacyCacheIsNotServedBeforeMigrationRuns]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testLegacyCacheIsNotServedBeforeMigrationRuns]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationCopiesTheLegacyEntryWhenTheAccountIDIsIdentical]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationCopiesTheLegacyEntryWhenTheAccountIDIsIdentical]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationDeletesTheLegacyEntryWhenNoAccountIDWasRecorded]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationDeletesTheLegacyEntryWhenNoAccountIDWasRecorded]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationDeletesTheLegacyEntryWhenTheAccountIDDiffers]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationDeletesTheLegacyEntryWhenTheAccountIDDiffers]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationIgnoresAnEmptyResolvedAccountID]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationIgnoresAnEmptyResolvedAccountID]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationNeverTargetsAccountB]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationNeverTargetsAccountB]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationRunsOnlyOnceAndNeverOverwritesNewerData]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testMigrationRunsOnlyOnceAndNeverOverwritesNewerData]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testProfileServiceAttributionUsesProfileScopedLastKnownAccountOnFailure]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testProfileServiceAttributionUsesProfileScopedLastKnownAccountOnFailure]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testProfileServiceDoesNotServeTheLegacyV2Cache]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testProfileServiceDoesNotServeTheLegacyV2Cache]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testSnapshotsAreIsolatedPerProfileAndPerAccount]' started.
+Test Case '-[UsageMonitorCoreTests.UsageCacheTests testSnapshotsAreIsolatedPerProfileAndPerAccount]' passed (0.002 seconds).
+Test Suite 'UsageCacheTests' passed at 2026-10-01 16:46:01.257.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.022 (0.022) seconds
+Test Suite 'UsageDisplayTests' started at 2026-10-01 16:46:01.257.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testCachedResultWithErrorShowsTheError]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testCachedResultWithErrorShowsTheError]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testCachedResultWithoutErrorIsNeverLabelledLive]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testCachedResultWithoutErrorIsNeverLabelledLive]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testFailedFetchWithCacheIsStale]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testFailedFetchWithCacheIsStale]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testFailedFetchWithoutCacheIsUnavailable]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testFailedFetchWithoutCacheIsUnavailable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testLiveFlagWithoutLiveSourceIsTreatedAsCached]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testLiveFlagWithoutLiveSourceIsTreatedAsCached]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testLiveResultRendersAsLive]' started.
+Test Case '-[UsageMonitorCoreTests.UsageDisplayTests testLiveResultRendersAsLive]' passed (0.000 seconds).
+Test Suite 'UsageDisplayTests' passed at 2026-10-01 16:46:01.258.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'UsageFormattingTests' started at 2026-10-01 16:46:01.258.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testCompactTitleKeepsBothWindows]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testCompactTitleKeepsBothWindows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testErrorTextCoversAllDocumentedStates]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testErrorTextCoversAllDocumentedStates]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testLevelThresholdsFollowSpec]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testLevelThresholdsFollowSpec]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testMenuBarTitleRoundsToWholePercent]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testMenuBarTitleRoundsToWholePercent]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testMenuBarTitleShowsBothWindowsAndCarriesNoMarker]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testMenuBarTitleShowsBothWindowsAndCarriesNoMarker]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextDoesNotKeepAnExpiredNearestDate]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextDoesNotKeepAnExpiredNearestDate]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextHandlesZeroAndUnavailableSources]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextHandlesZeroAndUnavailableSources]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextShowsCountAndNearestExpiryForLiveData]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRateLimitResetTextShowsCountAndNearestExpiryForLiveData]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRemainingTextIsExplicit]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testRemainingTextIsExplicit]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testResetPointTextUsesTheAbsoluteLocalDateAndTime]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testResetPointTextUsesTheAbsoluteLocalDateAndTime]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testResetTextNeverPresentsPastResetAsFuture]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testResetTextNeverPresentsPastResetAsFuture]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testStalenessAndUpdatedText]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testStalenessAndUpdatedText]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testUSDAmountUsesExactlyTwoDecimalPlaces]' started.
+Test Case '-[UsageMonitorCoreTests.UsageFormattingTests testUSDAmountUsesExactlyTwoDecimalPlaces]' passed (0.000 seconds).
+Test Suite 'UsageFormattingTests' passed at 2026-10-01 16:46:01.260.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'UsageParserTests' started at 2026-10-01 16:46:01.260.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests test10080MinutesClassifiesWeekly]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests test10080MinutesClassifiesWeekly]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests test300MinutesClassifiesFiveHour]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests test300MinutesClassifiesFiveHour]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDegenerateTopLevelWindowWithForeignLimitIdIsRejected]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDegenerateTopLevelWindowWithForeignLimitIdIsRejected]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDoesNotMixWindowsAcrossBuckets]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDoesNotMixWindowsAcrossBuckets]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDuplicateWindowsPreferOneWithResetTime]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testDuplicateWindowsPreferOneWithResetTime]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEmptyCodexBucketDoesNotFallBackToLegacy]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEmptyCodexBucketDoesNotFallBackToLegacy]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEnvelopeWithErrorThrowsJSONRPCError]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEnvelopeWithErrorThrowsJSONRPCError]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEnvelopeWithResultParses]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testEnvelopeWithResultParses]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testExpiredAndRedeemedDetailsAreNotPresentedAsAvailableExpiry]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testExpiredAndRedeemedDetailsAreNotPresentedAsAvailableExpiry]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketFallsBackToLegacyWhenNoCodexEntry]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketFallsBackToLegacyWhenNoCodexEntry]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketIsNeverMixedIntoCodexSnapshot]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketIsNeverMixedIntoCodexSnapshot]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketIsNeverSelectedAccidentally]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketIsNeverSelectedAccidentally]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketWithoutCodexEntryIsNeverSelected]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignBucketWithoutCodexEntryIsNeverSelected]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignLegacyLimitIdIsRejected]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testForeignLegacyLimitIdIsRejected]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testFractionalDurationIsRejectedInsteadOfTruncated]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testFractionalDurationIsRejectedInsteadOfTruncated]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testHugeDurationDoesNotTrapAndIsRejected]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testHugeDurationDoesNotTrapAndIsRejected]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testHugeUsedPercentDoesNotTrap]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testHugeUsedPercentDoesNotTrap]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testLegacyCodexLimitIdIsAccepted]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testLegacyCodexLimitIdIsAccepted]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testLegacySnapshotWithoutLimitIdIsAccepted]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testLegacySnapshotWithoutLimitIdIsAccepted]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testMalformedJSONDoesNotCrash]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testMalformedJSONDoesNotCrash]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testMalformedResetCreditSummaryIsUnavailableWithoutInvalidatingWindows]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testMalformedResetCreditSummaryIsUnavailableWithoutInvalidatingWindows]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNonPositiveDurationIsRejected]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNonPositiveDurationIsRejected]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNotificationWithoutIdIsNotAResponse]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNotificationWithoutIdIsNotAResponse]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNullAndNonFiniteValuesAreUnavailable]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNullAndNonFiniteValuesAreUnavailable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNullCodexEntryDoesNotFallBackToLegacy]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testNullCodexEntryDoesNotFallBackToLegacy]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOnlyFiveHourWindowLeavesWeeklyNil]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOnlyFiveHourWindowLeavesWeeklyNil]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOnlyWeeklyWindowLeavesFiveHourNil]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOnlyWeeklyWindowLeavesFiveHourNil]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOutOfRangeUsedPercentClampsRemainingTo0Through100]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testOutOfRangeUsedPercentClampsRemainingTo0Through100]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testPrefersCodexBucketFromRateLimitsByLimitId]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testPrefersCodexBucketFromRateLimitsByLimitId]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testPrimarySecondarySwappedStillClassifiedByDuration]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testPrimarySecondarySwappedStillClassifiedByDuration]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetCreditCountAndNearestFutureExpiryAreNormalized]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetCreditCountAndNearestFutureExpiryAreNormalized]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetCreditCountRemainsAuthoritativeWhenDetailsAreMissingOrShorter]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetCreditCountRemainsAuthoritativeWhenDetailsAreMissingOrShorter]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetDateAcceptsNumberAndISO8601]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResetDateAcceptsNumberAndISO8601]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResultWithoutWindowsThrowsInsteadOfFabricatingData]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testResultWithoutWindowsThrowsInsteadOfFabricatingData]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testUnknownDurationPreservedAsUnknownWithoutCrash]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testUnknownDurationPreservedAsUnknownWithoutCrash]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testUsedPercent25YieldsRemaining75]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testUsedPercent25YieldsRemaining75]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testZeroResetCreditsIsExplicitAndDoesNotBorrowAnExpiry]' started.
+Test Case '-[UsageMonitorCoreTests.UsageParserTests testZeroResetCreditsIsExplicitAndDoesNotBorrowAnExpiry]' passed (0.000 seconds).
+Test Suite 'UsageParserTests' passed at 2026-10-01 16:46:01.265.
+	 Executed 37 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'UsageServiceTests' started at 2026-10-01 16:46:01.265.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffGateServesCacheWithoutLaunching]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffGateServesCacheWithoutLaunching]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffGateWithoutCacheReReportsTheRecordedFailure]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffGateWithoutCacheReReportsTheRecordedFailure]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffLadderAdvances30_60_120_ThenCapsAt300]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testBackoffLadderAdvances30_60_120_ThenCapsAt300]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testConcurrentFetchesAreCoalescedNotStacked]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testConcurrentFetchesAreCoalescedNotStacked]' passed (0.306 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testConnectionEpochAdvancesOnlyWhenANewChildIsPublished]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testConnectionEpochAdvancesOnlyWhenANewChildIsPublished]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFactoryThrowEntersManualRetryRequirement]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFactoryThrowEntersManualRetryRequirement]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFailedEpisodeRetriesImmediatelyOnceThenOpensTheGate]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFailedEpisodeRetriesImmediatelyOnceThenOpensTheGate]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFailedWakeProbeClosesClientWithoutTouchingTheLadder]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFailedWakeProbeClosesClientWithoutTouchingTheLadder]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchAfterStopThrowsShutdownWithoutLaunchingAChild]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchAfterStopThrowsShutdownWithoutLaunchingAChild]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchJoiningAFailingWakeProbeRunsARealEpisodeForIt]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchJoiningAFailingWakeProbeRunsARealEpisodeForIt]' passed (0.407 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchJoiningARunningWakeProbeReceivesItsActualResult]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testFetchJoiningARunningWakeProbeReceivesItsActualResult]' passed (0.408 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLiveResultsCarryReadStartedAtAndCacheServedResultsDoNot]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLiveResultsCarryReadStartedAtAndCacheServedResultsDoNot]' passed (0.003 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLocatorHonoursEnvironmentOverride]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLocatorHonoursEnvironmentOverride]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLocatorReportsSearchedPathsWhenMissing]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testLocatorReportsSearchedPathsWhenMissing]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginAcceptsOnlyMatchingCompletion]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginAcceptsOnlyMatchingCompletion]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginHandlesCompletionBeforeStartReply]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginHandlesCompletionBeforeStartReply]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginPausesReadsAndRejectsLateCompletionAfterCancel]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManagedLoginPausesReadsAndRejectsLateCompletionAfterCancel]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualArrivalDuringRunningFetchQueuesExactlyOneFollowUp]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualArrivalDuringRunningFetchQueuesExactlyOneFollowUp]' passed (0.410 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualFollowUpRunsEvenWhenTheRunningOperationIsAConfirmationRead]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualFollowUpRunsEvenWhenTheRunningOperationIsAConfirmationRead]' passed (0.404 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryBypassesTheBackoffGate]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryBypassesTheBackoffGate]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryClearsTheManualRequirement]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryClearsTheManualRequirement]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryReopensExactlyOneEpisode]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testManualRetryReopensExactlyOneEpisode]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testMissingCLIDoesNotRestartAndIsReported]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testMissingCLIDoesNotRestartAndIsReported]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testMissingWindowIsReportedWithoutRestart]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testMissingWindowIsReportedWithoutRestart]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testNonRestartableErrorsRequireManualRetryInsteadOfRetrying]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testNonRestartableErrorsRequireManualRetryInsteadOfRetrying]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testResumeAllowsFetchingAgain]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testResumeAllowsFetchingAgain]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testRetryPolicyLadderNumbers]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testRetryPolicyLadderNumbers]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testShutdownDuringFetchIsNotRetried]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testShutdownDuringFetchIsNotRetried]' passed (0.205 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testShutdownReleasesWaitersWithoutWaitingForTheRunningOperation]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testShutdownReleasesWaitersWithoutWaitingForTheRunningOperation]' passed (0.923 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSplitTimeoutsArePassedPerCall]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSplitTimeoutsArePassedPerCall]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStartThrowIsBoundedAcrossScheduledFetches]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStartThrowIsBoundedAcrossScheduledFetches]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopDuringRestartDelayPreventsLateRestart]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopDuringRestartDelayPreventsLateRestart]' passed (0.403 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopDuringStartLeavesNoRunningClient]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopDuringStartLeavesNoRunningClient]' passed (0.528 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopIsIdempotent]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testStopIsIdempotent]' passed (0.005 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSuccessfulFetchSavesCacheAndReturnsLiveSnapshot]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSuccessfulFetchSavesCacheAndReturnsLiveSnapshot]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSuccessResetsTheLadder]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testSuccessResetsTheLadder]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testTimeoutRetainsCachedSnapshotAndMarksItStale]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testTimeoutRetainsCachedSnapshotAndMarksItStale]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testTimeoutWithoutCacheThrowsInsteadOfFabricatingData]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testTimeoutWithoutCacheThrowsInsteadOfFabricatingData]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeIsSuppressedByBackoffGateAndStop]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeIsSuppressedByBackoffGateAndStop]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeJoinsRunningFetchAndReceivesItsActualResult]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeJoinsRunningFetchAndReceivesItsActualResult]' passed (0.410 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeUsesOnlyTheExistingClientAndSkipsIdentity]' started.
+Test Case '-[UsageMonitorCoreTests.UsageServiceTests testWakeProbeUsesOnlyTheExistingClientAndSkipsIdentity]' passed (0.003 seconds).
+Test Suite 'UsageServiceTests' passed at 2026-10-01 16:46:05.708.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 4.440 (4.443) seconds
+Test Suite 'UsageSnapshotTests' started at 2026-10-01 16:46:05.708.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testCachedSnapshotFromCorruptCacheThrowsAndIsRecoverable]' started.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testCachedSnapshotFromCorruptCacheThrowsAndIsRecoverable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testCacheFreshnessWindow]' started.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testCacheFreshnessWindow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testOldPersistedPayloadWithoutResetFieldsStillDecodes]' started.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testOldPersistedPayloadWithoutResetFieldsStillDecodes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testPersistedRoundTripPreservesNumbersAndDropsRawPayloads]' started.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testPersistedRoundTripPreservesNumbersAndDropsRawPayloads]' passed (0.000 seconds).
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testPersistedRoundTripWithMissingWindowAndMissingReset]' started.
+Test Case '-[UsageMonitorCoreTests.UsageSnapshotTests testPersistedRoundTripWithMissingWindowAndMissingReset]' passed (0.000 seconds).
+Test Suite 'UsageSnapshotTests' passed at 2026-10-01 16:46:05.709.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-01 16:46:05.709.
+	 Executed 449 tests, with 4 tests skipped and 0 failures (0 unexpected) in 31.090 (31.116) seconds
+Test Suite 'All tests' passed at 2026-10-01 16:46:05.709.
+	 Executed 449 tests, with 4 tests skipped and 0 failures (0 unexpected) in 31.090 (31.116) seconds
+Test Suite 'All tests' started at 2026-10-01 16:46:05.782.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-01 16:46:05.783.
+Test Suite 'AntigravityModelTests' started at 2026-10-01 16:46:05.783.
+Test Case '-[UsageMonitorAppTests.AntigravityModelTests testGoogleMenuSelectionRestoresAndMissingGroupDoesNotPickReplacement]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityModelTests testGoogleMenuSelectionRestoresAndMissingGroupDoesNotPickReplacement]' passed (0.003 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityModelTests testRenderGoogleCardWithTwoPeriodsAndUnknownField]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityModelTests testRenderGoogleCardWithTwoPeriodsAndUnknownField]' passed (0.069 seconds).
+Test Suite 'AntigravityModelTests' passed at 2026-10-01 16:46:05.856.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.073 (0.073) seconds
+Test Suite 'AntigravityOfficialModelTests' started at 2026-10-01 16:46:05.856.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testCacheBelongsToUUIDAndEmailAndReplacementNeverInheritsIt]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testCacheBelongsToUUIDAndEmailAndReplacementNeverInheritsIt]' passed (0.015 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testDisconnectWaitsForReadAndRejectsLatePublication]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testDisconnectWaitsForReadAndRejectsLatePublication]' passed (0.283 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testFailureRetainsOwnCacheAndStopRejectsOldResults]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testFailureRetainsOwnCacheAndStopRejectsOldResults]' passed (0.174 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testManualRequestsQueueExactlyOneFollowUpPerAccount]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testManualRequestsQueueExactlyOneFollowUpPerAccount]' passed (0.114 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testResetCrossingTriggersOneReadWithoutFillingQuota]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testResetCrossingTriggersOneReadWithoutFillingQuota]' passed (0.017 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testTwoAccountsPublishIndependentlyAndAuthenticationFailureIsIsolated]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testTwoAccountsPublishIndependentlyAndAuthenticationFailureIsIsolated]' passed (0.261 seconds).
+Test Suite 'AntigravityOfficialModelTests' passed at 2026-10-01 16:46:06.720.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.864 (0.864) seconds
+Test Suite 'CodexStartupStateTests' started at 2026-10-01 16:46:06.720.
+Test Case '-[UsageMonitorAppTests.CodexStartupStateTests testCachedFailureRetainsSuccessTimeAndReason]' started.
+Test Case '-[UsageMonitorAppTests.CodexStartupStateTests testCachedFailureRetainsSuccessTimeAndReason]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.CodexStartupStateTests testStartupFailureAndMissingNodeHaveActionableLabels]' started.
+Test Case '-[UsageMonitorAppTests.CodexStartupStateTests testStartupFailureAndMissingNodeHaveActionableLabels]' passed (0.000 seconds).
+Test Suite 'CodexStartupStateTests' passed at 2026-10-01 16:46:06.721.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CommandCodeAccessibilityTests' started at 2026-10-01 16:46:06.721.
+Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryIsStillDrawnAsARealControl]' started.
+Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryIsStillDrawnAsARealControl]' passed (0.051 seconds).
+Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction]' started.
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorAppTests/CommandCodeAccessibilityTests.swift:154: -[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction] : Test skipped - not executed: this process is AX-trusted but exposes no accessibility windows (kAXWindows returned none while NSApp has 2 window(s)), so there is no tree to walk. An XCTest runner is not a GUI app. Use the standalone harness in IMPLEMENTATION_REPORT.md §10, or VoiceOver, to re-verify R1.
+Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction]' skipped (0.332 seconds).
+Test Suite 'CommandCodeAccessibilityTests' passed at 2026-10-01 16:46:07.104.
+	 Executed 2 tests, with 1 test skipped and 0 failures (0 unexpected) in 0.383 (0.383) seconds
+Test Suite 'CommandCodeFireLifecycleTests' started at 2026-10-01 16:46:07.104.
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testMissingCredentialFailsWithoutLaunchingCLI]' started.
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testMissingCredentialFailsWithoutLaunchingCLI]' passed (0.029 seconds).
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testScheduledFireUsesBackgroundCredentialPolicy]' started.
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testScheduledFireUsesBackgroundCredentialPolicy]' passed (0.028 seconds).
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testSuccessfulCLIFireConfirmsWithCreditsOnlyAndRecordsDrift]' started.
+Test Case '-[UsageMonitorAppTests.CommandCodeFireLifecycleTests testSuccessfulCLIFireConfirmsWithCreditsOnlyAndRecordsDrift]' passed (0.242 seconds).
+Test Suite 'CommandCodeFireLifecycleTests' passed at 2026-10-01 16:46:07.403.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.299 (0.299) seconds
+Test Suite 'ConnectionFormStateTests' started at 2026-10-01 16:46:07.403.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testAFailedSaveKeepsTheDraftAndTheExpandedForm]' started.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testAFailedSaveKeepsTheDraftAndTheExpandedForm]' passed (0.005 seconds).
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testAnAuthFailureLeavesTheFormReexpandable]' started.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testAnAuthFailureLeavesTheFormReexpandable]' passed (0.014 seconds).
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testASuccessfulSaveClearsTheDraftAndCollapsesTheForm]' started.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testASuccessfulSaveClearsTheDraftAndCollapsesTheForm]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testBackgroundRefreshDoesNotDisturbTheDraft]' started.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testBackgroundRefreshDoesNotDisturbTheDraft]' passed (0.214 seconds).
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testDeletingClearsTheDraftAndReportsDeletion]' started.
+Test Case '-[UsageMonitorAppTests.ConnectionFormStateTests testDeletingClearsTheDraftAndReportsDeletion]' passed (0.008 seconds).
+Test Suite 'ConnectionFormStateTests' passed at 2026-10-01 16:46:07.657.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.254 (0.254) seconds
+Test Suite 'DetailEvidenceRenderTests' started at 2026-10-01 16:46:07.657.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderChatGPTCardStates]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderChatGPTCardStates]' passed (0.084 seconds).
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderCommandCodeCacheAndStatisticsStates]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderCommandCodeCacheAndStatisticsStates]' passed (0.362 seconds).
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderCommandCodeCard]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderCommandCodeCard]' passed (0.282 seconds).
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderFireFooterStatesLightAndDark]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderFireFooterStatesLightAndDark]' passed (0.101 seconds).
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderFullPageLightAndDark]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderFullPageLightAndDark]' passed (0.223 seconds).
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderSettingsWithMultipleFireSchedules]' started.
+Test Case '-[UsageMonitorAppTests.DetailEvidenceRenderTests testRenderSettingsWithMultipleFireSchedules]' passed (0.151 seconds).
+Test Suite 'DetailEvidenceRenderTests' passed at 2026-10-01 16:46:08.860.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.202 (1.203) seconds
+Test Suite 'DetailPanelLayoutTests' started at 2026-10-01 16:46:08.860.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardHeightsAreTheSpecifiedOnes]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardHeightsAreTheSpecifiedOnes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsFitTheirFixedFramesWithoutClipping]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsFitTheirFixedFramesWithoutClipping]' passed (0.005 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardSizesMatchTheSpecification]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardSizesMatchTheSpecification]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsShareOneColumnAndNeverOverlap]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCardsShareOneColumnAndNeverOverlap]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeKeepsThreeQuotaRowsAndTwoGroupedSummaryLines]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeKeepsThreeQuotaRowsAndTwoGroupedSummaryLines]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeQuotaTextUsesTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeQuotaTextUsesTheFixedWording]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeRailsAreFiveSevenAndContinuous]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeRailsAreFiveSevenAndContinuous]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeTextUsesTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTimeTextUsesTheFixedWording]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTrackShowsRemainingNotUsage]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testCommandCodeTrackShowsRemainingNotUsage]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testComponentCacheWordingCarriesItsOwnSuccessTime]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testComponentCacheWordingCarriesItsOwnSuccessTime]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageAddsOneScrollRegionWhenViewportIsShort]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageAddsOneScrollRegionWhenViewportIsShort]' passed (0.018 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageKeepsOneContentScrollRegionAcrossServices]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testDetailPageKeepsOneContentScrollRegionAcrossServices]' passed (0.045 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testEachWindowBlockHasASegmentedResetRailOfTheRightSize]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testEachWindowBlockHasASegmentedResetRailOfTheRightSize]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testFireDialogCopyIsTheFixedWording]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testFireDialogCopyIsTheFixedWording]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingSummaryAndUnknownPeriodAreWordedDifferently]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingSummaryAndUnknownPeriodAreWordedDifferently]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingValuesNeverBecomeZero]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMissingValuesNeverBecomeZero]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMonthlyProgressIsNotInventedWithoutAStartDate]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMonthlyProgressIsNotInventedWithoutAStartDate]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMoreThanThreeCurrenciesPutTheOverflowInTheThirdSlot]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testMoreThanThreeCurrenciesPutTheOverflowInTheThirdSlot]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testPageIsASingleFourHundredFortyPointColumn]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testPageIsASingleFourHundredFortyPointColumn]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testRemainingIsDerivedFromLimitMinusUsedWhenTheServiceOmitsIt]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testRemainingIsDerivedFromLimitMinusUsedWhenTheServiceOmitsIt]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testSettingsPageUsesOneBoundedScrollRegionForExtensibleSchedules]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testSettingsPageUsesOneBoundedScrollRegionForExtensibleSchedules]' passed (0.037 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheAccessibilityValueRepeatsTheCacheSemantics]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheAccessibilityValueRepeatsTheCacheSemantics]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheCacheHelpTextCarriesTheLastSuccessTimeOrSaysItIsUnknown]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeights]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeights]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeightsMatchTheRowArithmetic]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheFourPreferredPageHeightsMatchTheRowArithmetic]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheHeaderSubtitleFollowsTheConnectionAndPlanMatrix]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheHeaderSubtitleFollowsTheConnectionAndPlanMatrix]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheRemainingTrackShrinksAsCreditIsConsumed]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheRemainingTrackShrinksAsCreditIsConsumed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoFireButtonsNeverShareState]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoFireButtonsNeverShareState]' passed (0.684 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoProfileCardsReadTheirOwnSnapshots]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testTheTwoProfileCardsReadTheirOwnSnapshots]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnknownArrivedAndCachedStatesRenderAsSpecified]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnknownArrivedAndCachedStatesRenderAsSpecified]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnnamedCurrencyBucketSortsLast]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUnnamedCurrencyBucketSortsLast]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUpToThreeCurrenciesAreAllShown]' started.
+Test Case '-[UsageMonitorAppTests.DetailPanelLayoutTests testUpToThreeCurrenciesAreAllShown]' passed (0.000 seconds).
+Test Suite 'DetailPanelLayoutTests' passed at 2026-10-01 16:46:09.661.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 0.799 (0.801) seconds
+Test Suite 'DetailPreferencesTests' started at 2026-10-01 16:46:09.661.
+Test Case '-[UsageMonitorAppTests.DetailPreferencesTests testFirstRunGateDistinguishesNewInstallFromLegacyDataAndSkippedGuide]' started.
+Test Case '-[UsageMonitorAppTests.DetailPreferencesTests testFirstRunGateDistinguishesNewInstallFromLegacyDataAndSkippedGuide]' passed (0.004 seconds).
+Test Case '-[UsageMonitorAppTests.DetailPreferencesTests testProviderVisibilityDefaultsToEnabledAndPersistsOnlyDisplayChoices]' started.
+Test Case '-[UsageMonitorAppTests.DetailPreferencesTests testProviderVisibilityDefaultsToEnabledAndPersistsOnlyDisplayChoices]' passed (0.001 seconds).
+Test Suite 'DetailPreferencesTests' passed at 2026-10-01 16:46:09.666.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'DisplayNamePreferencesTests' started at 2026-10-01 16:46:09.666.
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testEmptyDefaultAndTooLongValuesFollowTheDocumentedRules]' started.
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testEmptyDefaultAndTooLongValuesFollowTheDocumentedRules]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testNamesTrimPersistAndRestoreByStableServiceID]' started.
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testNamesTrimPersistAndRestoreByStableServiceID]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testUnknownServiceIDIsRejectedWithoutWritingPreferences]' started.
+Test Case '-[UsageMonitorAppTests.DisplayNamePreferencesTests testUnknownServiceIDIsRejectedWithoutWritingPreferences]' passed (0.000 seconds).
+Test Suite 'DisplayNamePreferencesTests' passed at 2026-10-01 16:46:09.669.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'FireLifecycleTests' started at 2026-10-01 16:46:09.669.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testACachedFirstRefreshIsRetriedAndTheLiveSecondOneConfirms]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testACachedFirstRefreshIsRetriedAndTheLiveSecondOneConfirms]' passed (0.522 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAConclusiveFirstReadSkipsTheSecondRefresh]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAConclusiveFirstReadSkipsTheSecondRefresh]' passed (0.245 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testALiveRefreshThatDoesNotMoveTheWindowIsUnchanged]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testALiveRefreshThatDoesNotMoveTheWindowIsUnchanged]' passed (0.238 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAMovedWindowInLiveDataConfirms]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAMovedWindowInLiveDataConfirms]' passed (0.294 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAnUnchangedFirstLiveReadStillTriggersTheSecondRefresh]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAnUnchangedFirstLiveReadStillTriggersTheSecondRefresh]' passed (0.239 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAPreFireStateWithoutAWindowCannotConfirm]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAPreFireStateWithoutAWindowCannotConfirm]' passed (0.237 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAStalePreFireWindowCannotConfirmANewWindow]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAStalePreFireWindowCannotConfirmANewWindow]' passed (0.284 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAWindowThatMovesLessThanSixtySecondsIsUnchanged]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testAWindowThatMovesLessThanSixtySecondsIsUnchanged]' passed (0.253 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testConfirmedFireShowsTheMeasuredDrift]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testConfirmedFireShowsTheMeasuredDrift]' passed (0.259 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testFireDriftHelperCoversOnlyMeasuredOutcomes]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testFireDriftHelperCoversOnlyMeasuredOutcomes]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStoppingInsideTheConfirmWaitPublishesNothing]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStoppingInsideTheConfirmWaitPublishesNothing]' passed (2.078 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStoppingInsideTheRetryWaitSkipsTheSecondRead]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStoppingInsideTheRetryWaitSkipsTheSecondRead]' passed (2.016 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStopTerminatesARunningFireChild]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testStopTerminatesARunningFireChild]' passed (0.431 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTheConfirmationTruthTableIsExhaustive]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTheConfirmationTruthTableIsExhaustive]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTheThreeRequestSucceededResultsCarryNoSuccessOrFailureColour]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTheThreeRequestSucceededResultsCarryNoSuccessOrFailureColour]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTwoCachedRefreshesReportTheRequestWithoutConfirmingAWindow]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTwoCachedRefreshesReportTheRequestWithoutConfirmingAWindow]' passed (0.259 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTwoLiveReadsBelowTheThresholdReportUnchanged]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testTwoLiveReadsBelowTheThresholdReportUnchanged]' passed (0.235 seconds).
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testUnchangedFireShowsASmallDriftAndUnconfirmedShowsNone]' started.
+Test Case '-[UsageMonitorAppTests.FireLifecycleTests testUnchangedFireShowsASmallDriftAndUnconfirmedShowsNone]' passed (0.254 seconds).
+Test Suite 'FireLifecycleTests' passed at 2026-10-01 16:46:17.517.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 7.846 (7.848) seconds
+Test Suite 'FireSchedulePreferencesTests' started at 2026-10-01 16:46:17.517.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testAddingAtTheSameMinuteChoosesANonDuplicateMinute]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testAddingAtTheSameMinuteChoosesANonDuplicateMinute]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testDisabledRowsNeverRunAndRemovingDeletesTheRow]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testDisabledRowsNeverRunAndRemovingDeletesTheRow]' passed (0.003 seconds).
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testDueOccurrenceCatchesUpTenMinutesAndThenStops]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testDueOccurrenceCatchesUpTenMinutesAndThenStops]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testMarkingAnOccurrenceSuppressesTicksAndRelaunchForThatDay]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testMarkingAnOccurrenceSuppressesTicksAndRelaunchForThatDay]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testMultipleTargetsTimesAndChecksPersistWithoutSecrets]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testMultipleTargetsTimesAndChecksPersistWithoutSecrets]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testSubFiveHourWarningIncludesTheMidnightWrap]' started.
+Test Case '-[UsageMonitorAppTests.FireSchedulePreferencesTests testSubFiveHourWarningIncludesTheMidnightWrap]' passed (0.001 seconds).
+Test Suite 'FireSchedulePreferencesTests' passed at 2026-10-01 16:46:17.528.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'Interface161Tests' started at 2026-10-01 16:46:17.528.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testLegacyAllMigrationIsIdempotentAndLeavesSourcePreferencesUntouched]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testLegacyAllMigrationIsIdempotentAndLeavesSourcePreferencesUntouched]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testMissingQuotaDoesNotEraseKnownResetOrInventRenewal]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testMissingQuotaDoesNotEraseKnownResetOrInventRenewal]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testPrimaryQuotaSelectionDoesNotSubstituteSharedGroupOrDependOnOrder]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testPrimaryQuotaSelectionDoesNotSubstituteSharedGroupOrDependOnOrder]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.Interface161Tests testSixAccountOverviewFitsWhileSmallScreenIsCapped]' started.
+Test Case '-[UsageMonitorAppTests.Interface161Tests testSixAccountOverviewFitsWhileSmallScreenIsCapped]' passed (0.001 seconds).
+Test Suite 'Interface161Tests' passed at 2026-10-01 16:46:17.532.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'MenuBarEvidenceRenderTests' started at 2026-10-01 16:46:17.532.
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderDirectionAndBars]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderDirectionAndBars]' passed (0.028 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderStateMatrix]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderStateMatrix]' passed (0.072 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderThreeSources]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarEvidenceRenderTests testRenderThreeSources]' passed (0.069 seconds).
+Test Suite 'MenuBarEvidenceRenderTests' passed at 2026-10-01 16:46:17.700.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.168 (0.168) seconds
+Test Suite 'MenuBarLabelWiringTests' started at 2026-10-01 16:46:17.700.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testBothAccountsAndDeepSeekAreMeasurableInBothModes]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testBothAccountsAndDeepSeekAreMeasurableInBothModes]' passed (0.004 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testClosingThePanelIsSafeWhenItWasNeverOpened]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testClosingThePanelIsSafeWhenItWasNeverOpened]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testCompactFallbackWidthFitsTheCompactTextForEverySource]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testCompactFallbackWidthFitsTheCompactTextForEverySource]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testCompactLabelKeepsBothQuotaValuesAndRows]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testCompactLabelKeepsBothQuotaValuesAndRows]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDeepSeekFullModeIsMoreOpenThanCompactMode]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDeepSeekFullModeIsMoreOpenThanCompactMode]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDeepSeekSourceHasNoTimeRowsAndIsNarrowerThanTheChatGPTFullLabel]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDeepSeekSourceHasNoTimeRowsAndIsNarrowerThanTheChatGPTFullLabel]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDismissMonitorInstallIsIdempotentAndStopIsRepeatable]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDismissMonitorInstallIsIdempotentAndStopIsRepeatable]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDrawingTheCountdownRepeatedlyDoesNotFetchOrRemeasure]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testDrawingTheCountdownRepeatedlyDoesNotFetchOrRemeasure]' passed (0.586 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testFiveAndSevenSegmentsSpanTheSameTotalWidth]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testFiveAndSevenSegmentsSpanTheSameTotalWidth]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testInstalledWidthsKeepTheModeOrdering]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testInstalledWidthsKeepTheModeOrdering]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testInstallSizesTheItemFromAMeasurementNotTheFallback]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testInstallSizesTheItemFromAMeasurementNotTheFallback]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testLabelWidthIsExactlyTheQuotaTextWidth]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testLabelWidthIsExactlyTheQuotaTextWidth]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testMeasuredWidthsArePositiveAndOrderedForEveryMode]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testMeasuredWidthsArePositiveAndOrderedForEveryMode]' passed (0.003 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testRepeatedInstallAndUninstallLeavesNoMonitorBehind]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testRepeatedInstallAndUninstallLeavesNoMonitorBehind]' passed (0.079 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testSegmentWidthDegradesInsteadOfCollapsing]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testSegmentWidthDegradesInsteadOfCollapsing]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testStatusButtonDeactivationDoesNotCloseBeforeTheButtonAction]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testStatusButtonDeactivationDoesNotCloseBeforeTheButtonAction]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheSameSourceAtDifferentAmountsChangesTheMeasuredWidth]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheSameSourceAtDifferentAmountsChangesTheMeasuredWidth]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheUnknownPlaceholderIsMeasuredLikeAnyOtherText]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheUnknownPlaceholderIsMeasuredLikeAnyOtherText]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWarningMarkerOnlyEverAddsLeadingRoom]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWarningMarkerOnlyEverAddsLeadingRoom]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWarningMarkerOnlyWidensTheLeadingSlot]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWarningMarkerOnlyWidensTheLeadingSlot]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWidestPercentageProducesTheWidestText]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testTheWidestPercentageProducesTheWidestText]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testUninstallTearsDownTheDismissMonitor]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarLabelWiringTests testUninstallTearsDownTheDismissMonitor]' passed (0.006 seconds).
+Test Suite 'MenuBarLabelWiringTests' passed at 2026-10-01 16:46:18.413.
+	 Executed 22 tests, with 0 failures (0 unexpected) in 0.712 (0.713) seconds
+Test Suite 'MenuBarPreferencesTests' started at 2026-10-01 16:46:18.414.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testAChangedPreferenceRepublishesSoTheStatusItemCanRemeasure]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testAChangedPreferenceRepublishesSoTheStatusItemCanRemeasure]' passed (0.023 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testACorruptOrUnknownSourceFallsBackToAccountA]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testACorruptOrUnknownSourceFallsBackToAccountA]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testDeepSeekCurrencyPersistsAndCanBeCleared]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testDeepSeekCurrencyPersistsAndCanBeCleared]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testDeepSeekMenuBarKeepsTheBalanceEvenWhenTheDetailCardIsHidden]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testDeepSeekMenuBarKeepsTheBalanceEvenWhenTheDetailCardIsHidden]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testEverySelectionPersistsAcrossInstances]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testEverySelectionPersistsAcrossInstances]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testInvalidNumericSettingsFailClosedOrNormalise]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testInvalidNumericSettingsFailClosedOrNormalise]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testLowUsageSettingsPersistAndCanBeReset]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testLowUsageSettingsPersistAndCanBeReset]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testMenuBarSourceFollowsTheSelectedProfile]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testMenuBarSourceFollowsTheSelectedProfile]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testPickerOffersProfilesThenDeepSeekInTheFixedOrder]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testPickerOffersProfilesThenDeepSeekInTheFixedOrder]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testPreferenceObjectNeverCarriesCredentialsOrCaches]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testPreferenceObjectNeverCarriesCredentialsOrCaches]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testSelectionIsCodableWithStableIdentifiers]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testSelectionIsCodableWithStableIdentifiers]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testSwitchingTheSourceChangesTheRenderedMenuBarText]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testSwitchingTheSourceChangesTheRenderedMenuBarText]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testTheStoredValueIsAnIdentifierNotAnIndex]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testTheStoredValueIsAnIdentifierNotAnIndex]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testUpgradeDefaultsToAccountA]' started.
+Test Case '-[UsageMonitorAppTests.MenuBarPreferencesTests testUpgradeDefaultsToAccountA]' passed (0.000 seconds).
+Test Suite 'MenuBarPreferencesTests' passed at 2026-10-01 16:46:18.454.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.039 (0.040) seconds
+Test Suite 'OverviewPresentationTests' started at 2026-10-01 16:46:18.454.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testBalancesRetainCurrenciesAndCreditAmountDoesNotInventLimit]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testBalancesRetainCurrenciesAndCreditAmountDoesNotInventLimit]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testCodexOverviewAgreesWithDetailForZeroMissingAndExpiredReset]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testCodexOverviewAgreesWithDetailForZeroMissingAndExpiredReset]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testExportOverviewExamples]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testExportOverviewExamples]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testGeminiMissingQuotaRetainsKnownTimeAndNeverUsesSharedPool]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testGeminiMissingQuotaRetainsKnownTimeAndNeverUsesSharedPool]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testOverviewColorsFollowDetailThresholdsAndRejectUnknownValues]' started.
+Test Case '-[UsageMonitorAppTests.OverviewPresentationTests testOverviewColorsFollowDetailThresholdsAndRejectUnknownValues]' passed (0.000 seconds).
+Test Suite 'OverviewPresentationTests' passed at 2026-10-01 16:46:18.455.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'ProductionWiringTests' started at 2026-10-01 16:46:18.455.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testAKeychainSaveFailureIsReportedAndStopsBeforeAnyNetworkCall]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testAKeychainSaveFailureIsReportedAndStopsBeforeAnyNetworkCall]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testANetworkFailureKeepsTheKeySavedAndSaysSo]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testANetworkFailureKeepsTheKeySavedAndSaysSo]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testARejectedKeyIsReportedAsInvalid]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testARejectedKeyIsReportedAsInvalid]' passed (0.014 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testDeleteClearsCredentialCacheSuspensionAndReportsIt]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testDeleteClearsCredentialCacheSuspensionAndReportsIt]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testSavingADeepSeekKeyThroughTheProductionRootStoresItAndVerifies]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testSavingADeepSeekKeyThroughTheProductionRootStoresItAndVerifies]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testSavingAKeyImmediatelyEntersTheVerifyingState]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testSavingAKeyImmediatelyEntersTheVerifyingState]' passed (0.014 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testTheEntryPointIsAppKitWithoutAnyScene]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testTheEntryPointIsAppKitWithoutAnyScene]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testTheProductionContainerCreatesOneRuntimePerProfileWithDistinctCodexHomes]' started.
+Test Case '-[UsageMonitorAppTests.ProductionWiringTests testTheProductionContainerCreatesOneRuntimePerProfileWithDistinctCodexHomes]' passed (0.001 seconds).
+Test Suite 'ProductionWiringTests' passed at 2026-10-01 16:46:18.522.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.067 (0.068) seconds
+Test Suite 'ProfileRefreshPublishingTests' started at 2026-10-01 16:46:18.522.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testAFailedProfilePublishesItsFailureWhileTheOtherIsBlocked]' started.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testAFailedProfilePublishesItsFailureWhileTheOtherIsBlocked]' passed (0.026 seconds).
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testAFastProfilePublishesBeforeTheBlockedProfileReturns]' started.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testAFastProfilePublishesBeforeTheBlockedProfileReturns]' passed (0.026 seconds).
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testALateResultAfterStopIsNeverPublished]' started.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testALateResultAfterStopIsNeverPublished]' passed (0.317 seconds).
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testBFastProfileAlsoPublishesFirstAndKeepsTheArrayOrder]' started.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testBFastProfileAlsoPublishesFirstAndKeepsTheArrayOrder]' passed (0.032 seconds).
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testTheRoundClosesAndTheNextOneIsAllowed]' started.
+Test Case '-[UsageMonitorAppTests.ProfileRefreshPublishingTests testTheRoundClosesAndTheNextOneIsAllowed]' passed (0.029 seconds).
+Test Suite 'ProfileRefreshPublishingTests' passed at 2026-10-01 16:46:18.952.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.429 (0.430) seconds
+Test Suite 'RefreshCadenceTests' started at 2026-10-01 16:46:18.952.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testClockRollbackDoesNotExtendTheWakeCooldown]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testClockRollbackDoesNotExtendTheWakeCooldown]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testFarFromResetBacksOff]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testFarFromResetBacksOff]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testHorizonBoundaryIsInclusive]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testHorizonBoundaryIsInclusive]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testInitializerUsesTheInjectedBaseAndClockIntervals]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testInitializerUsesTheInjectedBaseAndClockIntervals]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarAccelerationCanBeDisabledOrFailClosed]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarAccelerationCanBeDisabledOrFailClosed]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarChatGPTThresholdsAreStrictAndUseEitherWindow]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarChatGPTThresholdsAreStrictAndUseEitherWindow]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarDecisionOnlyUsesTheSelectedSourceAndNeverSlowsNormalCadence]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarDecisionOnlyUsesTheSelectedSourceAndNeverSlowsNormalCadence]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarDeepSeekUsesDisplayedCNYOnlyAndStrictBoundary]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarDeepSeekUsesDisplayedCNYOnlyAndStrictBoundary]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarTimerFollowsSelectionDisableAndStopLifecycle]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testMenuBarTimerFollowsSelectionDisableAndStopLifecycle]' passed (0.166 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testNearResetPollsFaster]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testNearResetPollsFaster]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testNoDataKeepsTheBaseInterval]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testNoDataKeepsTheBaseInterval]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testRetryDeadlineShortensNormalTimerAndExpiredGateUsesNormalCadence]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testRetryDeadlineShortensNormalTimerAndExpiredGateUsesNormalCadence]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testShouldRemeasureOnlyOnSignatureChange]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testShouldRemeasureOnlyOnSignatureChange]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWakeProbesHealthyProfileAndFullyRefreshesOnlyFailedProfile]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWakeProbesHealthyProfileAndFullyRefreshesOnlyFailedProfile]' passed (0.017 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWakeRefreshIsThrottledWithinThirtySeconds]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWakeRefreshIsThrottledWithinThirtySeconds]' passed (0.118 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWeeklyResetInsideTheHorizonCountsAsNear]' started.
+Test Case '-[UsageMonitorAppTests.RefreshCadenceTests testWeeklyResetInsideTheHorizonCountsAsNear]' passed (0.000 seconds).
+Test Suite 'RefreshCadenceTests' passed at 2026-10-01 16:46:19.263.
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.309 (0.310) seconds
+Test Suite 'ReleaseScreenshotTests' started at 2026-10-01 16:46:19.263.
+Test Case '-[UsageMonitorAppTests.ReleaseScreenshotTests testExportPublicGoogleScreenshots]' started.
+Test Case '-[UsageMonitorAppTests.ReleaseScreenshotTests testExportPublicGoogleScreenshots]' passed (0.001 seconds).
+Test Suite 'ReleaseScreenshotTests' passed at 2026-10-01 16:46:19.264.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'StartupWindowTests' started at 2026-10-01 16:46:19.264.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' passed (6.169 seconds).
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' passed (4.563 seconds).
+Test Suite 'StartupWindowTests' passed at 2026-10-01 16:46:29.996.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 10.732 (10.732) seconds
+Test Suite 'StatusItemWiringTests' started at 2026-10-01 16:46:29.996.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' passed (0.008 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' passed (0.007 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeStaysStableAcrossServicePreferences]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeStaysStableAcrossServicePreferences]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' passed (0.005 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' passed (0.015 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' passed (0.027 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' passed (0.077 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' passed (0.007 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' passed (0.006 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure]' passed (0.969 seconds).
+Test Suite 'StatusItemWiringTests' passed at 2026-10-01 16:46:31.126.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 1.129 (1.130) seconds
+Test Suite 'UsageMonitorAppTests.xctest' passed at 2026-10-01 16:46:31.126.
+	 Executed 182 tests, with 1 test skipped and 0 failures (0 unexpected) in 25.330 (25.343) seconds
+Test Suite 'All tests' passed at 2026-10-01 16:46:31.126.
+	 Executed 182 tests, with 1 test skipped and 0 failures (0 unexpected) in 25.330 (25.344) seconds
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

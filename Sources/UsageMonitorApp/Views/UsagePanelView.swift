@@ -235,33 +235,31 @@ struct UsagePanelView: View {
     @ViewBuilder private var overviewRows: some View {
         ForEach(model.profileStates) { state in
             OverviewAccountRow(service: .chatGPT, name: displayNames.displayName(for: state.id), status: state.connectionText,
-                values: "5 小时 " + QuotaPresentation.percentage(state.snapshot?.fiveHour?.remainingPercent)
-                    + "  ·  周 " + QuotaPresentation.percentage(state.snapshot?.weekly?.remainingPercent)) { preferences.selectedTab = .chatGPT }
+                summary: .codex(state.snapshot), isCached: state.isStale) { preferences.selectedTab = .chatGPT }
         }
         if preferences.showGoogle {
             if model.google.accounts.isEmpty {
-                OverviewAccountRow(service: .gemini, name: "Gemini", status: "未连接", values: "连接账号后查看额度") { onAccounts?() }
+                OverviewAccountRow(service: .gemini, name: "Gemini", status: "未连接", summary: .gemini([])) { onAccounts?() }
             }
             ForEach(model.google.accounts) { state in
-                let group = QuotaPresentation.primaryGroup(state.snapshot?.groups ?? [])
                 OverviewAccountRow(service: .gemini, name: model.google.displayName(state.account),
-                    status: state.statusText,
-                    values: "5 小时 " + QuotaPresentation.percentage(group?.buckets.first { $0.kind == .fiveHour }?.remainingFraction.map { $0 * 100 })
-                        + "  ·  周 " + QuotaPresentation.percentage(group?.buckets.first { $0.kind == .weekly }?.remainingFraction.map { $0 * 100 })) { preferences.selectedTab = .google }
+                    status: state.statusText, summary: .gemini(state.snapshot?.groups ?? []),
+                    isCached: state.isCached) { preferences.selectedTab = .google }
             }
         }
         if preferences.showDeepSeek {
             let report = report(for: .deepseek)
             OverviewAccountRow(service: .deepSeek, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
                 status: providerConnectionText(report.connection),
-                values: !(report.connection == .connected || report.connection == .stale) || report.balances.isEmpty ? "余额暂不可用" : report.balances.map { DecimalFormatting.balanceText($0) }.joined(separator: "  ·  ")) { preferences.selectedTab = .deepSeek }
+                summary: .balances(report.connection == .connected || report.connection == .stale ? report.balances : []),
+                isCached: report.connection == .stale) { preferences.selectedTab = .deepSeek }
         }
         if preferences.showCommandCode {
             let report = report(for: .commandcode)
             let window = report.usage?.windows.first { $0.kind == .fiveHour }
             OverviewAccountRow(service: .commandCode, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
-                status: providerConnectionText(report.connection),
-                values: "5 小时 " + CommandCodeCardPresentation.quotaText(window)) { preferences.selectedTab = .commandCode }
+                status: providerConnectionText(report.connection), summary: .credits(window),
+                isCached: report.connection == .stale) { preferences.selectedTab = .commandCode }
         }
     }
 
@@ -457,6 +455,7 @@ struct ProviderTimeBar: View {
             case .unavailable:
                 ZStack {
                     Capsule(style: .continuous).fill(Color.secondary.opacity(0.16))
+                        .frame(height: Self.height)
                     Text("?")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(.secondary)

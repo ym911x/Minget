@@ -5,23 +5,18 @@
 | 项目 | 当前状态 |
 | --- | --- |
 | 已公开版本 | 1.6.1，标签代码 `cab88c8`，CI 与 Release 核验通过 |
-| 当前任务 | 1.6.1 界面统一与项目资料归位，已实现，已补修 Gemini 折叠位移与切换抖动，完成最后的 Logo 导航调整，签名安装并完成本机界面检查；用户已授权公开发布，第二台 Mac 等现场边界保留 |
-| 主项目目录 | 本目录；开工前 main 已从 `fa894fa` 快进至 `da97890` |
-| 当前开发分支 | `main`，发布提交 `cab88c8`；开发分支已快进整合 |
-| 正式安装应用 | 1.6.1，已备份替换并通过 Finder 固定路径运行；回退位置见验收台账 |
+| 当前任务 | 1.6.2 聚合导览页布局优化，已实现、完整测试与签名构建通过，正式安装及本机界面检查完成；用户最终体验和现场边界保留，未推送/发布 |
+| 主项目目录 | 本目录；main保留1.6.1完成基线 `91f5ee4`，活动工作仅在本轮开发分支 |
+| 当前开发分支 | `codex/minget-1-6-2`，从干净 main `91f5ee4` 开始 |
+| 正式安装应用 | 1.6.2，1.6.1已备份；正式完整路径运行、签名和指纹核对通过，见本轮验收台账 |
 | 旧工作区 | 1.5.0 / Google 1.6.0 已合入发布基线，保留为只读历史工作区，禁止继续开发 |
 | 当前代码图谱 | 无；旧图谱已隔离，不能用于解释当前实现 |
 
 ## 工作入口
 
-- [1.6.1 需求](docs/versions/1.6.1/REQUIREMENTS.md)
-- [实施任务](docs/versions/1.6.1/IMPLEMENTATION_TASKS.md)
-- [项目对齐记录](docs/versions/1.6.1/PROJECT_ALIGNMENT.md) · [目录职责](docs/versions/1.6.1/WORKSPACE_MAP.md) · [界面规范](docs/versions/1.6.1/UI_SPEC.md)
-- [1.6.1 发布记录](docs/versions/1.6.1/PUBLICATION.md)
-- [最后的 Logo 导航调整](docs/versions/1.6.1/LOGO_NAVIGATION.md)
-- [窗口稳定性补修](docs/versions/1.6.1/WINDOW_STABILITY_FIX.md)
-- [审核](docs/versions/1.6.1/REVIEW.md) · [验收](docs/versions/1.6.1/ACCEPTANCE.md)
-- [历史版本索引](docs/versions/README.md) · [1.6.0 发布证据](docs/versions/1.6.0/PUBLICATION.md)
+- [1.6.2 需求](docs/versions/1.6.2/REQUIREMENTS.md) · [实施任务](docs/versions/1.6.2/IMPLEMENTATION_TASKS.md)
+- [审核](docs/versions/1.6.2/REVIEW.md) · [验收](docs/versions/1.6.2/ACCEPTANCE.md)
+- [1.6.1 发布基线](docs/versions/1.6.1/PUBLICATION.md) · [历史版本索引](docs/versions/README.md)
 
 ## 状态口径
 

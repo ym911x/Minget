@@ -1,0 +1,12 @@
+{
+  "evidence/build.log": "2d3a89ded5b205cab2629b72410f0b7e507a51523ac440ba366c34de870dc364",
+  "evidence/overview-dark.png": "5c962b6ac6a1128b38905d8826eac1a8683ec84e1a120e93b1b0972ce1f6a81c",
+  "evidence/overview-edge-dark.png": "4c05eece8cdf0950ecd24fa167957a6c62b428e820ff44399e453f78c87a7fb3",
+  "evidence/overview-edge-light.png": "8e4f5e613dd89e8834be6547d38ba5151c7bac0624e7018f06bfb32054716b85",
+  "evidence/overview-light.png": "476e8883d5d9a7c1d289adf46fb7b2618635753bff85e093c90b36941a8e08d0",
+  "evidence/overview-tests.log": "0e2626d91902ad3a2f2c422d3ac09f526a3660da3203f8d17b9fb988bf8e35bc",
+  "evidence/presentation-window-tests.log": "45a7c2debd934ecc70751baf7d13a923b8aac13ac736475246dc33324dde0faf",
+  "evidence/runtime-check.md": "eb7ada4b59bd39d12fa4969179eb709a439a99d9af3347c12678b4c6c9522fe4",
+  "evidence/swift-tests.log": "2546f551e2129c3b862365372a12203153a73a1c082189463bd4fc26ead7a943",
+  "evidence/verification.json": "b749077a7723f8c409c3556e694abdaf9f92c2429895f3d73642ba7cb68fb489"
+}
