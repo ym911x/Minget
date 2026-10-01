@@ -69,3 +69,5 @@ v1.6.0 的昨日 CLIProxyAPI 实现保留为历史原型；当前采用官方 CL
 The `v1.0.0` baseline is frozen. `v1.3.0` is released with an explicit AppKit entry, a fixed 440 pt single column, restored ChatGPT dual tracks, simplified Command Code balance/reset copy, a single-line DeepSeek card, enlarged DeepSeek menu-bar typography, screen-aware panel fallback, and complete fire-child shutdown. `v1.3.1` is released with per-account publishing as each refresh finishes, a three-outcome fire confirmation with a single 5 s retry, and layered Command Code tolerance where only `credits` is required. Real-interface and explicitly listed real-service checks remain pending. Candidate directions include improved DeepSeek credential UX, more account profiles, scheduled firing, local notifications, notarized distribution, and privacy-safe diagnostics export.
 
 Each future version receives its own requirements, implementation plan, review, and acceptance records under `docs/versions/<version>/`. Historical v1.0 documents remain unchanged.
+
+2026-10-01：1.6.1 已公开发布，CI 测试与构建通过，见 docs/versions/1.6.1/PUBLICATION.md。此前待发布条目保留当时状态。

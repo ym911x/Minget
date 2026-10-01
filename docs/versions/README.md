@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.1](1.6.1/IMPLEMENTATION_REPORT.md)，代码和本机安装检查完成，用户体验待确认；当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前迭代：[1.6.1](1.6.1/IMPLEMENTATION_REPORT.md)，代码和本机安装检查完成，用户已授权并公开发布，CI 通过；当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
