@@ -1,0 +1,53 @@
+{
+  "installed_path": "/Applications/Minget.app",
+  "compatible_symlink": "/Users/yuyimeng/Applications/Minget.app",
+  "version": "1.6.2",
+  "executable_sha256": "9d2b438968666cb535392faeb42774b8d8b2691cf03dc08969661a1db4c5bfb0",
+  "unregistered_backups": [
+    {
+      "path": "/Users/yuyimeng/Applications/Minget-backups/Minget-before-official-cli-20260930-210454.app",
+      "version": "1.6.0"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget-backups/Minget-before-official-cli-20261001-103155.app",
+      "version": "1.6.0"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget-1.4.3-backup-20260928-0015/Minget.app",
+      "version": "1.4.3"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget-1.4.2-backup-20260927-075450/Minget.app",
+      "version": "1.4.2"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.6.0-before-1.6.1-20261001-125244/Minget.app",
+      "version": "1.6.0"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-1.6.2-20261001-164733/Minget.app",
+      "version": "1.6.1"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.5.0-20260929-220903/Minget.app",
+      "version": "1.5.0"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-logo-nav-20261001-142458/Minget.app",
+      "version": "1.6.1"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-window-fix-20261001-140552/Minget.app",
+      "version": "1.6.1"
+    },
+    {
+      "path": "/Users/yuyimeng/Applications/Minget Backups/1.6.0-before-final-20260929-2218/Minget.app",
+      "version": "1.6.0"
+    }
+  ],
+  "backup_files_preserved": true,
+  "finder_system_applications_launch": "verified v1.6.2 and overview",
+  "running_executable": "/Applications/Minget.app/Contents/MacOS/UsageMonitor",
+  "build_path_checks": "bash syntax; migrated default; explicit override passed",
+  "script_sha256": "9f2a5c0d2db916545c2fba58a020893af9a55911ed3906ccb98f7d1bfb54732a"
+}

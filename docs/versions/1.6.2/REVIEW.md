@@ -11,3 +11,7 @@
 - candidate、archive、installed严格签名及可执行文件指纹一致；旧正式包已备份，未更改账号目录或凭证。
 
 详见 IMPLEMENTATION_REPORT.md、ACCEPTANCE.md 及 evidence/runtime-check.md。真实系统深色/短屏、菜单栏关开与第二Mac未记为已通过。
+
+## 启动入口补修审核
+
+系统正式路径迁移、旧路径兼容链接及10份旧备份取消注册均已核对。二进制未变，严格签名/指纹和Finder实际启动通过。构建脚本只识别明确的本机迁移链接，语法、本机默认及显式覆盖检查通过；没有删除备份、重置系统数据库或改动认证数据。详见 INSTALLATION_ENTRY.md。

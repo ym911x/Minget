@@ -15,7 +15,8 @@
 #   MINGET_STAGING_DIR     where the bundle is built, signed and strictly verified.
 #                          Defaults to a local directory outside the repository.
 #   MINGET_RUN_PATH        the fixed path the verified bundle is installed to.
-#                          Defaults to ~/Applications/Minget.app.
+#                          Defaults to ~/Applications/Minget.app; follows the canonical
+#                          /Applications installation when the compatibility link exists.
 #   MINGET_ARCHIVE_PATH    review copy path. Defaults to a system temporary directory
 #                          outside the repository.
 #
@@ -82,7 +83,13 @@ fi
 # --- staging and run paths --------------------------------------------------------
 BUILD_SCRATCH_DIR="${MINGET_BUILD_SCRATCH_DIR:-${TMPDIR:-/tmp}/minget-swiftpm-build}"
 STAGING_DIR="${MINGET_STAGING_DIR:-${TMPDIR:-/tmp}/minget-staging/Minget.app}"
-RUN_PATH="${MINGET_RUN_PATH:-$HOME/Applications/Minget.app}"
+DEFAULT_RUN_PATH="$HOME/Applications/Minget.app"
+# Keep future builds at the same official entry after the 1.6.2 installation migration.
+# Do not remove the compatibility symlink and accidentally create a second application.
+if [[ -L "$DEFAULT_RUN_PATH" && "$(readlink "$DEFAULT_RUN_PATH")" == /Applications/Minget.app ]]; then
+  DEFAULT_RUN_PATH=/Applications/Minget.app
+fi
+RUN_PATH="${MINGET_RUN_PATH:-$DEFAULT_RUN_PATH}"
 ARCHIVE_PATH="${MINGET_ARCHIVE_PATH:-${TMPDIR:-/tmp}/minget-archive/$APP_NAME.app}"
 STAGING_CONTENTS="$STAGING_DIR/Contents"
 

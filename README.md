@@ -13,6 +13,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 概览将状态放到名称下面，右侧使用简短数字与额度/重置时间图示。GPT/Gemini 并排展示 5H、周四条轨道；DeepSeek 显示实际余额，Command Code 保留 5H 金额及双轨。完整状态及重置日期可悬停查看，详情页继续提供完整信息。当前实施、检查与安装状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.2 验收](docs/versions/1.6.2/ACCEPTANCE.md) 为准；公开基线仍为 1.6.1。
 
+日常启动使用系统“应用程序”中的 **Minget**（`/Applications/Minget.app`）。本机原 `~/Applications/Minget.app` 已改为指向正式应用的兼容链接；旧备份保留，但已取消启动注册。
+
 ## v1.6.1：界面统一与稳定性
 
 概览显示账号摘要，点击顶部服务 Logo 后查看完整额度，刷新状态位于刷新按钮旁。GPT/Gemini 共用两位小数、额度条与重置时间样式；设置及账号管理合并为原生侧栏窗口。当前代码与验证状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为入口，[1.6.1 记录](docs/versions/1.6.1/IMPLEMENTATION_REPORT.md)保存实施和验收证据。已公开发布 [v1.6.1](https://github.com/ym911x/Minget/releases/tag/v1.6.1)，测试与构建 CI 通过；详情见 [发布记录](docs/versions/1.6.1/PUBLICATION.md)。
