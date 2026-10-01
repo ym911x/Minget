@@ -192,21 +192,44 @@ struct UsagePanelView: View {
     }
 
     private var providerTabs: some View {
-        HStack(spacing: 12) {
-            if preferences.effectiveTab != .all {
-                Button { preferences.selectedTab = .all } label: {
-                    Label("概览", systemImage: "chevron.left")
-                }.buttonStyle(.borderless).font(.system(size: 12))
+        HStack(spacing: 8) {
+            ForEach(preferences.visibleTabs, id: \.self) { tab in
+                Button { preferences.selectedTab = tab } label: {
+                    tabMark(tab)
+                        .frame(width: 44, height: 36)
+                        .background(preferences.effectiveTab == tab ? Color.accentColor.opacity(0.14) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 9))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 9)
+                                .strokeBorder(preferences.effectiveTab == tab ? Color.accentColor.opacity(0.4) : Color.clear,
+                                              lineWidth: 1)
+                        }
+                        .contentShape(RoundedRectangle(cornerRadius: 9))
+                }
+                .buttonStyle(.plain)
+                .help(tabTitle(tab))
+                .accessibilityLabel(tabTitle(tab))
+                .accessibilityValue(preferences.effectiveTab == tab ? "已选中" : "未选中")
             }
-            Picker("查看服务", selection: Binding(get: { preferences.effectiveTab }, set: { preferences.selectedTab = $0 })) {
-                ForEach(preferences.visibleTabs, id: \.self) { tab in Text(tabTitle(tab)).tag(tab) }
-            }.pickerStyle(.menu).labelsHidden().frame(width: 145)
             Spacer(minLength: 0)
-            Text(updateStatusText).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
         }.frame(height: DetailPageLayout.tabHeight)
             .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
             .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
             .onChange(of: preferences.showGoogle) { _ in normalizeTab() }
+    }
+
+    @ViewBuilder private func tabMark(_ tab: DetailPreferences.ProviderTab) -> some View {
+        switch tab {
+        case .all:
+            Image(systemName: "square.grid.2x2.fill")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.primary)
+                .accessibilityHidden(true)
+        case .chatGPT: ServiceMark(service: .chatGPT)
+        case .google: ServiceMark(service: .gemini)
+        case .deepSeek: ServiceMark(service: .deepSeek)
+        case .commandCode: ServiceMark(service: .commandCode)
+        }
     }
 
     @ViewBuilder private var overviewRows: some View {
@@ -293,7 +316,11 @@ struct UsagePanelView: View {
         HStack(spacing: 8) {
             Text(Self.productName()).font(.system(size: 18, weight: .semibold))
             Text("v\(appVersion)").font(.system(size: 11)).foregroundStyle(.secondary)
-            Spacer()
+            Spacer(minLength: 8)
+            Text(updateStatusText)
+                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.tail)
+                .help(updateStatusText)
             Button { model.refreshNow() } label: {
                 Image(systemName: "arrow.clockwise").font(.system(size: 14, weight: .medium))
                     .frame(width: 30, height: 30)
