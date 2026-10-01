@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.2](1.6.2/IMPLEMENTATION_REPORT.md)，本地实现、签名安装及本机界面检查完成，用户最终体验及现场边界保留，1.6.2 已获公开发布授权，结果见 [发布记录](1.6.2/PUBLICATION.md)；当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前迭代：[1.6.2](1.6.2/IMPLEMENTATION_REPORT.md)，本地实现、签名安装及本机界面检查完成，用户最终体验及现场边界保留，1.6.2 已公开发布，结果见 [发布记录](1.6.2/PUBLICATION.md)；当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -26,7 +26,7 @@
 | 1.5.0 | 尚未独立发布，纳入 1.6.0 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | — |
 | 1.6.0 | 已发布，现场待验收项保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | assets/screenshots/v1.6.0/ |
 | 1.6.1 | 是，CI 与 Release 核验通过 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
-| 1.6.2 | 发布状态见 PUBLICATION.md | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
+| 1.6.2 | 是，沿用已有验证；本轮不重跑 CI | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
 
 ## 各版本的额外资料
 
