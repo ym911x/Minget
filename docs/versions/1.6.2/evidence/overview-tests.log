@@ -11,7 +11,7 @@ Building for debugging...
 [90 / 171]
 [91 / 171]
 [111 / 171] UsageMonitorCore
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 132 |         // C `Boolean`, so the round trip is done in `Bool`.
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
@@ -19,7 +19,7 @@ Building for debugging...
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
 136 |         return {
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
@@ -27,7 +27,7 @@ Building for debugging...
 136 |         return {
 137 |             guard readStatus == errSecSuccess else {
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 138 |                 // The previous state could not be read: restore the documented default
 139 |                 // instead of leaving interaction disabled.
 140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
@@ -35,7 +35,7 @@ Building for debugging...
 141 |                 return
 142 |             }
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 141 |                 return
 142 |             }
 143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
@@ -66,7 +66,7 @@ Building for debugging...
 [263 / 293] UsageMonitorApp-product
 [268 / 293] UsageMonitorApp-product
 [268 / 293] UsageMonitorApp
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:328:13: warning: variable 'probeResult' was written to, but never read
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:328:13: warning: variable 'probeResult' was written to, but never read
 326 | 
 327 |         let probeDone = DispatchSemaphore(value: 0)
 328 |         var probeResult: UsageService.WakeProbeResult?
@@ -74,7 +74,7 @@ Building for debugging...
 329 |         DispatchQueue.global().async {
 330 |             probeResult = service.probeRateLimitsAfterWake()
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:406:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:406:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
 404 | 
 405 |     func testFailedEpisodeRetriesImmediatelyOnceThenOpensTheGate() {
 406 |         var now = Date(timeIntervalSince1970: 1_788_935_000)
@@ -82,7 +82,7 @@ Building for debugging...
 407 |         let stub = StubClient()
 408 |         stub.persistentError = .rpcFailed(.timedOut(method: "account/rateLimits/read"))
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:420:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:420:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
 418 | 
 419 |     func testBackoffGateServesCacheWithoutLaunching() throws {
 420 |         var now = Date(timeIntervalSince1970: 1_788_935_000)
@@ -90,7 +90,7 @@ Building for debugging...
 421 |         let defaults = makeUserDefaults()
 422 |         let cache = UsageCache(userDefaults: defaults)
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:438:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:438:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
 436 | 
 437 |     func testBackoffGateWithoutCacheReReportsTheRecordedFailure() {
 438 |         var now = Date(timeIntervalSince1970: 1_788_935_000)
@@ -98,7 +98,7 @@ Building for debugging...
 439 |         let stub = StubClient()
 440 |         stub.persistentError = .rpcFailed(.timedOut(method: "account/rateLimits/read"))
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:499:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/UsageServiceTests.swift:499:13: warning: variable 'now' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
 497 | 
 498 |     func testManualRetryBypassesTheBackoffGate() throws {
 499 |         var now = Date(timeIntervalSince1970: 1_788_935_000)
@@ -112,7 +112,7 @@ Building for debugging...
 [278 / 293] UsageMonitorApp-product
 [283 / 294] UsageMonitorAppTests-product
 [302 / 313] UsageMonitorAppTests-product
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorAppTests/ProductionWiringTests.swift:114:40: warning: 'is' test is always true
+$PROJECT_ROOT/Tests/UsageMonitorAppTests/ProductionWiringTests.swift:114:40: warning: 'is' test is always true
 112 |         let entryPoint: () -> Void = MingetMain.main
 113 |         _ = entryPoint
 114 |         XCTAssertTrue(AppDelegate.self is NSApplicationDelegate.Type)

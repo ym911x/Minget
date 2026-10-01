@@ -1,7 +1,7 @@
 {
   "version": "1.6.2",
-  "installed_path": "/Users/yuyimeng/Applications/Minget.app",
-  "backup": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-1.6.2-20261001-164733/Minget.app",
+  "installed_path": "$HOME/Applications/Minget.app",
+  "backup": "$HOME/Applications/Minget Backups/1.6.1-before-1.6.2-20261001-164733/Minget.app",
   "backup_executable_sha256": "fe341c32cfc417aa21bec558cafd2c08bb2c85632eeb5bc8b04bfb0ff50ef440",
   "executable_sha256": "9d2b438968666cb535392faeb42774b8d8b2691cf03dc08969661a1db4c5bfb0",
   "source_base": "91f5ee4",

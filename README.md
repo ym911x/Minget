@@ -9,9 +9,9 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 的额度、余额和使用状态。并支持两个 Google / Antigravity 账号的官方额度查询。
 
-## v1.6.2：聚合导览页布局优化（本地迭代）
+## v1.6.2：聚合导览页布局优化（2026-10-01）
 
-概览将状态放到名称下面，右侧使用简短数字与额度/重置时间图示。GPT/Gemini 并排展示 5H、周四条轨道；DeepSeek 显示实际余额，Command Code 保留 5H 金额及双轨。完整状态及重置日期可悬停查看，详情页继续提供完整信息。当前实施、检查与安装状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.2 验收](docs/versions/1.6.2/ACCEPTANCE.md) 为准；公开基线仍为 1.6.1。
+概览将状态放到名称下面，右侧使用简短数字与额度/重置时间图示。GPT/Gemini 并排展示 5H、周四条轨道；DeepSeek 显示实际余额，Command Code 保留 5H 金额及双轨。完整状态及重置日期可悬停查看，详情页继续提供完整信息。当前实施、检查与安装状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.2 验收](docs/versions/1.6.2/ACCEPTANCE.md) 为准；本轮已获公开发布授权，见 [1.6.2 发布记录](docs/versions/1.6.2/PUBLICATION.md)。
 
 日常启动使用系统“应用程序”中的 **Minget**（`/Applications/Minget.app`）。本机原 `~/Applications/Minget.app` 已改为指向正式应用的兼容链接；旧备份保留，但已取消启动注册。
 
@@ -178,7 +178,7 @@ Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/u
 
 ## 当前版本
 
-- 当前本地迭代：`1.6.1`，尚未推送或公开发布；安装和验收见 [当前状态](PROJECT_STATUS.md)。
+- 当前版本：`1.6.2`，发布状态见 [发布记录](docs/versions/1.6.2/PUBLICATION.md)；安装和验收见 [当前状态](PROJECT_STATUS.md)。
 - 已公开基线：`1.6.0`，见 [发布核验](docs/versions/1.6.0/PUBLICATION.md)。
 - 平台：macOS 13 及以上，Apple Silicon；Google 接入固定官方 CLI 1.2.13。
 - 分发：源码；本机签名包仅用于本地验收，不作为公开 Release 附件。
