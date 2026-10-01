@@ -1,6 +1,6 @@
 # 明明有数 · Minget 1.6.0
 
-发布说明已准备，尚未推送或发布。准备日期：2026-10-01；正式发布日期以实际发布为准。
+已于 2026-10-01 公开发布：[GitHub Release](https://github.com/ym911x/Minget/releases/tag/v1.6.0)。发布提交远端 CI 通过，详见[发布记录](PUBLICATION.md)。
 
 本版新增 Google / Antigravity 官方 CLI 双账号接入。在应用内分别登录两个 Google 账号，查看官方返回的共享额度组、5 小时及周剩余比例和重置时间。日常查询无需运行 CPA。
 

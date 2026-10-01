@@ -1,5 +1,7 @@
 # Minget 1.6.0 GitHub 发布准备
 
+后续状态：已于 2026-10-01 完成公开发布，见 [PUBLICATION.md](PUBLICATION.md)。以下保留发布准备时的原始记录。
+
 准备日期：2026-10-01（Asia/Shanghai）。本次只准备本地文件和提交。**尚未推送、合并 main、创建标签、GitHub PR 或 Release。** 用户将另行安排远端操作。
 
 ## 发布元数据

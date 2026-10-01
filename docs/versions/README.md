@@ -22,7 +22,7 @@
 | 1.4.2 | 已发布（核验见 ACCEPTANCE.md） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | [Release](https://github.com/ym911x/Minget/releases/tag/v1.4.2) |
 | 1.4.3 | 已发布（保留界面及换机验收边界） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | — |
 | 1.5.0 | 尚未独立发布，纳入 1.6.0 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | — |
-| 1.6.0 | 发布准备，未推送 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | assets/screenshots/v1.6.0/ |
+| 1.6.0 | 已发布，现场待验收项保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | assets/screenshots/v1.6.0/ |
 
 ## 各版本的额外资料
 
@@ -43,3 +43,5 @@
 ## 阅读顺序
 
 新版本开工时按 `REQUIREMENTS.md` → `IMPLEMENTATION_TASKS.md` → `IMPLEMENTATION_REPORT.md` → `REVIEW.md` → `ACCEPTANCE.md` 阅读；`ACCEPTANCE.md` 中的「待验收」项目只有取得真实证据后才能改为通过，自动测试不能替代。
+
+1.6.0 公开发布与远端验证：[PUBLICATION.md](1.6.0/PUBLICATION.md)。

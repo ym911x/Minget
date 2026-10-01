@@ -1,8 +1,8 @@
 # 变更记录
 
-## 1.6.0（发布准备，2026-10-01）
+## 1.6.0（2026-10-01）
 
-状态：本机实现与验收通过，GitHub 推送、标签及 Release 待用户另行安排。发布日期以实际发布为准。
+状态：已公开发布 [v1.6.0](https://github.com/ym911x/Minget/releases/tag/v1.6.0)，发布提交远端 CI 测试与构建通过。详见[发布记录](docs/versions/1.6.0/PUBLICATION.md)。
 
 ### Google / Antigravity 双账号
 
