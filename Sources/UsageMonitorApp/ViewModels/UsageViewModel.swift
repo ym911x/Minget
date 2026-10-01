@@ -168,7 +168,8 @@ public final class UsageViewModel: ObservableObject {
                 fireRetryDelay: TimeInterval = 5,
                 clockInterval: TimeInterval = 30) {
         self.coordinator = coordinator
-        self.google = google ?? AntigravityModel(credentials: InMemoryCredentialStore(), defaults: UserDefaults(suiteName: "minget-unconnected-google")!)
+        self.google = google ?? AntigravityModel(credentials: InMemoryCredentialStore(), defaults: UserDefaults(suiteName: "minget-unconnected-google")!,
+            store: AntigravityProfileStore(base: FileManager.default.temporaryDirectory.appendingPathComponent("minget-unconnected-google")), migrateLegacy: false)
         self.providerEngine = providerEngine
         self.menuBarPreferences = menuBarPreferences
         self.displayNames = displayNames

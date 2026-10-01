@@ -2,7 +2,7 @@
 == swift build (release) ==
 Building for production...
 [2 / 6] UsageMonitorCore
-/Users/yuyimeng/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+/Users/<user>/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 132 |         // C `Boolean`, so the round trip is done in `Bool`.
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
@@ -10,7 +10,7 @@ Building for production...
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
 136 |         return {
 
-/Users/yuyimeng/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+/Users/<user>/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
@@ -18,7 +18,7 @@ Building for production...
 136 |         return {
 137 |             guard readStatus == errSecSuccess else {
 
-/Users/yuyimeng/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+/Users/<user>/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 138 |                 // The previous state could not be read: restore the documented default
 139 |                 // instead of leaving interaction disabled.
 140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
@@ -26,7 +26,7 @@ Building for production...
 141 |                 return
 142 |             }
 
-/Users/yuyimeng/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+/Users/<user>/.codex/worktrees/minget-google-quota/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 141 |                 return
 142 |             }
 143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)

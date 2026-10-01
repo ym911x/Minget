@@ -1,0 +1,9 @@
+Complete Minget 1.6.0 official Google CLI integration and release preparation
+
+- Use pinned Google Antigravity CLI for isolated dual-account login and read-only usage
+- Fix authorization feedback, onboarding navigation, TLS sandbox and identity parsing
+- Integrate account management, quota cards, menu bar selection and independent refresh
+- Retain local validation evidence and explicitly deferred acceptance items
+- Prepare changelog, release copy, reproducible public screenshots and source distribution
+
+GitHub push, release tag and publication remain pending user authorization.

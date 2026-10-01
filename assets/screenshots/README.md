@@ -10,6 +10,7 @@
 | `v1.1.1/` | `menu-bar.png`、`detail-redacted.png`、`settings.png` | 移除 GLM 入口后的界面基线 |
 | `v1.2.1/` | `detail-redacted.png` | Command Code 金额与详情卡片空间修订后的详情页 |
 | `v1.3.0/` | `detail-redacted.png` | 440 pt 单列、双 ChatGPT 账号、DeepSeek 单行卡与 Command Code 三周期卡 |
+| `v1.6.0/` | Google 双账号浅色/深色、已连接管理、首次连接 | 当前正式 SwiftUI 组件生成的示例展示副本，非真实取数证据 |
 
 ## 约定
 

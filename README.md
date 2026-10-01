@@ -7,19 +7,37 @@
 **你的 AI 使用，心里有数。**<br>
 *Your AI usage, at a glance.*
 
-Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 与本机 Antigravity Google 账号 的额度、余额和使用状态。
+Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 的额度、余额和使用状态。并支持两个 Google / Antigravity 账号的官方额度查询。
 
-## v1.6.0 Google / Antigravity 额度（本机开发版）
+## v1.6.0：Google / Antigravity 双账号（发布准备）
 
-通过本机 CLIProxyAPI 接入 Google 账号，详情显示各额度组或模型的剩余百分比与重置时间，菜单栏可选择账号与额度组。沿用现有 1.5.0 单列卡片、供应商切换、账号管理和菜单栏样式。
+Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/usage`、账号管理、卡片与刷新已完成代码接线。修复了授权后引导、初始登录方式和折行认证 URL 处理，正式运行不依赖 CPA。
 
-在“管理账号 → Google / Antigravity → 连接或管理”输入 http://127.0.0.1:8317 和管理密钥，点击“保存并连接”。密钥仅存 macOS Keychain，不自动读取磁盘密钥或 Google 授权文件。连接后，在设置选择 Google 菜单栏来源及模型/额度组；Google 卡片显示开关独立于菜单栏来源。
+当前状态（2026-10-01）：本机 1.6.0 官方 CLI 双账号迭代已完成并安装。正式 A/B 登录、官方 `/usage`、真实卡片对账、退出重启、手动刷新及应用内官方下载校验均已通过。发布准备测试 621 项，620 通过、1 跳过、0 失败，Release 严格签名通过。第二台 Mac 验收按用户要求延期；自然令牌续期、撤销后的重新登录和真实睡眠唤醒仍待现场验证。未推送或公开发布。
 
-默认五分钟刷新，支持手动刷新与唤醒补刷；未知字段不补零，过期窗口不自动恢复额度，离线旧数据标记缓存。首次连接的真实服务验证和签名版界面验收见 [1.6.0 验收台账](docs/versions/1.6.0/ACCEPTANCE.md)。未公开发布。
+### 登录与使用
 
-## 开发中：v1.5.0
+1. 从“管理账号”进入 Google / Antigravity，点击“准备官方 CLI”。Minget 从 Google 官方下载固定的 1.2.13 Apple Silicon 版本，并校验哈希与签名。
+2. 分别点击账号 A/B 的“登录 Google 账号”，在 Google 官方页面授权，再将一次性授权码粘贴到应用的登录窗口。
+3. 按实时提示完成官方引导，确认条款和目录信任；可选交互数据收集建议关闭。成功后窗口明确显示“已登录”，额度读取状态另行显示。
+4. 日常可查看 Google 卡片，或在设置中选择菜单栏的账号与额度组。默认五分钟刷新，支持手动刷新和唤醒补刷。
 
-详情页新增可选供应商切换、固定底部操作与账号管理窗口。首次安装时可从引导连接一个服务；ChatGPT 由官方 Codex app-server 发起浏览器登录，DeepSeek 和 Command Code 继续通过本机 Keychain 保存 Key，并以只读请求确认数据。升级用户保持原详情布局。当前实现与验收状态见 [v1.5.0 验收台账](docs/versions/1.5.0/ACCEPTANCE.md)。公开最新版本仍为 v1.4.3。
+授权数据由官方 CLI 保存在 Minget 本机独立账号目录；Minget 不读取或复制认证文件。Google 功能无需 CPA、Google 桌面应用或其他插件。换电脑应重新登录每个账号；第二台 Mac 的完整流程尚未实测。
+
+### 界面预览
+
+下面由正式 SwiftUI 组件生成，账号、额度、时间均为示例，是**公开展示副本**，不用于证明真实取数。卡片内更多官方额度组可滚动查看。
+
+<img src="assets/screenshots/v1.6.0/google-dual-light.png" alt="Minget 1.6.0 Google 双账号额度浅色展示副本" width="360">
+<img src="assets/screenshots/v1.6.0/google-dual-dark.png" alt="Minget 1.6.0 Google 双账号额度深色展示副本" width="360">
+
+<img src="assets/screenshots/v1.6.0/google-accounts-light.png" alt="Minget 1.6.0 Google 双账号管理展示副本" width="460">
+
+[首次连接入口](assets/screenshots/v1.6.0/google-connect-light.png) · [更新说明](docs/versions/1.6.0/RELEASE_NOTES.md) · [验收记录](docs/versions/1.6.0/ACCEPTANCE.md)
+
+### 纳入此前 1.5.0 的界面更新
+
+本轮同时包含尚未单独公开发布的 1.5.0 工作：详情页供应商切换、固定底部操作、共用账号管理窗口、首次连接入口及菜单栏浮窗交互修复。历史验收边界仍见 [1.5.0 台账](docs/versions/1.5.0/ACCEPTANCE.md)。
 
 ## v1.4.3 Codex 启动兼容性
 
@@ -146,22 +164,22 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatG
 
 ## 当前版本
 
-- 当前版本：`1.4.2`（本机验收通过；发布核验见验收台账）
-- 状态：Swift 测试 538 项执行、537 通过、1 项 AX 环境跳过、0 失败；外部脚本与安装器 53 项假 CLI 断言通过。安装后的自然任务中三路请求与 LaunchAgent 均 exit 0，但 A 窗口观测不可用、B 重置时间未变化。真实界面三次手动刷新已观察到数据返回；用户于 2026-09-24 确认详情页关闭重开三次均正常。第三轮聚合结束标志未单独留证，保留此证据边界。资料见 [1.4.2 验收台账](docs/versions/1.4.2/ACCEPTANCE.md)。
-- 平台：macOS 13 及以上，Apple Silicon
-- 发布记录：[CHANGELOG.md](CHANGELOG.md)
-- 后续规划：[ROADMAP.md](ROADMAP.md)
+- 本机开发与发布候选：`1.6.0`；GitHub 推送与发布尚未执行，等待用户安排。
+- 已公开基线：`1.4.3`。
+- 平台：macOS 13 及以上，Apple Silicon；Google 接入固定官方 CLI 1.2.13。
+- 分发：源码；本机签名包仅用于本地验收，不作为公开 Release 附件。
+- [发布说明](docs/versions/1.6.0/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.0/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)
 
 ## 已实现功能
 
 - 同时监控两个隔离的 ChatGPT (Codex) 账号：各自独立的 `CODEX_HOME`、独立的长生命周期 `codex app-server` 子进程、独立的失败预算与独立的额度缓存。
-- 菜单栏一次显示一个来源：ChatGPT 账号 A、ChatGPT 账号 B 或 DeepSeek，可在设置页切换并持久化；升级默认保持账号 A。
+- 菜单栏一次显示一个来源：ChatGPT 账号 A、ChatGPT 账号 B、DeepSeek，或某个 Google 账号的额度组，可在设置页切换并持久化；升级默认保持账号 A。
 - ChatGPT 菜单栏文案带账号短标签与两排重置时间进度：完整 `A 5H 78% | W 42%`，紧凑 `A 78% 42%`，下方上排 5 段代表 5 小时、下排 7 段代表 7 天。
 - DeepSeek 菜单栏条目显示官方余额接口返回的余额，不换算、不合计、不显示重置时间条：完整和紧凑模式均为 `DS CNY 123.45`，通过字号与词间距区分宽度；无可用余额时显示 `DS —` 并加一个前置警告标记，不显示 `0`。
 - 检测状态项是否进入刘海遮挡区域，并在空间不足时从完整模式压缩为保留双额度与双时间条的紧凑模式；紧凑内容仍无法显示时打开详情窗口，不显示残缺文字。
 - 点击菜单栏打开详情后，点击桌面或其他应用可立即收起弹层，同时保留原点击效果。
-- 应用以显式 AppKit 入口启动，不声明任何 SwiftUI Scene；冷启动只出现菜单栏图标，不会出现空的设置窗口。弹层在显示前先确定内容尺寸，屏幕容纳不下整页时改用普通详情窗口，不会留下越界且无法移回的弹层。
-- 详情页为 440 pt 宽的单列布局，一排一张卡片：ChatGPT A、ChatGPT B、DeepSeek、Command Code；完整首选高度为 `440 × 801 pt`，屏幕高度不足时只滚动卡片区，普通详情窗口同步使用可用 viewport。
+- 应用以显式 AppKit 入口启动，不声明任何 SwiftUI Scene；已有连接冷启动显示菜单栏图标，首次使用可进入账号连接窗口，不会出现空的设置窗口。弹层在显示前先确定内容尺寸，屏幕容纳不下整页时改用普通详情窗口，不会留下越界且无法移回的弹层。
+- 详情页为 440 pt 宽的单列布局，一排一张卡片：ChatGPT A/B、Google A/B、DeepSeek、Command Code；高度随启用供应商和账号变化，屏幕高度不足时只滚动卡片区，底部操作保持可见，普通详情窗口同步使用可用 viewport。
 - 每张 ChatGPT 卡片显示 Profile 名称、连接/缓存状态、套餐、实际账号邮箱、5 小时与周额度的**剩余额度轨道和各自的重置时间分段轨道**（5 小时 5 段、周 7 段）、可用重置次数、点火结果和“5 小时点火”按钮。
 - 手动点火经固定确认对话框触发，应用直接执行官方 Codex CLI 的固定参数并丢弃子进程输出；结果区分“新窗口已确认”“请求成功，窗口未变化”和证据不足时的“请求成功，暂无法确认”，确认态与未变化态追加实测差值，悬停查看最近 3 次内存历史。
 - DeepSeek 卡片分两行显示自定义名称、余额、`deepseek` wordmark、连接绿点和服务器状态，横向最多显示 3 个币种金额，超过 3 个时第三项显示“另有 N 个币种”；不换算、不合计、不伪造 0。

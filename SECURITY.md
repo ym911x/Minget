@@ -8,6 +8,10 @@
 
 提交报告时请提供受影响版本、复现步骤和影响范围，并删除所有真实凭据和账号数据。
 
+### Google 官方 CLI
+
+Minget 的 Google 功能由官方 CLI 在本机专用账号目录保管授权，不读取或复制认证文件。请勿上传 `~/Library/Application Support/Minget/AntigravityCLI/profiles/`、账号连接元数据、一次性授权码或包含真实身份的登录画面。公开截图使用标明示例的展示副本；额度查询只使用官方 `/usage`，不通过模型请求验证登录。
+
 ## English
 
 Do not include API keys, cookies, access tokens, email addresses, raw account responses, or other sensitive information in public issues, discussions, logs, or screenshots.

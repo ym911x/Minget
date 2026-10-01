@@ -10,7 +10,7 @@ public struct AntigravityAccountState: Identifiable, Equatable {
     public var failure: ProviderFailure?
     public var id: String { account.id }
     public var statusText: String {
-        if account.disabled { return "账号已在代理中停用" }
+        if account.disabled { return "账号已停用" }
         if isFetching { return snapshot == nil ? "正在读取额度…" : "正在刷新，显示上次数据" }
         if let failure { return (snapshot == nil ? "" : "缓存 · ") + failure.displayText }
         if snapshot == nil { return "额度暂不可用" }
@@ -18,203 +18,206 @@ public struct AntigravityAccountState: Identifiable, Equatable {
     }
 }
 
-/// All requests share one discovery cycle and publish each account as soon as it finishes.
-/// A connection generation prevents replaced keys/accounts from publishing late results.
+/// Official CLI connections. Each UUID owns its task, cache and authentication failure.
 @MainActor
 public final class AntigravityModel: ObservableObject {
     @Published public private(set) var accounts: [AntigravityAccountState] = []
+    @Published public private(set) var connections: [AntigravityConnection] = []
     @Published public private(set) var isRefreshing = false
-    @Published public private(set) var feedback = "未连接本机代理"
-    @Published public private(set) var baseURL: String
+    @Published public private(set) var feedback = "请登录 Google 账号"
     @Published public private(set) var names: [String: String]
+    @Published public private(set) var activeLoginSlot: AntigravitySlot?
+    @Published public private(set) var isPreparingCLI = false
+    private let store: AntigravityProfileStore
+    private let reader: AntigravityUsageReading
     private let defaults: UserDefaults
-    private let access: CredentialAccessCoordinator
-    private let reader: AntigravityReading
-    private var generation = UUID()
-    private var namespace: String
-    private var task: Task<Void, Never>?
-    private var pendingManual = false
+    private var tasks: [UUID: Task<Void, Never>] = [:]
+    private var pending = Set<UUID>()
+    private var attempts: [UUID: Date] = [:]
+    private var suspended = Set<UUID>()
+    private var retryUntil: [UUID: Date] = [:]
     private var stopped = false
-    private var authSuspended = false
-    private var lastAttempt: Date?
+    private var epoch = UUID()
+    private var loginWindow: AntigravityLoginWindowController?
+    private var installTask: Task<Void, Never>?
+    private struct Entry: Codable { let uuid: UUID; let email: String; let snapshot: AntigravitySnapshot }
+    private static let cacheKey = "antigravity.cli.snapshots.v1"
+    private static let namesKey = "antigravity.cli.names.v1"
 
-    private enum Key {
-        static let base = "antigravity.baseURL.v1"
-        static let namespace = "antigravity.connection.v1"
-        static let cache = "antigravity.snapshots.v1"
-        static let names = "antigravity.names.v1"
-    }
-    private struct CacheEntry: Codable {
-        let namespace: String
-        let account: AntigravityAccount
-        let snapshot: AntigravitySnapshot
-    }
-
-    public init(reader: AntigravityReading = AntigravityProvider(),
-                credentials: ProviderCredentialStoring = KeychainCredentialStore(),
-                defaults: UserDefaults = .standard) {
-        self.reader = reader
-        self.defaults = defaults
-        access = CredentialAccessCoordinator(store: credentials)
-        baseURL = defaults.string(forKey: Key.base) ?? AntigravityProvider.defaultBaseURL
-        namespace = defaults.string(forKey: Key.namespace) ?? UUID().uuidString
-        names = defaults.dictionary(forKey: Key.names) as? [String: String] ?? [:]
-        if let data = defaults.data(forKey: Key.cache),
-           let entries = try? JSONDecoder().decode([CacheEntry].self, from: data) {
-            accounts = entries.filter { $0.namespace == namespace && $0.snapshot.accountIdentity == $0.account.identity }
-                .map { AntigravityAccountState(account: $0.account, snapshot: $0.snapshot) }
+    public init(credentials: ProviderCredentialStoring = KeychainCredentialStore(), defaults: UserDefaults = .standard,
+                store: AntigravityProfileStore = AntigravityProfileStore(),
+                reader: AntigravityUsageReading = AntigravityUsageService(), migrateLegacy: Bool = true) {
+        self.store = store; self.reader = reader; self.defaults = defaults
+        names = defaults.dictionary(forKey: Self.namesKey) as? [String: String] ?? [:]
+        if migrateLegacy {
+            // Delete only our obsolete proxy key; never read its value or touch CPA.
+            do {
+                try credentials.delete(.antigravityManagementKey)
+                for key in ["antigravity.baseURL.v1", "antigravity.connection.v1", "antigravity.snapshots.v1"] {
+                    defaults.removeObject(forKey: key)
+                }
+            } catch { feedback = "旧代理密钥清理失败，下次启动重试；可继续登录 Google" }
         }
-    }
-
-    public func displayName(_ account: AntigravityAccount) -> String {
-        names[account.id] ?? account.label
-    }
-    public func setName(_ name: String, accountID: String) {
-        let name = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
-        if name.isEmpty { names.removeValue(forKey: accountID) } else { names[accountID] = name }
-        defaults.set(names, forKey: Key.names)
-    }
-
-    @discardableResult
-    public func connect(baseURL: String, key: String) -> Bool {
-        do {
-            let url = try AntigravityProvider.validatedBaseURL(baseURL)
-            let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !key.isEmpty, !key.contains("\r"), !key.contains("\n") else {
-                feedback = "请输入有效管理密钥"; return false
+        reloadConnections()
+        if feedback == "请登录 Google 账号", !connections.isEmpty { feedback = "Google 账号已连接" }
+        if let data = defaults.data(forKey: Self.cacheKey), let entries = try? JSONDecoder().decode([Entry].self, from: data) {
+            for index in accounts.indices {
+                guard let connection = connections.first(where: { $0.email == accounts[index].id }),
+                      let entry = entries.first(where: { $0.uuid == connection.uuid && $0.email == connection.email }),
+                      entry.snapshot.accountIdentity == connection.account.identity else { continue }
+                accounts[index].snapshot = entry.snapshot
             }
-            try access.store(key, for: .antigravityManagementKey)
-            invalidate()
-            self.baseURL = url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            namespace = UUID().uuidString
-            defaults.set(self.baseURL, forKey: Key.base)
-            defaults.set(namespace, forKey: Key.namespace)
-            feedback = "管理密钥已保存，正在发现账号…"
-            refresh(force: true)
-            return true
-        } catch {
-            feedback = "连接未保存，请检查本机地址和钥匙串权限"
-            return false
         }
     }
-
-    public func disconnect() {
+    public func displayName(_ account: AntigravityAccount) -> String { names[account.id] ?? account.label }
+    public func setName(_ name: String, accountID: String) {
+        let value = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        if value.isEmpty { names.removeValue(forKey: accountID) } else { names[accountID] = value }
+        defaults.set(names, forKey: Self.namesKey)
+    }
+    public func connection(for slot: AntigravitySlot) -> AntigravityConnection? { connections.first { $0.slot == slot } }
+    public func loginStatus(for slot: AntigravitySlot) -> String {
+        guard let connection = connection(for: slot) else { return "未登录" }
+        return suspended.contains(connection.uuid) ? "授权失效，请重新登录" : "已登录：" + connection.email
+    }
+    public func prepareCLI() {
+        guard installTask == nil else { return }
+        isPreparingCLI = true; feedback = "正在从 Google 官方准备 CLI…"
+        installTask = Task { [weak self] in
+            guard let self else { return }
+            do { try await AntigravityCLIInstaller.install(); feedback = "官方 CLI 已准备，可以登录账号" }
+            catch { feedback = "官方 CLI 准备失败，请检查网络、磁盘或签名兼容性" }
+            isPreparingCLI = false; installTask = nil
+        }
+    }
+    public func login(_ slot: AntigravitySlot) {
+        guard activeLoginSlot == nil else { loginWindow?.present(); return }
+        do { try AntigravityCLILocator.validate() }
+        catch { feedback = "请先点击准备官方 CLI"; return }
+        activeLoginSlot = slot
+        loginWindow = AntigravityLoginWindowController(slot: slot, store: store, completion: { [weak self] connection in
+            guard let self else { return }
+            self.didLogin(connection); self.feedback = "登录成功，正在读取额度"
+            DetailPreferences.shared.showGoogle = true
+            self.refresh(force: true)
+        }, onClose: { [weak self] in self?.activeLoginSlot = nil; self?.loginWindow = nil })
+        loginWindow?.present()
+    }
+    func didLogin(_ connection: AntigravityConnection) {
+        let old = connections.first { $0.slot == connection.slot && $0.uuid != connection.uuid }
+        let previous = old.flatMap { tasks[$0.uuid] }
+        reloadConnections(); persist()
+        if names[connection.email] == nil, let legacy = defaults.dictionary(forKey: "antigravity.names.v1") as? [String: String],
+           let name = legacy[connection.email] { setName(name, accountID: connection.email) }
+        if let old {
+            Task { [store] in
+                await previous?.value
+                try? store.removeProfile(old.uuid)
+            }
+        }
+    }
+    public func cancelLogin() { loginWindow?.close() }
+    public func disconnect(_ slot: AntigravitySlot) {
+        guard let connection = connection(for: slot) else { return }
+        let previous = tasks.removeValue(forKey: connection.uuid)
+        previous?.cancel(); pending.remove(connection.uuid)
+        // Remove presentation immediately; delete CLI-owned files only after the reader joins.
+        connections.removeAll { $0.uuid == connection.uuid }; accounts.removeAll { $0.id == connection.email }
+        persist(); updateRefreshing()
+        Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            do { try store.disconnect(connection); reloadConnections(); persist(); feedback = "已断开本机账号 " + slot.rawValue }
+            catch { reloadConnections(); feedback = "本机账号清理失败，请重试" }
+        }
+    }
+    public func reloadConnections() {
         do {
-            try access.remove(.antigravityManagementKey)
-            invalidate()
-            namespace = UUID().uuidString
-            defaults.set(namespace, forKey: Key.namespace)
-            feedback = "已断开本应用连接"
-        } catch { feedback = "无法删除钥匙串密钥，连接尚未断开" }
+            let next = try store.connections().sorted { $0.slot.rawValue < $1.slot.rawValue }
+            for old in connections where !next.contains(old) {
+                tasks.removeValue(forKey: old.uuid)?.cancel(); pending.remove(old.uuid)
+                attempts.removeValue(forKey: old.uuid); suspended.remove(old.uuid); retryUntil.removeValue(forKey: old.uuid)
+            }
+            accounts = next.map { connection in
+                guard connections.contains(connection), let old = accounts.first(where: { $0.id == connection.email }) else {
+                    return AntigravityAccountState(account: connection.account)
+                }
+                return old
+            }
+            connections = next; updateRefreshing()
+        } catch { feedback = "本机账号记录无法读取，请检查目录权限" }
     }
-
-    private func invalidate() {
-        generation = UUID()
-        task?.cancel(); task = nil
-        pendingManual = false; isRefreshing = false
-        accounts = []; authSuspended = false; lastAttempt = nil
-        defaults.removeObject(forKey: Key.cache)
-    }
-
     public func start() { stopped = false; refresh(force: false) }
     public func stop() {
-        stopped = true; generation = UUID(); task?.cancel(); task = nil
-        pendingManual = false; isRefreshing = false
+        stopped = true; epoch = UUID(); tasks.values.forEach { $0.cancel() }; tasks = [:]; pending = []
+        for index in accounts.indices { accounts[index].isFetching = false }
+        cancelLogin(); installTask?.cancel(); updateRefreshing()
     }
     public func refresh(force: Bool, now: Date = Date(), afterWake: Bool = false) {
         guard !stopped else { return }
-        if task != nil { if force { pendingManual = true }; return }
-        if !force {
-            guard !authSuspended else { return }
-            if !afterWake, let lastAttempt, now.timeIntervalSince(lastAttempt) >= 0,
-               now.timeIntervalSince(lastAttempt) < 300 { return }
+        for connection in connections {
+            if tasks[connection.uuid] != nil { if force { pending.insert(connection.uuid) }; continue }
+            if suspended.contains(connection.uuid) && !force { continue }
+            if let until = retryUntil[connection.uuid], now < until { continue }
+            if !force, !afterWake, let last = attempts[connection.uuid], now.timeIntervalSince(last) < 300 {
+                let crossedReset = accounts.first(where: { $0.id == connection.email })?.snapshot?.groups
+                    .flatMap(\.buckets).contains { bucket in
+                        guard let reset = bucket.resetsAt else { return false }
+                        return reset > last && reset <= now
+                    } ?? false
+                if !crossedReset { continue }
+            }
+            launch(connection, now: now)
         }
-        let current = generation
-        lastAttempt = now
-        isRefreshing = true
-        let base = baseURL
-        task = Task { [weak self] in
+    }
+    private func launch(_ connection: AntigravityConnection, now: Date) {
+        let id = connection.uuid, currentEpoch = epoch
+        attempts[id] = now
+        if let index = accounts.firstIndex(where: { $0.id == connection.email }) { accounts[index].isFetching = true }
+        tasks[id] = Task { [weak self] in
             guard let self else { return }
-            let outcome = await access.value(for: .antigravityManagementKey,
-                                             purpose: force ? .userRequestedRead : .providerRead,
-                                             interaction: force ? .allowed : .disallowed)
-            guard current == generation, !stopped else { return }
-            guard let key = outcome.secret else {
-                let failure: ProviderFailure = outcome.isMissing ? .notConfigured : .credentialAccessBlocked
-                if outcome.isMissing { accounts = []; defaults.removeObject(forKey: Key.cache) }
-                else { markFailure(failure) }
-                feedback = failure.displayText
-                finish(current: current)
-                return
-            }
-            do {
-                let discovered = try await reader.accounts(baseURL: base, managementKey: key)
-                guard current == generation, !stopped else { return }
-                accounts = discovered.map { account in
-                    let old = self.accounts.first { $0.account.identity == account.identity }
-                    return AntigravityAccountState(account: account, snapshot: old?.snapshot,
-                        isCached: true, isFetching: !account.disabled,
-                        failure: account.disabled ? .suspended : nil)
-                }
-                // Successful discovery removes deleted/replaced accounts before any quota request.
-                persist()
-                authSuspended = false
-                feedback = discovered.isEmpty ? "本机代理没有 Antigravity 账号" : "已发现 \(discovered.count) 个 Google 账号"
-                await withTaskGroup(of: (String, Result<AntigravitySnapshot, ProviderFailure>).self) { group in
-                    for account in discovered where !account.disabled {
-                        let reader = self.reader
-                        group.addTask {
-                            do { return (account.identity, .success(try await reader.quota(account: account, baseURL: base, managementKey: key))) }
-                            catch { return (account.identity, .failure((error as? ProviderFailure) ?? (error is CancellationError ? .cancelled : .other))) }
-                        }
-                    }
-                    for await (identity, result) in group {
-                        guard current == self.generation, !self.stopped,
-                              let index = self.accounts.firstIndex(where: { $0.account.identity == identity }) else { continue }
-                        self.accounts[index].isFetching = false
-                        switch result {
-                        case .success(let snapshot):
-                            guard snapshot.accountIdentity == identity else {
-                                self.accounts[index].failure = .unexpectedResponse; continue
-                            }
-                            self.accounts[index].snapshot = snapshot
-                            self.accounts[index].isCached = false
-                            self.accounts[index].failure = nil
-                        case .failure(let error):
-                            self.accounts[index].isCached = true
-                            self.accounts[index].failure = error
-                        }
-                        self.persist()
-                    }
-                }
-            } catch {
-                guard current == generation, !stopped else { return }
-                let error = (error as? ProviderFailure) ?? .other
-                authSuspended = error.isAuthenticationFailure
-                markFailure(error)
-                feedback = error.displayText
-            }
-            finish(current: current)
-        }
-    }
-
-    private func markFailure(_ failure: ProviderFailure) {
-        for index in accounts.indices {
-            accounts[index].isCached = true
+            let result: Result<AntigravitySnapshot, Error>
+            do { result = .success(try await reader.read(connection: connection, home: store.home(id))) }
+            catch { result = .failure(error) }
+            guard epoch == currentEpoch, !stopped, connections.contains(connection),
+                  let index = accounts.firstIndex(where: { $0.id == connection.email }) else { return }
             accounts[index].isFetching = false
-            accounts[index].failure = failure
+            switch result {
+            case .success(let snapshot):
+                if snapshot.accountIdentity == connection.account.identity {
+                    accounts[index].snapshot = snapshot; accounts[index].failure = nil
+                    accounts[index].isCached = false; suspended.remove(id); retryUntil.removeValue(forKey: id)
+                } else { accounts[index].failure = .unexpectedResponse; accounts[index].isCached = true }
+            case .failure(let error):
+                let failure: ProviderFailure
+                if let error = error as? AntigravityCLIProcess.Failure {
+                    switch error {
+                    case .authenticationRequired: failure = .invalidCredential
+                    case .rateLimited(let retryAfter):
+                        failure = .serverError(status: 429)
+                        // No fabricated Retry-After: an absent duration uses the normal five-minute cadence.
+                        if let retryAfter, retryAfter.isFinite, retryAfter > 0 { retryUntil[id] = Date().addingTimeInterval(retryAfter) }
+                        pending.remove(id)
+                    case .timedOut: failure = .timedOut
+                    case .cancelled: failure = .cancelled
+                    case .invalidReport, .outputTooLarge: failure = .structureUnsupported
+                    default: failure = .other
+                    }
+                } else { failure = error as? ProviderFailure ?? .other }
+                accounts[index].failure = failure; accounts[index].isCached = true
+                if failure.isAuthenticationFailure { suspended.insert(id) }
+            }
+            persist(); tasks[id] = nil; updateRefreshing()
+            if pending.remove(id) != nil && !suspended.contains(id) { launch(connection, now: Date()) }
         }
+        updateRefreshing()
     }
-    private func finish(current: UUID) {
-        guard generation == current else { return }
-        task = nil; isRefreshing = false
-        if pendingManual { pendingManual = false; refresh(force: true) }
-    }
+    private func updateRefreshing() { isRefreshing = !tasks.isEmpty }
     private func persist() {
-        let entries = accounts.compactMap { state -> CacheEntry? in
-            guard let snapshot = state.snapshot else { return nil }
-            return CacheEntry(namespace: namespace, account: state.account, snapshot: snapshot)
+        let entries = connections.compactMap { connection -> Entry? in
+            guard let snapshot = accounts.first(where: { $0.id == connection.email })?.snapshot else { return nil }
+            return Entry(uuid: connection.uuid, email: connection.email, snapshot: snapshot)
         }
-        if let data = try? JSONEncoder().encode(entries) { defaults.set(data, forKey: Key.cache) }
+        if let data = try? JSONEncoder().encode(entries) { defaults.set(data, forKey: Self.cacheKey) }
     }
 }

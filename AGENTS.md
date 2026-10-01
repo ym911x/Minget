@@ -19,9 +19,9 @@ Codex 默认直接负责项目组织、架构、应用代码、测试、构建�
 
 ## 凭证与数据处理边界
 
-允许处理的凭证包括用户在应用内主动提供的 DeepSeek API Key、Command Code API Key、Antigravity 本机代理管理密钥，以及用户在应用自建窗口内完成智谱官方控制台登录后产生的会话数据。默认处理范围限于本地保存和读取对应平台的只读余额或用量数据。
+允许处理的凭证仅包括用户在应用内主动提供的 DeepSeek API Key、Command Code API Key，以及用户在应用自建窗口内完成智谱官方控制台登录后产生的会话数据。默认处理范围限于本地保存和读取对应平台的只读余额或用量数据。
 
-Antigravity 管理密钥只存入 macOS Keychain，只发送至用户设置的 127.0.0.1 本机代理。Minget 不读取磁盘管理密钥、Google OAuth 文件或现有浏览器会话；仅列出 Antigravity 账号及通过固定模板查询额度。禁止授权文件下载、任意 api-call、模型生成、重置额度或修改代理账号。额度查询的 POST 是只读业务查询，不是模型请求。
+Google / Antigravity 的当前路线仅允许 Google 官方 CLI 在 Minget 自建的隔离 `HOME` 和 appdata 内管理授权。Minget 不打开、解析、复制认证文件，不读取现有浏览器会话，不自行创建 OAuth 客户端或直接调用 Google 内部额度端点。官方 CLI 内置 `/usage` 可用于只读验证。正式身份、真实取数和后台限制必须保留实际验收证据；未通过本机真实验收不替换安装版。跨设备验收若由用户明确延期，记录为待验收，不得记为通过。昨日 CLIProxyAPI 路径仅保留为历史原型，不能作为本轮交付或退路。
 
 Command Code 点火是经用户明确授权的唯一例外：Minget 可将应用 Keychain 中的 Command Code API Key 仅传给官方 `command-code` CLI，用于用户手动确认或用户已勾选的定时点火。该路径必须使用固定最小请求、禁用 CLI 自动更新、session 和 skills，使用隔离 `HOME`，不保存或记录输出。应用 HTTP 网络层仍只允许白名单只读用量端点，不得直接调用模型端点。
 

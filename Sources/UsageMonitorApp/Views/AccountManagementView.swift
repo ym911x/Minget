@@ -66,7 +66,7 @@ struct AccountManagementView: View {
     }
 
     private var hasConnectedSource: Bool {
-        model.google.accounts.contains { !$0.isCached && $0.snapshot != nil }
+        !model.google.connections.isEmpty
         || model.profileStates.contains { !$0.isStale && $0.snapshot != nil }
         || model.providerReports.contains { $0.connection == .connected && $0.isLive }
     }

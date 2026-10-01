@@ -41,7 +41,7 @@ fi
 
 APP_NAME="Minget"
 EXECUTABLE_NAME="UsageMonitor"
-BUNDLE_ID="local.usagemonitor.UsageMonitor"
+BUNDLE_ID="${MINGET_BUNDLE_ID:-local.usagemonitor.UsageMonitor}"
 
 # --- signing identity -------------------------------------------------------------
 # A stable certificate identity is what keeps the keychain access control list matching.
@@ -153,7 +153,7 @@ cat > "$STAGING_CONTENTS/Info.plist" <<PLIST
     <key>LSUIElement</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHumanReadableUsageDescription</key>
-    <string>Reads isolated Codex profiles and read-only provider usage. User-provided provider keys are stored in macOS Keychain; Google authorization stays in the local proxy.</string>
+    <string>Reads isolated Codex profiles and read-only provider usage. Provider keys supplied in Minget are stored in macOS Keychain. Google authorization is managed by the official CLI in a private local profile.</string>
 </dict>
 </plist>
 PLIST
@@ -170,8 +170,9 @@ each with its own CODEX_HOME and its own child process — and reads account rat
 limits over stdio JSON-RPC. Both profiles refresh in parallel. Only normalized
 usage numbers are cached.
 
-Google / Antigravity quotas are read through a fixed local-proxy query. Provider
-keys supplied in the app are stored in macOS Keychain. Google OAuth stays in CPA.
+Google / Antigravity login uses the official CLI in a private, per-account local
+profile. Minget does not read the CLI's authentication data. Provider keys supplied
+in the app are stored in macOS Keychain.
 Launch with --show-accounts to open the connection form.
 
 Contents/MacOS/MingetCLI is the QA smoke diagnostic:

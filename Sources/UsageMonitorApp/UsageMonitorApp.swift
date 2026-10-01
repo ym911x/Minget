@@ -90,6 +90,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let model = AppLifecycle.model
             model.start()
             AppLifecycle.statusItem.install(model: model)
+            if ProcessInfo.processInfo.arguments.contains("--google-login-a") || ProcessInfo.processInfo.arguments.contains("--google-login-b") {
+                model.google.login(ProcessInfo.processInfo.arguments.contains("--google-login-b") ? .b : .a)
+            }
             if showFirstRun || ProcessInfo.processInfo.arguments.contains("--show-accounts") {
                 FirstRunGate.markPresented()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

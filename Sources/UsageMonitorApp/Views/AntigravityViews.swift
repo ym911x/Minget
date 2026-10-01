@@ -4,59 +4,43 @@ import UsageMonitorCore
 struct AntigravityConnectionView: View {
     @ObservedObject var google: AntigravityModel
     @ObservedObject var preferences: DetailPreferences = .shared
-    @State private var address: String
-    @State private var key = ""
-    @State private var expanded = false
-
-    init(google: AntigravityModel, preferences: DetailPreferences = .shared) {
-        self.google = google
-        self.preferences = preferences
-        _address = State(initialValue: google.baseURL)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Google / Antigravity").font(.headline)
                 Spacer()
-                Button(expanded ? "收起" : "连接或管理") { expanded.toggle() }
+                Button(google.isPreparingCLI ? "准备中…" : "准备官方 CLI") { google.prepareCLI() }
+                    .disabled(google.isPreparingCLI)
             }
             Text(google.feedback).font(.system(size: 11)).foregroundStyle(.secondary)
-            if expanded {
-                TextField("本机代理地址", text: $address)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Antigravity 本机代理地址")
-                SecureField("管理密钥", text: $key)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Antigravity 管理密钥")
-                HStack {
-                    Button("保存并连接") {
-                        if google.connect(baseURL: address, key: key) {
-                            key = ""
-                            preferences.showGoogle = true
+            ForEach(AntigravitySlot.allCases, id: \.self) { slot in
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text("Google 账号 " + slot.rawValue).font(.subheadline.bold())
+                        Spacer()
+                        if google.activeLoginSlot == slot {
+                            Button("继续登录") { google.login(slot) }
+                            Button("取消登录") { google.cancelLogin() }
+                        } else {
+                            Button(google.connection(for: slot) == nil ? "登录 Google 账号" : "重新登录") { google.login(slot) }
+                                .disabled(google.activeLoginSlot != nil || google.isPreparingCLI)
                         }
-                    }.disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("授权读取 / 刷新") { google.refresh(force: true) }
-                    Spacer()
-                    Button("断开连接") { google.disconnect(); key = "" }
-                }
-                Text("使用 8317 管理面板的管理密钥。Google 登录和账号启停在代理面板中管理。")
-                    .font(.system(size: 10)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                ForEach(google.accounts) { state in
-                    VStack(alignment: .leading, spacing: 3) {
-                        TextField("账号显示名称", text: Binding(
-                            get: { google.names[state.id] ?? state.account.label },
-                            set: { google.setName($0, accountID: state.id) }))
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityLabel("Google 账号显示名称")
-                        Text(state.statusText).font(.system(size: 10)).foregroundStyle(.secondary)
+                        if google.connection(for: slot) != nil {
+                            Button("断开本机") { google.disconnect(slot) }.disabled(google.activeLoginSlot != nil)
+                        }
                     }
-                }
+                    Text(google.loginStatus(for: slot)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    if let connection = google.connection(for: slot), let state = google.accounts.first(where: { $0.id == connection.email }) {
+                        Text("额度：" + state.statusText).font(.system(size: 10)).foregroundStyle(.secondary)
+                        TextField("账号显示名称", text: Binding(get: { google.names[state.id] ?? state.account.label },
+                            set: { google.setName($0, accountID: state.id) })).textFieldStyle(.roundedBorder)
+                    }
+                }.padding(.vertical, 4)
             }
-        }
-        .padding(12)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            if !google.connections.isEmpty { Button("刷新 Google 额度") { google.refresh(force: true) } }
+            Text("在官方页面分别登录两个账号。授权数据由官方 CLI 保存在这台 Mac 的独立账号目录中。")
+                .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }.padding(12).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

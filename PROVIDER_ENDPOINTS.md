@@ -1,6 +1,6 @@
 # 服务端点与取数依据
 
-更新日期：2026-09-29
+更新日期：2026-10-01
 适用版本：1.6.0
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
@@ -14,6 +14,22 @@
 | C | 仅由自动化测试或第三方资料支持，尚未完成真实账号验证 |
 
 ## Google / Antigravity（1.6.0）
+
+2026-10-01 最新 A 级证据：Minget 正式 A/B 独立 profile 的官方 CLI `/usage`、重启与真实卡片均已对照通过；两个报告 SUCCESS、num_turns 和全部模型 token 为 0。第二 Mac 由用户延期；续期及授权失效未实测。下文较早阶段状态保留供追溯，最新结论见验收台账。
+
+2026-10-01 实测补充：按本机 CPA Manager Plus v1.14.1 的固定查询结构，通过 CLIProxyAPI v8.0.4 分别代发两个账号的 `retrieveUserQuotaSummary`，Google 上游均 HTTP 200，返回 Gemini 与 Claude/GPT 共享组及明确的 `5h`/`weekly`、比例、重置时间。project 从公开账号元数据取得，未读取授权文件、未发起模型请求。该证据确认本机代理查询路线能读取官方数据；不表示 Minget 自有 OAuth 或正式 CLI 应用接线已完成。详细源码依据、与截图的采样时间差及可借鉴内容见 [CPAMP 核对记录](docs/versions/1.6.0/CPAMP_REFERENCE_20261001.md)。
+
+### 官方 CLI 试验（2026-09-30 后续）
+
+用户已允许官方 CLI 依赖。Google 签名的 Antigravity CLI 1.2.13 实测支持 `--print /usage --output-format json`：两个真实隔离账号各自返回共享额度组、`weekly`／`5h`、`remaining_fraction` 和 `reset_time`；轮次和模型 token 为 0。该真实试验是 A 级证据，详见 `docs/versions/1.6.0/OFFICIAL_CLI_PROBE.md`。正式运行现已接入 CLI 的双账号模型、登录及刷新；旧代理网络客户端只在历史记录和测试目标编译。真实空 profile 的认证快速终止、首屏到完整 OAuth URL 识别、正式双账号授权后的沙箱额度查询与本机卡片对账通过；自然续期未实测，第二台 Mac 由用户延期。见 `docs/versions/1.6.0/ACCEPTANCE.md`。仅以邮箱确认本版身份，JSON 绑定 UUID；不读取认证文件、不输出授权码/URL/原始报告。
+
+查询固定 30 秒总超时、每路输出 1 MiB 上限；沙箱拒绝 fork、Apple Events 和 LaunchServices，HOME/appdata/workspace/tmp 均为账号专用绝对路径。仅从 macOS 系统 HTTP/HTTPS 配置取得网络代理，未修改代理配置、不读取任意 shell 凭证。CLI 错误字符串中的明确 HTTP 429 可分类，但没有已确认的 Retry-After 字段，不推算等待时长。
+
+应用内下载只访问固定 Google Storage 官方包，拒绝重定向；校验 archive/executable SHA-512 和 Google TeamIdentifier EQHXZ8M8AV。仅支持已验证的 arm64 1.2.13，不静默升级。官方 [Headless 文档](https://antigravity.google/docs/cli/headless/)说明 JSON error 是字符串；[Model Quotas 文档](https://antigravity.google/docs/cli/commands/usage/)说明只读额度命令。实际生命周期仍以本轮验证为准。
+
+### 此前直连调查与昨日代理原型
+
+**2026-09-30 自有 OAuth 直连调查。** Google [Antigravity 附加条款第 6 条](https://antigravity.google/terms)及[官方 FAQ](https://www.antigravity.google/docs/faq/)没有明确给 Minget 自行访问内部接口的许可；原调查将只读软件一概判为禁止的结论过度。下述内部端点和代理路径仅记录昨日开发原型，不构成当前官方 CLI 路线的生产依据。详情见 `docs/versions/1.6.0/DIRECT_GOOGLE_FEASIBILITY.md`。未注册 Minget OAuth 客户端，未用真实账号调用内部端点。
 
 兼容代码依据：CLIProxyAPI v7.3.18 的 internal/api/handlers/management/api_tools.go、auth_files.go，CPA Manager Plus v1.14.1 的 apps/web/src/utils/quota/builders.ts 和 types/quota.ts。当前验证为 C，真实双账号尚待应用内连接核对。控制台内部协议，非 Google 公开稳定 API。
 
