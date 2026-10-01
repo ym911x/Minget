@@ -1,0 +1,9 @@
+{
+  "backup": "/Users/yuyimeng/Applications/Minget Backups/1.6.1-before-window-fix-20261001-140552/Minget.app",
+  "installed_path": "/Users/yuyimeng/Applications/Minget.app",
+  "executable_sha256": "c19a601ba2084d56be50c95f3b72c1bae79bf6498a084fc518840fbbabfff51d",
+  "source_commit": "52f3b89",
+  "version": "1.6.1",
+  "signature": "strict verification passed; Minget Local Signing",
+  "native_ui": "Finder exact-path launch; Gemini disclosure and wheel scrolling; ChatGPT and overview navigation inspected via CUA"
+}
