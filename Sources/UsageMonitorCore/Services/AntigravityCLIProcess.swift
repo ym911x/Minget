@@ -12,6 +12,7 @@ public struct AntigravityCLIProcess: Sendable {
         case outputTooLarge
         case invalidReport
         case authenticationRequired
+        case accountRegionUnavailable
         case rateLimited(retryAfter: TimeInterval?)
     }
 
@@ -153,6 +154,10 @@ public struct AntigravityCLIProcess: Sendable {
     static func reportFailure(_ data: Data) -> Failure? {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               root["status"] as? String == "ERROR", let error = root["error"] as? String else { return nil }
+        let message = error.lowercased()
+        if message.contains("eligibility check failed") && message.contains("not currently available in your location") {
+            return .accountRegionUnavailable
+        }
         if error.range(of: "(?i)(?:http|status(?: code)?)[ :=]+429\\b", options: .regularExpression) != nil {
             return .rateLimited(retryAfter: nil)
         }

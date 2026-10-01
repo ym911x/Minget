@@ -57,6 +57,23 @@ final class AntigravityCLIProcessTests: XCTestCase {
             XCTAssertEqual(error as? AntigravityCLIProcess.Failure, .nonZeroExit)
         }
     }
+    func testExplicitRegionEligibilityErrorHasAUsefulCategoryBeforeNonZeroExit() throws {
+        let fixture = try Fixture(#"echo '{"status":"ERROR","error":"Eligibility check failed: Your current account is not eligible for Antigravity, because it is not currently available in your location."}'; exit 1"#)
+        defer { fixture.remove() }
+        XCTAssertThrowsError(try fixture.runner().run()) {
+            XCTAssertEqual($0 as? AntigravityCLIProcess.Failure, .accountRegionUnavailable)
+        }
+    }
+    func testRegionClassificationRequiresErrorStatusAndSpecificEligibilityMessage() throws {
+        for root in [
+            ["status": "SUCCESS", "error": "Eligibility check failed: not currently available in your location"],
+            ["status": "ERROR", "error": "Eligibility check failed: age verification required"],
+            ["status": "ERROR", "error": "not currently available in your location"],
+            ["status": "ERROR", "error": 123]
+        ] as [[String: Any]] {
+            XCTAssertNil(AntigravityCLIProcess.reportFailure(try JSONSerialization.data(withJSONObject: root)))
+        }
+    }
 
     func testTotalTimeoutCoversWaitingBeforeAnyReport() throws {
         let fixture = try Fixture("sleep 5")

@@ -1,0 +1,112 @@
+Building for debugging...
+[1 / 10]
+[2 / 11] UsageMonitorCore
+[5 / 14] UsageMonitorCore
+[12 / 21] UsageMonitorCore
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+132 |         // C `Boolean`, so the round trip is done in `Bool`.
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+    |                          `- warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+136 |         return {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+    |             `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+136 |         return {
+137 |             guard readStatus == errSecSuccess else {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+138 |                 // The previous state could not be read: restore the documented default
+139 |                 // instead of leaving interaction disabled.
+140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
+    |                     `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
+    |                 `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+144 |         }
+145 |     }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[13 / 22] UsageMonitorCore
+[21 / 29] UsageMonitorCore
+[33 / 42] UsageMonitorApp
+[34 / 43] UsageMonitorApp
+[39 / 47] UsageMonitorApp
+[40 / 48] UsageMonitorApp-product
+[41 / 47] UsageMonitorApp
+[54 / 61] UsageMonitorApp-product
+[55 / 62] UsageMonitorApp-product
+[57 / 63] UsageMonitorApp-product
+[60 / 63] UsageMonitorAppTests-product
+[72 / 75] UsageMonitorAppTests-product
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorAppTests/ProductionWiringTests.swift:114:40: warning: 'is' test is always true
+112 |         let entryPoint: () -> Void = MingetMain.main
+113 |         _ = entryPoint
+114 |         XCTAssertTrue(AppDelegate.self is NSApplicationDelegate.Type)
+    |                                        `- warning: 'is' test is always true
+115 |     }
+116 | 
+[78 / 80] UsageMonitorAppTests-product
+[81 / 84] UsageMonitorCoreTests-product
+[90 / 93] UsageMonitorCoreTests-product
+[96 / 98] UsageMonitorCoreTests-product
+[99 / 103] UsageMonitorCLI-product
+[102 / 103] UsageMonitorCLI-product
+Build complete! (6.49秒)
+Test Suite 'Selected tests' started at 2026-10-01 21:05:35.258.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-01 21:05:35.259.
+Test Suite 'AntigravityCLIProcessTests' started at 2026-10-01 21:05:35.259.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testAuthenticationWaitIsStoppedBeforeTotalTimeout]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testAuthenticationWaitIsStoppedBeforeTotalTimeout]' passed (0.890 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testExplicitRegionEligibilityErrorHasAUsefulCategoryBeforeNonZeroExit]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testExplicitRegionEligibilityErrorHasAUsefulCategoryBeforeNonZeroExit]' passed (0.639 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testFixedArgumentsIsolatedEnvironmentAndParsedReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testFixedArgumentsIsolatedEnvironmentAndParsedReport]' passed (0.359 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testNonZeroExitCannotPublishAValidLookingReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testNonZeroExitCannotPublishAValidLookingReport]' passed (0.358 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testOutputLimitAndCancellation]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testOutputLimitAndCancellation]' passed (0.378 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRegionClassificationRequiresErrorStatusAndSpecificEligibilityMessage]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRegionClassificationRequiresErrorStatusAndSpecificEligibilityMessage]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRejectsMissingDirectories]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testRejectsMissingDirectories]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testTotalTimeoutCoversWaitingBeforeAnyReport]' started.
+Test Case '-[UsageMonitorCoreTests.AntigravityCLIProcessTests testTotalTimeoutCoversWaitingBeforeAnyReport]' passed (0.154 seconds).
+Test Suite 'AntigravityCLIProcessTests' passed at 2026-10-01 21:05:38.040.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2.780 (2.781) seconds
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-01 21:05:38.040.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2.780 (2.781) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 21:05:38.041.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2.780 (2.782) seconds
+Test Suite 'Selected tests' started at 2026-10-01 21:05:38.114.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-01 21:05:38.114.
+Test Suite 'AntigravityOfficialModelTests' started at 2026-10-01 21:05:38.114.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testCacheBelongsToUUIDAndEmailAndReplacementNeverInheritsIt]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testCacheBelongsToUUIDAndEmailAndReplacementNeverInheritsIt]' passed (0.015 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testDisconnectWaitsForReadAndRejectsLatePublication]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testDisconnectWaitsForReadAndRejectsLatePublication]' passed (0.285 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testFailureRetainsOwnCacheAndStopRejectsOldResults]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testFailureRetainsOwnCacheAndStopRejectsOldResults]' passed (0.180 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testManualRequestsQueueExactlyOneFollowUpPerAccount]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testManualRequestsQueueExactlyOneFollowUpPerAccount]' passed (0.121 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testRegionIneligibleAccountHasNoFalseCacheAndDoesNotBreakAnotherAccount]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testRegionIneligibleAccountHasNoFalseCacheAndDoesNotBreakAnotherAccount]' passed (0.012 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testResetCrossingTriggersOneReadWithoutFillingQuota]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testResetCrossingTriggersOneReadWithoutFillingQuota]' passed (0.016 seconds).
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testTwoAccountsPublishIndependentlyAndAuthenticationFailureIsIsolated]' started.
+Test Case '-[UsageMonitorAppTests.AntigravityOfficialModelTests testTwoAccountsPublishIndependentlyAndAuthenticationFailureIsIsolated]' passed (0.264 seconds).
+Test Suite 'AntigravityOfficialModelTests' passed at 2026-10-01 21:05:39.010.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.895 (0.896) seconds
+Test Suite 'UsageMonitorAppTests.xctest' passed at 2026-10-01 21:05:39.010.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.895 (0.896) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 21:05:39.010.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.895 (0.896) seconds

@@ -5,6 +5,8 @@ import XCTest
 private actor OfficialFixtureReader: AntigravityUsageReading {
     var counts: [UUID: Int] = [:]
     var failures: [UUID: ProviderFailure] = [:]
+    var cliFailures: [UUID: AntigravityCLIProcess.Failure] = [:]
+    func failCLI(_ id: UUID, with failure: AntigravityCLIProcess.Failure) { cliFailures[id] = failure }
     var delays: [UUID: UInt64] = [:]
     var resets: [UUID: Date] = [:]
     func setReset(_ id: UUID, date: Date) { resets[id] = date }
@@ -17,6 +19,7 @@ private actor OfficialFixtureReader: AntigravityUsageReading {
         let failure = failures[connection.uuid], delay = delays[connection.uuid, default: 0]
         if delay > 0 { try? await Task.sleep(nanoseconds: delay) } // Deliberately ignores cancellation: test late publication.
         if let failure { throw failure }
+        if let failure = cliFailures[connection.uuid] { throw failure }
         let data = Data("""
         {"status":"SUCCESS","num_turns":0,"usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0},"command":{"name":"usage","data":{"groups":[{"name":"Synthetic","buckets":[{"id":"5h","window":"5h","remaining_fraction":0}]}]}}}
         """.utf8)
@@ -77,6 +80,21 @@ final class AntigravityOfficialModelTests: XCTestCase {
         model.refresh(force: false, now: Date().addingTimeInterval(400)); await settle(model)
         let aCount = await reader.count(f.a.uuid), bCount = await reader.count(f.b.uuid)
         XCTAssertEqual(aCount, 1); XCTAssertEqual(bCount, 2)
+    }
+    func testRegionIneligibleAccountHasNoFalseCacheAndDoesNotBreakAnotherAccount() async throws {
+        let f = try Fixture(); defer { f.cleanup() }
+        let reader = OfficialFixtureReader(); await reader.failCLI(f.a.uuid, with: .accountRegionUnavailable)
+        let model = f.model(reader); model.start(); await settle(model)
+        let restricted = try XCTUnwrap(model.accounts.first)
+        XCTAssertEqual(restricted.failure, .accountRegionUnavailable)
+        XCTAssertEqual(restricted.statusText, "Google 账号地区不支持 Antigravity")
+        XCTAssertNil(restricted.snapshot)
+        XCTAssertFalse(restricted.hasCachedData)
+        XCTAssertFalse(ProviderFailure.accountRegionUnavailable.isAuthenticationFailure)
+        XCTAssertNotNil(model.accounts.last?.snapshot)
+        let restored = f.model(reader)
+        XCTAssertFalse(restored.accounts.first?.hasCachedData == true)
+        XCTAssertTrue(restored.accounts.last?.hasCachedData == true)
     }
     func testManualRequestsQueueExactlyOneFollowUpPerAccount() async throws {
         let f = try Fixture(); defer { f.cleanup() }

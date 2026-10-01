@@ -9,6 +9,8 @@ public enum ProviderFailure: Error, Equatable, Sendable {
     case notConfigured
     /// The credential was rejected (401, 403, expired console session).
     case invalidCredential
+    /// Google explicitly rejected the account's geographical eligibility, not its login.
+    case accountRegionUnavailable
     /// The device has no usable network path.
     case networkUnreachable
     case timedOut
@@ -67,6 +69,7 @@ public enum ProviderFailure: Error, Equatable, Sendable {
         switch self {
         case .notConfigured: return "notConfigured"
         case .invalidCredential: return "invalidCredential"
+        case .accountRegionUnavailable: return "accountRegionUnavailable"
         case .networkUnreachable: return "networkUnreachable"
         case .timedOut: return "timedOut"
         case .serverError(let status): return "serverError(status:\(status))"
@@ -89,6 +92,8 @@ public enum ProviderFailure: Error, Equatable, Sendable {
             return "尚未配置连接"
         case .invalidCredential:
             return "凭证被拒绝或已过期，请重新连接"
+        case .accountRegionUnavailable:
+            return "Google 账号地区不支持 Antigravity"
         case .networkUnreachable:
             return "网络不可用，显示最近一次成功数据"
         case .timedOut:

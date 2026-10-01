@@ -76,18 +76,24 @@ struct AntigravityOverviewCard: View {
         VStack(alignment: .leading, spacing: 12) {
             AccountCardHeader(service: .gemini, name: displayName, subtitle: "Gemini · Google / Antigravity",
                               identity: state.account.email ?? "账号暂不可用", status: state.statusText,
-                              isCached: state.isCached)
+                              isCached: state.hasCachedData)
                 .frame(height: 50)
             quotaRows(primary)
             HStack {
                 Text(state.snapshot.map { "最近成功 " + $0.fetchedAt.formatted(date: .omitted, time: .shortened) } ?? "尚未成功读取")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer()
-                if state.isCached { Text("缓存数据").font(.system(size: 11)).foregroundStyle(.orange) }
+                if state.hasCachedData { Text("缓存数据").font(.system(size: 11)).foregroundStyle(.orange) }
             }
             if let failure = state.failure {
-                Text(failure.displayText).font(.system(size: 11)).foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Text(failure.displayText).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if failure == .accountRegionUnavailable {
+                        Spacer(minLength: 8)
+                        Link("官方说明", destination: URL(string: "https://www.antigravity.google/docs/faq/#what-is-google-antigravitys-geographical-availability")!)
+                    }
+                }.font(.system(size: 11))
             }
             let other = groups.filter { $0.id != primary?.id }
             if !other.isEmpty {
@@ -113,10 +119,10 @@ struct AntigravityOverviewCard: View {
     @ViewBuilder private func quotaRows(_ group: AntigravityQuotaGroup?) -> some View {
         QuotaWindowBlock(label: "5 小时", kind: .fiveHour,
                          window: group?.buckets.first { $0.kind == .fiveHour }?.rateLimitWindow,
-                         isCached: state.isCached, resetDate: group?.buckets.first { $0.kind == .fiveHour }?.resetsAt)
+                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .fiveHour }?.resetsAt)
         QuotaWindowBlock(label: "周额度", kind: .weekly,
                          window: group?.buckets.first { $0.kind == .weekly }?.rateLimitWindow,
-                         isCached: state.isCached, resetDate: group?.buckets.first { $0.kind == .weekly }?.resetsAt)
+                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .weekly }?.resetsAt)
         ForEach(group?.buckets.filter { $0.kind == .unknown } ?? []) { bucket in
             HStack {
                 Text(bucket.label)

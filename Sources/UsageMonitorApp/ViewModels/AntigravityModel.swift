@@ -9,6 +9,7 @@ public struct AntigravityAccountState: Identifiable, Equatable {
     public var isFetching = false
     public var failure: ProviderFailure?
     public var id: String { account.id }
+    public var hasCachedData: Bool { isCached && snapshot != nil }
     public var statusText: String {
         if account.disabled { return "账号已停用" }
         if isFetching { return snapshot == nil ? "正在读取额度…" : "正在刷新，显示上次数据" }
@@ -222,6 +223,7 @@ public final class AntigravityModel: ObservableObject {
                 if let error = error as? AntigravityCLIProcess.Failure {
                     switch error {
                     case .authenticationRequired: failure = .invalidCredential
+                    case .accountRegionUnavailable: failure = .accountRegionUnavailable
                     case .rateLimited(let retryAfter):
                         failure = .serverError(status: 429)
                         // No fabricated Retry-After: an absent duration uses the normal five-minute cadence.

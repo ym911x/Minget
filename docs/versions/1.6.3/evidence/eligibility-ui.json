@@ -1,0 +1,13 @@
+{
+  "version": "1.6.3",
+  "formal_app": "/Applications/Minget.app",
+  "observation": "native AX and screenshot, not persisted",
+  "account_management_region_status_visible": true,
+  "google_detail_region_status_visible": true,
+  "official_help_link_visible": true,
+  "no_snapshot_no_cache_label": true,
+  "other_google_accounts_live": 2,
+  "observed_success_time": "21:22",
+  "target_quota_acceptance": "not passed: official eligibility refusal",
+  "scheduled_fire_disabled_for_observation": true
+}

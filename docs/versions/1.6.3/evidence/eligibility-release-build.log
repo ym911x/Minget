@@ -1,0 +1,66 @@
+== signing identity: Minget Local Signing ==
+== swift build (release) ==
+Building for production...
+[1 / 1]
+[2 / 6] UsageMonitorCore
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+132 |         // C `Boolean`, so the round trip is done in `Bool`.
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+    |                          `- warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+136 |         return {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+133 |         var previous = DarwinBoolean(true)
+134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+135 |         _ = SecKeychainSetUserInteractionAllowed(false)
+    |             `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+136 |         return {
+137 |             guard readStatus == errSecSuccess else {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+138 |                 // The previous state could not be read: restore the documented default
+139 |                 // instead of leaving interaction disabled.
+140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
+    |                     `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+141 |                 return
+142 |             }
+143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
+    |                 `- warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+144 |         }
+145 |     }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[4 / 7] UsageMonitorCore
+[12 / 17] UsageMonitorApp-product
+[13 / 18] UsageMonitorCLI-product
+[15 / 18] UsageMonitorCLI-product
+[16 / 18] UsageMonitorCLI-product
+[18 / 21] UsageMonitorApp-product
+[20 / 21] UsageMonitorApp-product
+[21 / 21] UsageMonitorApp-product
+Build complete! (16.22秒)
+== staging /tmp/minget-1.6.3-eligibility-stage/Minget.app ==
+== codesign (Minget Local Signing) ==
+/tmp/minget-1.6.3-eligibility-stage/Minget.app: replacing existing signature
+== strict verification in staging ==
+--prepared:/private/tmp/minget-1.6.3-eligibility-stage/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-1.6.3-eligibility-stage/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-1.6.3-eligibility-stage/Minget.app: valid on disk
+/tmp/minget-1.6.3-eligibility-stage/Minget.app: satisfies its Designated Requirement
+/tmp/minget-1.6.3-eligibility-stage/Minget.app/Contents/Info.plist: OK
+== install to /tmp/minget-1.6.3-eligibility-candidate/Minget.app ==
+--prepared:/private/tmp/minget-1.6.3-eligibility-candidate/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-1.6.3-eligibility-candidate/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-1.6.3-eligibility-candidate/Minget.app: valid on disk
+/tmp/minget-1.6.3-eligibility-candidate/Minget.app: satisfies its Designated Requirement
+== archive copy to /tmp/minget-1.6.3-eligibility-archive/Minget.app ==
+/tmp/minget-1.6.3-eligibility-archive/Minget.app: valid on disk
+/tmp/minget-1.6.3-eligibility-archive/Minget.app: satisfies its Designated Requirement
+built:   /tmp/minget-1.6.3-eligibility-candidate/Minget.app
+archive: /tmp/minget-1.6.3-eligibility-archive/Minget.app

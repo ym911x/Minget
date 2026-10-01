@@ -21,6 +21,8 @@
 - 移除 ChatGPT 连接新增官方 `account/logout`，作用于该 Profile 的 app-server。接口依据：[官方文档](https://learn.chatgpt.com/docs/app-server)。Minget 不直接编辑认证文件。
 - 第三、第四个账号和 API 多连接的自动测试只证明接线与隔离。真实新账号登录、额度核对和真实移除的验收状态见 `docs/versions/1.6.3/ACCEPTANCE.md`。
 
+1.6.3 实测追加：第三个 Google 账号的官方 CLI 返回地区资格检查错误（ERROR，num_turns/total_tokens=0）。新增固定分类 `accountRegionUnavailable`，无额度快照不标记缓存。此证据证明目标身份已连接但额度被资格检查拒绝，不证明该账号真实取数成功。详见 `docs/versions/1.6.3/GOOGLE_ELIGIBILITY_FIX.md`。
+
 ## Google / Antigravity（1.6.0）
 
 2026-10-01 最新 A 级证据：Minget 正式 A/B 独立 profile 的官方 CLI `/usage`、重启与真实卡片均已对照通过；两个报告 SUCCESS、num_turns 和全部模型 token 为 0。第二 Mac 由用户延期；续期及授权失效未实测。下文较早阶段状态保留供追溯，最新结论见验收台账。

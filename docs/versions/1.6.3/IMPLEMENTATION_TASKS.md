@@ -10,3 +10,5 @@
 6. Release 候选严格签名、真实界面核验、备份安装、文档与验收台账。
 
 任务 1–6 已完成本机实施、自动回归、签名、备份安装和入口检查。真实新增账号及服务端操作保留待验收，见 IMPLEMENTATION_REPORT.md、REVIEW.md、ACCEPTANCE.md。
+
+7. 用户现场反馈后补充 Google 地区资格错误分类和真实缓存标记。实施与验证记录见 GOOGLE_ELIGIBILITY_FIX.md。

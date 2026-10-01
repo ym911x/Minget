@@ -1,0 +1,18 @@
+{
+  "exit": 1,
+  "stdout_bytes": 339,
+  "stderr_bytes": 143,
+  "proxy_enabled": true,
+  "status": "ERROR",
+  "command": null,
+  "groups": 0,
+  "num_turns": 0,
+  "total_tokens": 0,
+  "markers": [
+    "error"
+  ],
+  "error_type_names": [],
+  "failure_category": "accountRegionUnavailable",
+  "official_cli_version": "1.2.13",
+  "probe": "fixed read-only /usage in app-owned isolated profile"
+}

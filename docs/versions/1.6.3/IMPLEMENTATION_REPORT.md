@@ -42,3 +42,9 @@ MINGET_ARCHIVE_PATH=/tmp/minget-1.6.3-archive/Minget.app \
 ## 未完成的现场验收
 
 第三/第四个真实 ChatGPT 和 Google 登录、第二个真实 API Key、真实移除和重新登录返回、新账号真实点火与计划触发需用户提供身份/Key 或操作后核对。自动测试不发真实模型请求，不以假额度证明取数。第二 Mac、真实睡眠唤醒与自然授权续期仍无本轮证据。
+
+## 现场反馈后的修正
+
+用户提供第三个 Google 账号无法取数的现场截图。通过该账号自建隔离目录的官方 `/usage`，定位到地区资格检查拒绝。修正错误分类及无快照缓存标签，见 [诊断与修正](GOOGLE_ELIGIBILITY_FIX.md)；原连接、名称与计划保留。
+
+本轮定向 15 项及完整 658 项（653 通过、5 跳过、0 失败）通过；签名构建并备份安装完成，正式安装版真实界面确认提示、官方链接、无虚假缓存和原两个 Google 账号成功刷新。构建使用 `/tmp/minget-1.6.3-eligibility-{stage,candidate,archive}/Minget.app`，完整测试的 `MINGET_TEST_APP_PATH` 指向本轮 candidate，其余 scratch 和禁用定时点火参数沿用上文。没有推送、发布或改 Google 设置。

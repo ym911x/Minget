@@ -8,3 +8,5 @@
 - `synthetic-accounts-{light,dark}.png`、`synthetic-add-api-{light,dark}.png`：真实 SwiftUI 组件的示例渲染，无真实 Key 或额度。离屏渲染未绘制侧栏，不能用于证明原生窗口现场交互；现场交互另见 ACCEPTANCE.md。
 
 本目录不保存真实用户账号截图、AX 明细或认证文件。记录仅用于本机交付，没有公开发布。
+
+`eligibility-*` 为第三个 Google 账号反馈后的修正证据：diagnostic 仅保存固定分类/计数、不含个人身份或原始报告；focused-tests / regression 为本轮自动测试；release-build 与 install 为当前安装版。初版测试与安装证据保留作历史记录，不代表当前二进制指纹。

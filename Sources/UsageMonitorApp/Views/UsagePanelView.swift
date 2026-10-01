@@ -276,7 +276,7 @@ struct UsagePanelView: View {
             ForEach(model.google.accounts) { state in
                 OverviewAccountRow(service: .gemini, name: model.google.displayName(state.account),
                     status: state.statusText, summary: .gemini(state.snapshot?.groups ?? []),
-                    isCached: state.isCached) { preferences.selectedTab = .google }
+                    isCached: state.hasCachedData) { preferences.selectedTab = .google }
             }
         }
         if model.accountRegistry != nil {
