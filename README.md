@@ -9,9 +9,9 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 的额度、余额和使用状态。并支持两个 Google / Antigravity 账号的官方额度查询。
 
-## 当前迭代：1.6.1 界面统一
+## v1.6.1：界面统一与稳定性
 
-概览显示账号摘要，选择服务后查看完整额度。GPT/Gemini 共用两位小数、额度条与重置时间样式；设置及账号管理合并为原生侧栏窗口。当前代码与验证状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为入口，[1.6.1 记录](docs/versions/1.6.1/IMPLEMENTATION_REPORT.md)保存实施和验收证据。1.6.1 尚未公开发布。
+概览显示账号摘要，点击顶部服务 Logo 后查看完整额度，刷新状态位于刷新按钮旁。GPT/Gemini 共用两位小数、额度条与重置时间样式；设置及账号管理合并为原生侧栏窗口。当前代码与验证状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为入口，[1.6.1 记录](docs/versions/1.6.1/IMPLEMENTATION_REPORT.md)保存实施和验收证据。发布准备已获用户授权，远端发布状态见 [发布记录](docs/versions/1.6.1/PUBLICATION.md)。
 
 以下各版本章节保留对应历史状态，不能替代当前任务台账。
 
