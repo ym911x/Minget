@@ -120,3 +120,10 @@ CLI JSON 的 error 字段为字符串，没有已确认的 Retry-After 字段。
 - 个人邮箱、本机用户名和正式 profile UUID 已脱敏，私有文档原件在本地临时目录保留，不纳入 Git 或源码包。构建缓存、应用包、官方 CLI、账号目录和元数据不纳入公开源码包。
 - 本地 main 是当前开发分支祖先；此次没有 fetch、push、合并 main、标签、GitHub PR 或 Release。发布时仍需重新检查远端 main 和实际 CI。
 - 公开政策延续源码分发，Release / PR / 提交文案与 README 已准备；1.5.0 纳入 1.6.0 说明已补齐。第二 Mac、自然续期/撤销及真实唤醒保持待验收。
+
+## 2026-10-01 发布时 CI 编译兼容性修复
+
+- 首次远端 CI [36808851569](https://github.com/ym911x/Minget/actions/runs/36808851569) 在编译阶段失败：ChatGPT 登录回调的嵌套 MainActor Task 引用了外层弱捕获变量。尚未创建发布标签或 Release。
+- 修改 `Sources/UsageMonitorApp/ViewModels/UsageViewModel.swift`：嵌套 Task 显式使用 `[weak self]`，保留原有弱引用和 MainActor 回调语义。
+- 本机 `swift test --scratch-path /tmp/minget-google-implementation-20261001 --disable-sandbox`：621 项，616 通过、5 跳过、0 失败。此次未启用四项显式官方 CLI probe，另有一项既有 AX 环境跳过；此前真实服务验收不变。日志 `/tmp/minget-160-publication-tests.log`。
+- 本轮仅修复并发捕获的编译兼容性；没有操作账号、点火或替换安装应用。后续构建、远端 CI 和公开核验记入发布记录。

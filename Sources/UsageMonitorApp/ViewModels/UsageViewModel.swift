@@ -750,7 +750,7 @@ public final class UsageViewModel: ObservableObject {
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 let started = try service.beginManagedLogin { [weak self] success in
-                    Task { @MainActor in self?.finishChatGPTLogin(profileID: profileID, attemptID: attemptID, success: success) }
+                    Task { @MainActor [weak self] in self?.finishChatGPTLogin(profileID: profileID, attemptID: attemptID, success: success) }
                 }
                 await self?.showBrowserLogin(started, profileID: profileID, attemptID: attemptID, service: service)
             } catch {
