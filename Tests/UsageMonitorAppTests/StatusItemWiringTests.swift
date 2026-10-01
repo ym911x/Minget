@@ -118,24 +118,24 @@ final class StatusItemWiringTests: XCTestCase {
 
     // MARK: - Popover geometry (REVISION_SPEC.md §8, §11.5)
 
-    /// The panel's preferred size follows the 1.4.1 single-column page; a short screen caps the
+    /// The panel keeps the same outer size across services; a short screen caps the
     /// viewport while the page itself supplies the scroll region.
-    func testPanelSizeMatchesThePreferredPageSizes() {
+    func testPanelSizeStaysStableAcrossServicePreferences() {
         let suiteName = "UsageMonitorAppTests.PanelSize." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let preferences = DetailPreferences(defaults: defaults)
 
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 456))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 640))
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 380))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 640))
 
         preferences.showCommandCode = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 304))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 640))
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 380))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 640))
     }
 
     /// The hosting controller and the popover must be given the same size before `show`, so
@@ -264,6 +264,54 @@ final class StatusItemWiringTests: XCTestCase {
         XCTAssertEqual(visibleSettingsWindows().count, 1, "reopening must not add another instance")
     }
 
+    func testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure() async throws {
+        let preferences = DetailPreferences.shared
+        let selected = preferences.selectedTab
+        let googleVisible = preferences.showGoogle
+        let expanded = preferences.expandedGoogleAccounts
+        let controller = StatusItemController()
+        defer {
+            controller.uninstall()
+            preferences.showGoogle = googleVisible
+            preferences.selectedTab = selected
+            preferences.expandedGoogleAccounts = expanded
+        }
+        let defaults = Self.isolatedDefaults()
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("MingetPopoverRegression-" + UUID().uuidString)
+        let store = AntigravityProfileStore(base: root)
+        for slot in AntigravitySlot.allCases {
+            let id = UUID()
+            try store.prepare(id)
+            _ = try store.commit(slot: slot, uuid: id, email: slot.rawValue + "@example.com")
+        }
+        let google = AntigravityModel(credentials: InMemoryCredentialStore(), defaults: defaults,
+            store: store, reader: PublicScreenshotReader(), migrateLegacy: false)
+        google.start()
+        defer { google.stop(); try? FileManager.default.removeItem(at: root) }
+        for _ in 0..<200 where google.isRefreshing { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertEqual(google.accounts.count, 2)
+        let cache = UsageCache(userDefaults: defaults)
+        let coordinator = CodexProfilesCoordinator { profile in
+            UsageService(factory: { throw UsageError.appServerStartupFailed(.launchFailed) }, cache: cache, profileID: profile.id)
+        }
+        let model = UsageViewModel(coordinator: coordinator, google: google,
+            providerEngine: ProviderRefreshEngine(readers: [], cache: ProviderCache(userDefaults: defaults)))
+        controller.install(model: model)
+        try await Task.sleep(nanoseconds: 500_000_000)
+        controller.togglePanel()
+        guard controller.isPopoverShown else { throw XCTSkip("Visible status item required for popover geometry regression") }
+        let originalHost = try XCTUnwrap(controller.panelHostIdentity)
+        let originalFrame = try XCTUnwrap(controller.visiblePanelFrame)
+        preferences.showGoogle = true
+        for tab in [DetailPreferences.ProviderTab.google, .chatGPT, .commandCode, .all] {
+            preferences.selectedTab = tab
+            for state in google.accounts { preferences.expandedGoogleAccounts.insert(state.id) }
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertEqual(controller.panelHostIdentity, originalHost, "state changes must not replace a visible host")
+            XCTAssertEqual(controller.visiblePanelFrame, originalFrame, "service/disclosure changes must not move the popover")
+        }
+    }
+
     private func visibleSettingsWindows() -> [NSWindow] {
         NSApp.windows.filter { $0.title == "明明有数设置" && $0.isVisible }
     }
@@ -277,7 +325,7 @@ final class StatusItemWiringTests: XCTestCase {
         XCTAssertEqual(window?.frame.width, DetailPageLayout.pageWidth)
         XCTAssertEqual(window?.contentView?.fittingSize.width, DetailPageLayout.pageWidth)
         XCTAssertEqual(window?.contentView?.fittingSize.height,
-                       UsagePanelView.preferredHeight(for: DetailPreferences.shared))
+                       DetailPageLayout.stableViewportHeight)
     }
 
     // MARK: - Redirect pollution at the app boundary

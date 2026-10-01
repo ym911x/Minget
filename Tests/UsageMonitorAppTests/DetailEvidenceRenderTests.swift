@@ -174,7 +174,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         let (live, livePreferences) = await makeModel("live")
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
-                                          height: UsagePanelView.preferredHeight(for: livePreferences)),
+                                          height: DetailPageLayout.stableViewportHeight),
                              background: .light),
                   named: "01-detail-440x837-light.png")
 
@@ -182,7 +182,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         let (cached, cachedPreferences) = await makeModel("cached", aStale: true)
         try write(try render(UsagePanelView(model: cached, preferences: cachedPreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
-                                          height: UsagePanelView.preferredHeight(for: cachedPreferences)),
+                                          height: DetailPageLayout.stableViewportHeight),
                              background: .dark),
                   named: "02-detail-440x837-dark-a-cached.png")
 
@@ -192,7 +192,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         XCTAssertEqual(UsagePanelView.preferredHeight(for: livePreferences), 304)
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
-                                          height: UsagePanelView.preferredHeight(for: livePreferences)),
+                                          height: DetailPageLayout.stableViewportHeight),
                              background: .light),
                   named: "03-detail-440x468-light.png")
 
@@ -201,7 +201,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         livePreferences.selectedTab = .commandCode
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
-                                          height: UsagePanelView.preferredHeight(for: livePreferences)),
+                                          height: DetailPageLayout.stableViewportHeight),
                              background: .light),
                   named: "04-detail-command-code-tab-light.png")
 

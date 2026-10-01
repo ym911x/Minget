@@ -69,7 +69,7 @@ final class ReleaseScreenshotTests: XCTestCase {
                 preferences.selectedTab = selection
                 let panel = UsagePanelView(model: appModel, preferences: preferences,
                     maxHeight: 640, refreshOnAppear: false)
-                let height = min(640, UsagePanelView.preferredHeight(for: preferences))
+                let height = DetailPageLayout.stableViewportHeight
                 try export(panel, dark: dark, size: NSSize(width: 476, height: height + 68),
                     to: output.appendingPathComponent("panel-\(selection.rawValue)-\(dark ? "dark" : "light").png"))
             }
@@ -134,7 +134,7 @@ private final class ExampleCodexClient: CodexAppServerProviding {
     func stop() { isTransportRunning = false }
 }
 
-private struct PublicScreenshotReader: AntigravityUsageReading {
+struct PublicScreenshotReader: AntigravityUsageReading {
     func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
         let a = connection.slot == .a
         let iso = ISO8601DateFormatter()

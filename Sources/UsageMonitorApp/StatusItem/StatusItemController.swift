@@ -78,7 +78,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private(set) var labelSignature: String?
     private var monitor: MenuBarSpaceMonitor?
     private var cancellables: Set<AnyCancellable> = []
-    private var detailPreferenceObserver: AnyCancellable?
     private var hasAutoOpenedDetailWindow = false
     /// Width currently applied to the status item. `private(set)` for the wiring tests.
     private(set) var appliedWidth: CGFloat = 0
@@ -93,6 +92,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     var isMonitorRunning: Bool { monitor != nil }
     /// Introspection for the wiring tests: the popover is on screen.
     var isPopoverShown: Bool { popover.isShown }
+    var panelHostIdentity: ObjectIdentifier? { popover.contentViewController.map(ObjectIdentifier.init) }
+    var visiblePanelFrame: NSRect? { popover.contentViewController?.view.window?.frame }
+
     /// The click-toggle contract requires explicit dismissal rather than AppKit auto-close.
     var popoverBehavior: NSPopover.Behavior { popover.behavior }
     /// Introspection for the wiring tests: the outside-click monitor is installed.
@@ -128,12 +130,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.behavior = .applicationDefined
         popover.animates = false
         popover.delegate = self
-        detailPreferenceObserver = DetailPreferences.shared.objectWillChange
-            .sink { [weak self] _ in
-                DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.resizeVisiblePanel() }
-                }
-            }
 
         button.target = self
         button.action = #selector(statusItemClicked(_:))
@@ -182,7 +178,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         monitor?.stop()
         monitor = nil
         cancellables.removeAll()
-        detailPreferenceObserver = nil
         closePanel()
         dismissMonitor.stop()   // idempotent: no callback survives the item
         popover.delegate = nil
@@ -377,11 +372,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard popover.isShown, let button = statusItem?.button else { return }
         let frame = button.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
         let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame, googleAccountCount: model?.google.accounts.count ?? 0)
-        let screenHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000, visibleFrame: frame)
-        guard let controller = makePanelViewController(maxHeight: screenHeight, refreshOnAppear: false) else { return }
-        controller.preferredContentSize = size
-        popover.contentViewController = controller
+        // Never replace a visible host for view state changes. SwiftUI updates its
+        // observed model in place; only a changed screen constraint may resize the shell.
+        guard popover.contentSize != size else { return }
         popover.contentSize = size
+
     }
 
     /// Every close path ends here, including the ones AppKit starts itself (escape key, app
@@ -445,7 +440,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// The panel's content size for the current display preferences.
     static func panelSize(for preferences: DetailPreferences,
                           visibleFrame: CGRect? = nil, googleAccountCount: Int = 2) -> NSSize {
-        let preferredHeight = UsagePanelView.preferredHeight(for: preferences, googleAccountCount: googleAccountCount)
+        let preferredHeight = DetailPageLayout.stableViewportHeight
         return NSSize(width: DetailPageLayout.pageWidth,
                       height: DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                               visibleFrame: visibleFrame))
@@ -532,6 +527,7 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
                                   onAccounts: onAccounts,
                                   onQuit: onQuit)
         super.init(rootView: view)
+        sizingOptions = []
     }
 
     @available(*, unavailable)
@@ -541,15 +537,11 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
 /// Regular, closable window holding the same detail view. Not a floating panel: it uses the
 /// normal window level and behaves like any other document window.
 ///
-/// The window is 440 pt wide and its height follows the four fixed
-/// page sizes. A change to the display preferences resizes the *already open* window
-/// immediately, so the user never sees a half-empty or clipped page after toggling a service
-/// card. The first presentation centres on the menu-bar icon and is clamped into the screen's
+/// The window is 440 pt wide with a stable, screen-bounded viewport.
+/// Service selection and quota disclosure update only the content, never its outer frame. The first presentation centres on the menu-bar icon and is clamped into the screen's
 /// visible area, so it can never open partly off-screen.
 final class DetailWindowController: NSWindowController {
 
-    private var preferenceObserver: AnyCancellable?
-    private var googleLayoutObserver: AnyCancellable?
     private let model: UsageViewModel
 
     init(model: UsageViewModel,
@@ -558,7 +550,7 @@ final class DetailWindowController: NSWindowController {
          onQuit: (() -> Void)? = nil) {
         self.model = model
         let preferences = DetailPreferences.shared
-        let preferredHeight = UsagePanelView.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count)
+        let preferredHeight = DetailPageLayout.stableViewportHeight
         let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000,
                                                         visibleFrame: NSScreen.main?.visibleFrame)
         let panel = UsagePanelView(model: model,
@@ -578,27 +570,16 @@ final class DetailWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: panel)
         super.init(window: window)
-        googleLayoutObserver = model.google.$accounts.map(\.count).removeDuplicates()
-            .sink { [weak self] _ in
-                DispatchQueue.main.async { self?.applyPreferredContentSize() }
-            }
 
-        // `objectWillChange` fires before the new value lands, so the resize is deferred one
-        // runloop turn; reading the preference inside the sink would use the old value.
-        preferenceObserver = preferences.objectWillChange
-            .sink { [weak self] _ in
-                DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.applyPreferredContentSize() }
-                }
-            }
     }
 
     private func applyPreferredContentSize() {
         guard let window else { return }
-        let preferredHeight = UsagePanelView.preferredHeight(for: DetailPreferences.shared, googleAccountCount: model.google.accounts.count)
+        let preferredHeight = DetailPageLayout.stableViewportHeight
         let height = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                      visibleFrame: NSScreen.main?.visibleFrame)
-        window.setContentSize(NSSize(width: DetailPageLayout.pageWidth, height: height))
+        let size = NSSize(width: DetailPageLayout.pageWidth, height: height)
+        if window.contentLayoutRect.size != size { window.setContentSize(size) }
     }
 
     /// Shows the window, positioned by the status item rather than by AppKit's default.

@@ -71,11 +71,11 @@ final class DetailPanelLayoutTests: XCTestCase {
         preferences.displayMode = .byProvider
         preferences.selectedTab = .chatGPT
         XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 632)
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 632)
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 640)
         preferences.selectedTab = .commandCode
         let commandHeight = UsagePanelView.preferredHeight(for: preferences)
         XCTAssertLessThan(commandHeight, 632)
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, commandHeight)
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 640)
         preferences.showCommandCode = false
         XCTAssertEqual(preferences.effectiveTab, .all)
         XCTAssertFalse(preferences.visibleTabs.contains(.commandCode))
@@ -170,7 +170,7 @@ final class DetailPanelLayoutTests: XCTestCase {
 
     // MARK: §4.2 Scroll only when the viewport is shorter than preferred
 
-    func testDetailPageUsesNoScrollAtItsPreferredHeight() {
+    func testDetailPageKeepsOneContentScrollRegionAcrossServices() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.NoScroll"))
         let model = makeModel()
 
@@ -185,8 +185,8 @@ final class DetailPanelLayoutTests: XCTestCase {
                                    height: UsagePanelView.preferredHeight(for: preferences))
             hosting.layoutSubtreeIfNeeded()
 
-            XCTAssertFalse(containsScrollContainer(hosting),
-                           "\(showDeepSeek)/\(showCommandCode): preferred page should not scroll")
+            XCTAssertTrue(containsScrollContainer(hosting),
+                           "\(showDeepSeek)/\(showCommandCode): page keeps its internal scroll region")
         }
     }
 

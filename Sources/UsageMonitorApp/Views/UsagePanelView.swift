@@ -9,6 +9,7 @@ import UsageMonitorCore
 /// page; callers may provide a smaller viewport and the card stack will then scroll.
 enum DetailPageLayout {
 
+    static let stableViewportHeight: CGFloat = 640
     static let pageWidth: CGFloat = 440
     static let margin: CGFloat = 16
     static let contentWidth: CGFloat = 408
@@ -107,28 +108,26 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        let preferred = Self.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count)
-        let viewport = min(preferred, 640, maxHeight ?? preferred)
+        let viewport = min(DetailPageLayout.stableViewportHeight, maxHeight ?? DetailPageLayout.stableViewportHeight)
         let tabHeight = DetailPageLayout.tabHeight
         let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
 
         VStack(alignment: .leading, spacing: 0) {
             header
             providerTabs
-            if viewport < preferred || preferences.effectiveTab == .google {
-                ScrollView(.vertical, showsIndicators: true) {
-                    cardStack
-                }
-                .frame(height: cardViewport)
-            } else {
+            ScrollView(.vertical, showsIndicators: false) {
                 cardStack
             }
+            .id(preferences.effectiveTab)
+            .frame(height: cardViewport)
+
             Spacer(minLength: 0)
             footer
         }
         .padding(DetailPageLayout.margin)
         .frame(width: DetailPageLayout.pageWidth, height: viewport, alignment: .top)
         .background(.regularMaterial)
+        .transaction { $0.animation = nil }
         .onAppear { if refreshOnAppear { model.panelWillOpen() } }
     }
 
