@@ -9,6 +9,12 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 的额度、余额和使用状态。并支持两个 Google / Antigravity 账号的官方额度查询。
 
+## 当前迭代：1.6.1 界面统一
+
+概览显示账号摘要，选择服务后查看完整额度。GPT/Gemini 共用两位小数、额度条与重置时间样式；设置及账号管理合并为原生侧栏窗口。当前代码与验证状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为入口，[1.6.1 记录](docs/versions/1.6.1/IMPLEMENTATION_REPORT.md)保存实施和验收证据。1.6.1 尚未公开发布。
+
+以下各版本章节保留对应历史状态，不能替代当前任务台账。
+
 ## v1.6.0：Google / Antigravity 双账号
 
 Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/usage`、账号管理、卡片与刷新已完成代码接线。修复了授权后引导、初始登录方式和折行认证 URL 处理，正式运行不依赖 CPA。
@@ -166,8 +172,8 @@ Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/u
 
 ## 当前版本
 
-- 本机开发与发布候选：`1.6.0`；GitHub 推送与发布尚未执行，等待用户安排。
-- 已公开基线：`1.4.3`。
+- 当前本地迭代：`1.6.1`，尚未推送或公开发布；安装和验收见 [当前状态](PROJECT_STATUS.md)。
+- 已公开基线：`1.6.0`，见 [发布核验](docs/versions/1.6.0/PUBLICATION.md)。
 - 平台：macOS 13 及以上，Apple Silicon；Google 接入固定官方 CLI 1.2.13。
 - 分发：源码；本机签名包仅用于本地验收，不作为公开 Release 附件。
 - [发布说明](docs/versions/1.6.0/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.0/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)

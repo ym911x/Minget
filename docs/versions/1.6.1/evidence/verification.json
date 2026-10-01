@@ -1,0 +1,24 @@
+{
+  "installed_path": "$HOME/Applications/Minget.app",
+  "version": "1.6.1",
+  "architecture": "arm64",
+  "executable_sha256": "a43673463e5fafae8fbe5eff1cb0ce7a3e7c5242dbbe90c187615148555f98a9",
+  "backup": {
+    "backup": "$HOME/Applications/Minget Backups/1.6.0-before-1.6.1-20261001-125244/Minget.app",
+    "version": "1.6.0",
+    "executable_sha256": "db3a3b48d9eff28487ed8377da1476c04926c79488bf991633863cf10d687efc"
+  },
+  "full_tests": {
+    "core_executed": 449,
+    "app_executed": 176,
+    "skipped": 5,
+    "failed": 0
+  },
+  "last_window_tests": {
+    "executed": 15,
+    "failed": 0
+  },
+  "artifact_note": "Only synthetic data in tracked PNGs. Real native UI observations recorded in this task and ACCEPTANCE.md.",
+  "source_commit": "cfcb164",
+  "native_ui": "Final installed app inspected through CUA from 13:04 local time; overview, account pane, grouped settings, refresh, disclosure preservation and about routing passed."
+}

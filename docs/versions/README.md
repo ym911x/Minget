@@ -4,6 +4,8 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
+当前迭代：[1.6.1](1.6.1/IMPLEMENTATION_REPORT.md)，代码和本机安装检查完成，用户体验待确认；当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+
 ## 状态表
 
 | 版本 | 发布 | 需求 | 实施任务 | 实施报告 | 审核 | 验收 | 发布说明 | 截图 |
@@ -23,6 +25,8 @@
 | 1.4.3 | 已发布（保留界面及换机验收边界） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | — |
 | 1.5.0 | 尚未独立发布，纳入 1.6.0 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | — |
 | 1.6.0 | 已发布，现场待验收项保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | assets/screenshots/v1.6.0/ |
+
+| 1.6.1 | 未发布，已本机安装检查 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | 本目录 evidence/ |
 
 ## 各版本的额外资料
 

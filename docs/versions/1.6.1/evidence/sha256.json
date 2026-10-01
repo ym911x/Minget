@@ -1,0 +1,12 @@
+{
+  "panel-all-dark.png": "a594fe5658a8916d693997d4f3f79b3f3eaabcb93d90ec89beafc5d0c6baafff",
+  "panel-all-light.png": "41f395c590fe82ff2d81d8b8ea0d8375d2de4c84f6ba7ddb08d05124a4961552",
+  "panel-chatGPT-dark.png": "8d9892cec36bac7d25a271e89dcd091cdd443713e0c8b1bfa5ef9493d0591415",
+  "panel-chatGPT-light.png": "95c730ce1a98c64163996055810f1103870dbb96ffc5d463610e730f40d89e77",
+  "panel-google-dark.png": "9acbd75a4b7e15b1f927ceb5fe90d58cb5f758061bed28f095827b8e46e3f0d3",
+  "panel-google-light.png": "f3e2c7e83ed2c8a9f1fb0963bc3a17ce8ff4f22abd25089e91c400f08b376f8f",
+  "release-build.log": "787f878a6d0f6ac8d71ebdbaf663190d2f535f21ea9e75a5a9890c99de83be0a",
+  "swift-tests.log": "b945461929b22517e5a077e9487fb1ed2bb690601cff0c792040982c79ba7e26",
+  "verification.json": "faa4b98f494a3b7fc22efebfc70eb0d8bd109cf1719ebd56ac1a7f2349999f6b",
+  "window-tests.log": "27eee85e6493680c2399ad35210651a667a5b6117a352de581d0d74be1ade3fe"
+}

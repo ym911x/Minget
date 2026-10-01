@@ -1,0 +1,60 @@
+Building for debugging...
+[2 / 11] UsageMonitorApp-product
+[4 / 13] UsageMonitorApp-product
+[8 / 17] UsageMonitorApp
+[9 / 18] UsageMonitorApp-product
+[12 / 21] UsageMonitorApp
+[15 / 21] UsageMonitorApp
+[18 / 21] UsageMonitorAppTests-product
+[20 / 23] UsageMonitorAppTests-product
+[21 / 23] UsageMonitorAppTests-product
+[25 / 27] UsageMonitorAppTests-product
+Build complete! (2.92秒)
+Test Suite 'Selected tests' started at 2026-10-01 13:02:24.097.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-01 13:02:24.098.
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-01 13:02:24.098.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 13:02:24.098.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'Selected tests' started at 2026-10-01 13:02:24.156.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-01 13:02:24.157.
+Test Suite 'StartupWindowTests' started at 2026-10-01 13:02:24.157.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' passed (6.215 seconds).
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' passed (4.560 seconds).
+Test Suite 'StartupWindowTests' passed at 2026-10-01 13:02:34.932.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 10.775 (10.776) seconds
+Test Suite 'StatusItemWiringTests' started at 2026-10-01 13:02:34.932.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testHostingControllerAndLoaderAgreeOnThePanelSizeBeforeShow]' passed (0.120 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallAppliesANonZeroWidthToTheItem]' passed (0.020 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testInstallRegistersAnItemWithTheSystemStatusBar]' passed (0.015 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeMatchesThePreferredPageSizes]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testPanelSizeMatchesThePreferredPageSizes]' passed (0.002 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testProviderTransportErrorCategoriesStayPerRequest]' passed (0.007 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testRecordPopoverFrameEvidenceForCentreAndBothEdges]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testReinstallAfterUninstallProducesAWorkingItem]' passed (0.033 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheAnchorIsTheButtonMidpoint]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheDetailWindowUsesTheFixedPageSize]' passed (0.121 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testThePanelOnlyRequiresItsWidthAndCapsShortViewports]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testTheSettingsWindowIsCreatedOnDemandAndReused]' passed (0.236 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallIsIdempotent]' passed (0.030 seconds).
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' started.
+Test Case '-[UsageMonitorAppTests.StatusItemWiringTests testUninstallStopsTheMonitorClosesSurfacesAndRemovesTheItem]' passed (0.033 seconds).
+Test Suite 'StatusItemWiringTests' passed at 2026-10-01 13:02:35.551.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.618 (0.619) seconds
+Test Suite 'UsageMonitorAppTests.xctest' passed at 2026-10-01 13:02:35.552.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 11.393 (11.395) seconds
+Test Suite 'Selected tests' passed at 2026-10-01 13:02:35.552.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 11.393 (11.396) seconds
