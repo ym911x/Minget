@@ -52,22 +52,58 @@ final class ReleaseScreenshotTests: XCTestCase {
             heading("管理 Google 账号")
             AntigravityConnectionView(google: model, preferences: preferences)
         }, dark: false, size: NSSize(width: 460, height: 430), to: output.appendingPathComponent("google-accounts-light.png"))
+        // All sources share the real production panel, with isolated synthetic readers.
+        let cache = UsageCache(userDefaults: defaults)
+        let coordinator = CodexProfilesCoordinator { profile in
+            UsageService(factory: { ExampleCodexClient(isA: profile.id == "chatgpt-a") }, cache: cache, profileID: profile.id)
+        }
+        for id in coordinator.profileIDs { _ = coordinator.fetch(profileID: id) }
+        let appModel = UsageViewModel(coordinator: coordinator, google: model,
+            providerEngine: ProviderRefreshEngine(readers: [], cache: ProviderCache(userDefaults: defaults)),
+            menuBarPreferences: MenuBarPreferences(defaults: defaults),
+            displayNames: DisplayNamePreferences(defaults: defaults),
+            fireSchedules: FireSchedulePreferences(defaults: defaults))
+        preferences.showGoogle = true
+        for dark in [false, true] {
+            for selection in [DetailPreferences.ProviderTab.all, .chatGPT, .google, .commandCode] {
+                preferences.selectedTab = selection
+                let panel = UsagePanelView(model: appModel, preferences: preferences,
+                    maxHeight: 640, refreshOnAppear: false)
+                let height = min(640, UsagePanelView.preferredHeight(for: preferences))
+                try export(panel, dark: dark, size: NSSize(width: 476, height: height + 68),
+                    to: output.appendingPathComponent("panel-\(selection.rawValue)-\(dark ? "dark" : "light").png"))
+            }
+            let nav = SettingsNavigation(defaults: defaults)
+            for section in SettingsSection.allCases {
+                nav.section = section
+                try export(MingetSettingsView(model: appModel, preferences: preferences,
+                    menuBarPreferences: appModel.menuBarPreferences, onQuit: {}, navigation: nav),
+                    dark: dark, size: NSSize(width: 816, height: 708),
+                    to: output.appendingPathComponent("settings-\(section.rawValue)-\(dark ? "dark" : "light").png"))
+            }
+        }
+
     }
     private func heading(_ title: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("明明有数 v1.6.0").font(.system(size: 18, weight: .semibold))
+            Text("明明有数 v1.6.1").font(.system(size: 18, weight: .semibold))
             Text(title).font(.system(size: 13, weight: .medium))
             Text("展示副本 · 示例账号与数据").font(.system(size: 11)).foregroundStyle(.secondary)
         }
     }
     private func export<V: View>(_ content: V, dark: Bool, size: NSSize, to url: URL) throws {
-        let view = content.padding(18).frame(width: size.width, height: size.height, alignment: .topLeading)
+        let view = VStack(spacing: 8) { Text("1.6.1 展示副本 · 示例账号与数据").font(.system(size: 11)).foregroundStyle(.secondary); content }.padding(18).frame(width: size.width, height: size.height, alignment: .topLeading)
             .background(dark ? Color(red: 0.11, green: 0.12, blue: 0.14) : Color.white)
             .environment(\.colorScheme, dark ? .dark : .light)
             .environment(\.locale, Locale(identifier: "zh_CN"))
         let hosting = NSHostingView(rootView: view)
         hosting.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         hosting.frame.size = size
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.setContentSize(size)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
         hosting.layoutSubtreeIfNeeded()
         let rep = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         hosting.cacheDisplay(in: hosting.bounds, to: rep)
@@ -77,11 +113,32 @@ final class ReleaseScreenshotTests: XCTestCase {
     }
 }
 
+private final class ExampleCodexClient: CodexAppServerProviding {
+    let isA: Bool
+    var isTransportRunning = true
+    init(isA: Bool) { self.isA = isA }
+    func start() throws {}
+    func handshake(timeout: TimeInterval) throws {}
+    func readAccount(timeout: TimeInterval) throws -> CodexAccount? {
+        CodexAccount(kind: .chatgpt, email: isA ? "account-a@example.com" : "account-b@example.com", planType: "plus")
+    }
+    func readRateLimits(timeout: TimeInterval) throws -> UsageSnapshot {
+        let five = isA ? 82.45 : 56.32
+        let week = isA ? 91.67 : 78.40
+        return UsageSnapshot(fiveHour: RateLimitWindow(kind: .fiveHour, windowDurationMinutes: 300,
+                usedPercent: 100 - five, remainingPercent: five, resetsAt: Date().addingTimeInterval(3 * 3600)),
+            weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10080,
+                usedPercent: 100 - week, remainingPercent: week, resetsAt: Date().addingTimeInterval(5 * 86400)),
+            fetchedAt: Date(), source: .codexAppServer)
+    }
+    func stop() { isTransportRunning = false }
+}
+
 private struct PublicScreenshotReader: AntigravityUsageReading {
     func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
         let a = connection.slot == .a
         let iso = ISO8601DateFormatter()
-        let reset = iso.date(from: "2026-10-08T08:00:00Z")!
+        let reset = Date().addingTimeInterval(3 * 3600)
         let groups = [
             AntigravityQuotaGroup(id: "gemini", label: "Gemini Models", models: [], buckets: [
                 AntigravityQuotaBucket(id: "gemini-5h", label: "Five Hour Limit Remaining", window: "5h", remainingFraction: a ? 0.8245 : 0.5632, resetsAt: reset),

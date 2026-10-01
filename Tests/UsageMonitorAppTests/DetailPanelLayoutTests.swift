@@ -4,7 +4,7 @@ import SwiftUI
 import UsageMonitorCore
 @testable import UsageMonitorApp
 
-/// Detail-page geometry, structure and card semantics under the 1.4.1 visual specification.
+/// Detail-page geometry, structure and card semantics under the 1.6.1 visual specification.
 ///
 /// The preferred page is a 440 pt single column. A scroll region is introduced only when the
 /// available viewport is shorter than that preferred page.
@@ -39,42 +39,42 @@ final class DetailPanelLayoutTests: XCTestCase {
     func testPageIsASingleFourHundredFortyPointColumn() {
         XCTAssertEqual(DetailPageLayout.pageWidth, 440)
         XCTAssertEqual(UsagePanelView.pageWidth, 440)
-        XCTAssertEqual(DetailPageLayout.margin, 12)
-        XCTAssertEqual(DetailPageLayout.contentWidth, 416)
+        XCTAssertEqual(DetailPageLayout.margin, 16)
+        XCTAssertEqual(DetailPageLayout.contentWidth, 408)
         XCTAssertEqual(DetailPageLayout.headerHeight, 36)
-        XCTAssertEqual(DetailPageLayout.rowSpacing, 8)
+        XCTAssertEqual(DetailPageLayout.rowSpacing, 12)
     }
 
     func testTheFourPreferredPageHeights() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout"))
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 837)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 456)
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 757, "only Command Code")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 380, "only Command Code")
 
         preferences.showCommandCode = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 468, "neither service card")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 304, "neither service card")
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 548, "only DeepSeek")
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 380, "only DeepSeek")
     }
 
     func testTheFourPreferredPageHeightsMatchTheRowArithmetic() {
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 801)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 721)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 512)
-        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 432)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: true), 956)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: true), 872)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: true, showCommandCode: false), 632)
+        XCTAssertEqual(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false), 548)
     }
 
     func testProviderTabsShowOneGroupAndResizeWithoutChangingVisibility() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.Tabs"))
         preferences.displayMode = .byProvider
         preferences.selectedTab = .chatGPT
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 502)
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 502)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: preferences), 632)
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, 632)
         preferences.selectedTab = .commandCode
         let commandHeight = UsagePanelView.preferredHeight(for: preferences)
-        XCTAssertLessThan(commandHeight, 502)
+        XCTAssertLessThan(commandHeight, 632)
         XCTAssertEqual(StatusItemController.panelSize(for: preferences).height, commandHeight)
         preferences.showCommandCode = false
         XCTAssertEqual(preferences.effectiveTab, .all)
@@ -107,10 +107,10 @@ final class DetailPanelLayoutTests: XCTestCase {
         let rows = DetailPageLayout.rows(showDeepSeek: true, showCommandCode: true)
         let heights = Dictionary(uniqueKeysWithValues: rows.map { ($0.kind, $0.frame.height) })
         XCTAssertEqual(heights[.header], 36)
-        XCTAssertEqual(heights[.chatGPTA], 178)
-        XCTAssertEqual(heights[.chatGPTB], 178)
+        XCTAssertEqual(heights[.chatGPTA], 228)
+        XCTAssertEqual(heights[.chatGPTB], 228)
         XCTAssertEqual(heights[.deepSeek], 72)
-        XCTAssertEqual(heights[.commandCode], 281)
+        XCTAssertEqual(heights[.commandCode], 312)
     }
 
     private func expectedCardOrder(showDeepSeek: Bool, showCommandCode: Bool) -> [DetailPageLayout.Kind] {
@@ -121,34 +121,34 @@ final class DetailPanelLayoutTests: XCTestCase {
     }
 
     func testCardSizesMatchTheSpecification() {
-        XCTAssertEqual(CodexProfileCard.size, CGSize(width: 416, height: 178))
-        XCTAssertEqual(CodexProfileCard.contentPadding, 12)
+        XCTAssertEqual(CodexProfileCard.size, CGSize(width: 408, height: 228))
+        XCTAssertEqual(CodexProfileCard.contentPadding, 16)
         XCTAssertEqual(CodexProfileCard.headerHeight, 34)
         XCTAssertEqual(CodexProfileCard.accountRowHeight, 16)
         XCTAssertEqual(CodexProfileCard.rowSpacing, 4)
         XCTAssertEqual(CodexProfileCard.headerToWindowSpacing, 12)
-        XCTAssertEqual(CodexProfileCard.windowBlockHeight, 32)
-        XCTAssertEqual(CodexProfileCard.windowGroupSpacing, 10)
-        XCTAssertEqual(CodexProfileCard.footerHeight, 16)
+        XCTAssertEqual(CodexProfileCard.windowBlockHeight, 40)
+        XCTAssertEqual(CodexProfileCard.windowGroupSpacing, 12)
+        XCTAssertEqual(CodexProfileCard.footerHeight, 28)
         XCTAssertEqual(CodexProfileCard.footerSpacing, 12)
         XCTAssertEqual(CodexProfileCard.labelWidth, 50)
-        XCTAssertEqual(CodexProfileCard.valueWidth, 102)
+        XCTAssertEqual(CodexProfileCard.valueWidth, 122)
         XCTAssertEqual(CodexProfileCard.quotaTrackHeight, 6)
         XCTAssertEqual(CodexProfileCard.logoSize, 28)
-        XCTAssertEqual(CodexProfileCard.fireButtonWidth, 76)
-        XCTAssertEqual(CodexProfileCard.fireButtonHeight, 22)
+        XCTAssertEqual(CodexProfileCard.fireButtonWidth, 96)
+        XCTAssertEqual(CodexProfileCard.fireButtonHeight, 26)
         XCTAssertEqual(ProviderTimeBar.height, 3)
         XCTAssertEqual(ProviderTimeBar.segmentGap, 2)
-        XCTAssertEqual(DeepSeekOverviewCard.size, CGSize(width: 416, height: 72))
-        XCTAssertEqual(DeepSeekOverviewCard.logoSize, 34)
-        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 416, height: 281))
+        XCTAssertEqual(DeepSeekOverviewCard.size, CGSize(width: 408, height: 72))
+        XCTAssertEqual(DeepSeekOverviewCard.logoSize, 28)
+        XCTAssertEqual(CommandCodeOverviewCard.size, CGSize(width: 408, height: 312))
         XCTAssertEqual(CommandCodeOverviewCard.windowGroupSpacing, 10)
         XCTAssertEqual(CommandCodeOverviewCard.headerToWindowSpacing, 12)
         XCTAssertEqual(CommandCodeOverviewCard.quotaToSummarySpacing, 12)
         XCTAssertEqual(CommandCodeOverviewCard.summaryToFooterSpacing, 12)
         XCTAssertEqual(CommandCodeOverviewCard.valueWidth, 116)
-        XCTAssertEqual(CommandCodeOverviewCard.footerHeight, 16)
-        XCTAssertEqual(CommandCodeOverviewCard.fireButtonWidth, 76)
+        XCTAssertEqual(CommandCodeOverviewCard.footerHeight, 28)
+        XCTAssertEqual(CommandCodeOverviewCard.fireButtonWidth, 96)
     }
 
     func testFireDialogCopyIsTheFixedWording() {
@@ -195,8 +195,8 @@ final class DetailPanelLayoutTests: XCTestCase {
         let model = makeModel("short")
         let hosting = NSHostingView(rootView: UsagePanelView(model: model,
                                                               preferences: preferences,
-                                                              maxHeight: 520))
-        hosting.frame = NSRect(x: 0, y: 0, width: DetailPageLayout.pageWidth, height: 520)
+                                                              maxHeight: 280))
+        hosting.frame = NSRect(x: 0, y: 0, width: DetailPageLayout.pageWidth, height: 280)
         hosting.layoutSubtreeIfNeeded()
         XCTAssertTrue(containsScrollContainer(hosting))
     }
@@ -229,7 +229,7 @@ final class DetailPanelLayoutTests: XCTestCase {
         hosting.layoutSubtreeIfNeeded()
 
         XCTAssertTrue(containsScrollContainer(hosting))
-        XCTAssertEqual(MingetSettingsView.pageSize, CGSize(width: 520, height: 700))
+        XCTAssertEqual(MingetSettingsView.pageSize, CGSize(width: 780, height: 640))
     }
 
     // MARK: §11.3 ChatGPT cards
@@ -278,7 +278,7 @@ final class DetailPanelLayoutTests: XCTestCase {
         let active = ResetTimeModel.progress(expected: .fiveHour, window: activeWindow, now: now)
         XCTAssertEqual(CodexProfileCard.timeProgress(active).segmentCount, 5)
         XCTAssertEqual(CodexProfileCard.resetValueText(active, window: activeWindow),
-                       UsageFormatting.resetPointText(activeWindow))
+                       QuotaPresentation.reset(activeWindow.resetsAt))
     }
 
     func testTheTwoProfileCardsReadTheirOwnSnapshots() {

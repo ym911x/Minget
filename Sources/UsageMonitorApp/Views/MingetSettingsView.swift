@@ -2,15 +2,10 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// 1.4.2 settings surface. The daily fire list is user-extensible, so the content scrolls
-/// inside a bounded window while the title and footer remain reachable.
-///
-/// Top to bottom: title, the "菜单栏显示" radio group, the service group, advanced
-/// diagnostics, footer. The service group lists both ChatGPT profiles read-only plus the two
-/// credential-backed providers, whose connection forms open one at a time.
+/// One native settings window with shared account management and grouped preferences.
 struct MingetSettingsView: View {
 
-    static let pageSize = CGSize(width: 520, height: 700)
+    static let pageSize = CGSize(width: 780, height: 640)
     static let margin: CGFloat = 18
 
     @ObservedObject var model: UsageViewModel
@@ -19,79 +14,86 @@ struct MingetSettingsView: View {
     @ObservedObject var displayNames: DisplayNamePreferences
     var onDetailWindow: (() -> Void)?
     var onQuit: () -> Void
+    @ObservedObject var navigation: SettingsNavigation
+    var onDone: () -> Void
 
-    @StateObject private var deepSeekForm: ConnectionFormState
-    @StateObject private var commandCodeForm: ConnectionFormState
-    @State private var showsAbout = false
 
     init(model: UsageViewModel,
          preferences: DetailPreferences = .shared,
          menuBarPreferences: MenuBarPreferences = .shared,
          displayNames: DisplayNamePreferences? = nil,
          onDetailWindow: (() -> Void)? = nil,
-         onQuit: @escaping () -> Void) {
+         onQuit: @escaping () -> Void,
+         navigation: SettingsNavigation? = nil,
+         onDone: @escaping () -> Void = {}) {
         self.model = model
         self.preferences = preferences
         self.menuBarPreferences = menuBarPreferences
         _displayNames = ObservedObject(wrappedValue: displayNames ?? model.displayNames)
         self.onDetailWindow = onDetailWindow
         self.onQuit = onQuit
-        _deepSeekForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .deepseek))
-        _commandCodeForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .commandcode))
+        self.navigation = navigation ?? SettingsNavigation()
+        self.onDone = onDone
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("设置").font(.system(size: 20, weight: .bold))
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    menuBarGroup
-                    detailDisplayGroup
-                    displayNameGroup
-                    FireScheduleSettingsView(preferences: model.fireSchedules,
-                                             displayNames: displayNames)
-                    serviceGroup
-                    AntigravityConnectionView(google: model.google, preferences: preferences)
-
-                    DisclosureGroup("高级诊断") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Toggle(isOn: Binding(get: { model.isCredentialDiagnosticOn },
-                                                 set: { model.setCredentialDiagnostics($0) })) {
-                                Text("记录钥匙串访问诊断").font(.system(size: 11))
-                            }
-                            .controlSize(.small)
-                            if model.isCredentialDiagnosticOn, let path = model.credentialDiagnosticPath {
-                                Text(path).font(.system(size: 9, design: .monospaced))
-                                    .foregroundStyle(.secondary).textSelection(.enabled).lineLimit(2)
-                            }
-                        }.padding(.top, 7)
-                    }
-                    .font(.system(size: 11))
+        NavigationSplitView {
+            List(selection: Binding<SettingsSection?>(get: { navigation.section }, set: { if let section = $0 { navigation.section = section } })) {
+                ForEach(SettingsSection.allCases) { section in
+                    Label(section.title, systemImage: section.symbol).tag(section)
                 }
-                .padding(.trailing, 4)
-            }
+            }.listStyle(.sidebar).navigationSplitViewColumnWidth(min: 170, ideal: 185, max: 220)
+        } detail: {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(navigation.section.title).font(.system(size: 18, weight: .semibold))
+                    .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 12)
+                settingsPane
+            }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }.frame(minWidth: 700, minHeight: 520)
+    }
 
-            footer
+    @ViewBuilder private var settingsPane: some View {
+        if navigation.section == .accounts {
+            AccountManagementView(model: model, firstRun: navigation.firstRun, onDone: onDone)
+        } else {
+            Form {
+                switch navigation.section {
+                case .menuBar:
+                    Section { menuBarGroup }
+                case .detail:
+                    Section("可见服务") { detailDisplayGroup }
+                    Section { Text("概览显示所有账号摘要；选择服务后查看完整额度。隐藏卡片不会改变菜单栏来源或停止刷新。") }
+                case .schedules:
+                    Section("菜单栏低额度刷新") { lowUsageRefreshSettings }
+                    Section { FireScheduleSettingsView(preferences: model.fireSchedules, displayNames: displayNames) }
+                case .about:
+                    Section("明明有数 · Minget") {
+                        LabeledContent("版本", value: appVersion)
+                        Link("GitHub 项目", destination: URL(string: "https://github.com/ym911x/Minget")!)
+                        if let onDetailWindow { Button("打开独立详情窗口", action: onDetailWindow) }
+                    }
+                    Section("高级诊断") {
+                        Toggle("记录钥匙串访问诊断", isOn: Binding(get: { model.isCredentialDiagnosticOn }, set: { model.setCredentialDiagnostics($0) }))
+                        if model.isCredentialDiagnosticOn, let path = model.credentialDiagnosticPath {
+                            Text(path).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                        }
+                    }
+                case .accounts: EmptyView()
+                }
+            }.formStyle(.grouped)
         }
-        .padding(Self.margin)
-        .frame(width: Self.pageSize.width, height: Self.pageSize.height, alignment: .topLeading)
     }
 
     // MARK: - Menu bar source
 
     private var detailDisplayGroup: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("详情页显示").font(.system(size: 13, weight: .semibold))
-            Picker("详情页模式", selection: $preferences.displayMode) {
-                Text("全部显示").tag(DetailPreferences.DisplayMode.all)
-                Text("按供应商切换").tag(DetailPreferences.DisplayMode.byProvider)
-            }
-            .pickerStyle(.radioGroup)
-            Toggle("显示 Google 额度卡片", isOn: $preferences.showGoogle)
-                .font(.system(size: 11))
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("显示 Gemini", isOn: $preferences.showGoogle)
+            Toggle("显示 DeepSeek", isOn: $preferences.showDeepSeek)
+            Toggle("显示 Command Code", isOn: $preferences.showCommandCode)
+            Text("ChatGPT 两个账号始终保留；更多账号信息在“账号”页管理。")
+                .font(.system(size: 13)).foregroundStyle(.secondary)
         }
-        .settingsGroupBackground()
     }
 
     private var menuBarGroup: some View {
@@ -120,14 +122,13 @@ struct MingetSettingsView: View {
 
             googleGroupPicker
             deepSeekCurrencyRow
-            lowUsageRefreshSettings
 
             Text("菜单栏显示与详情页显示相互独立：隐藏详情卡不会停止该来源的刷新。")
-                .font(.system(size: 9))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .settingsGroupBackground()
+
     }
 
 
@@ -145,9 +146,9 @@ struct MingetSettingsView: View {
                     Text("所选额度组已不可用").tag(Optional(selected))
                 }
             }
-            .font(.system(size: 11))
+            .font(.system(size: 13))
             Text("Google 额度每 5 分钟刷新，支持手动刷新。")
-                .font(.system(size: 10)).foregroundStyle(.secondary)
+                .font(.system(size: 11)).foregroundStyle(.secondary)
         }
     }
 
@@ -157,7 +158,7 @@ struct MingetSettingsView: View {
             let currencies = model.deepSeekCurrencies
             if currencies.count >= 2 {
                 HStack(spacing: 8) {
-                    Text("菜单栏币种").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text("菜单栏币种").font(.system(size: 13)).foregroundStyle(.secondary)
                     Picker("菜单栏币种", selection: $menuBarPreferences.deepSeekCurrency) {
                         ForEach(currencies, id: \.self) { currency in
                             Text(currency).tag(Optional(currency))
@@ -167,9 +168,9 @@ struct MingetSettingsView: View {
                     .frame(width: 140)
                 }
             } else if currencies.count == 1 {
-                Text("币种 \(currencies[0])").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("币种 \(currencies[0])").font(.system(size: 13)).foregroundStyle(.secondary)
             } else {
-                Text("等待余额数据").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("等待余额数据").font(.system(size: 13)).foregroundStyle(.secondary)
             }
         }
     }
@@ -178,7 +179,7 @@ struct MingetSettingsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle("低额度时提高菜单栏刷新频率",
                    isOn: $menuBarPreferences.lowUsageRefreshEnabled)
-                .font(.system(size: 11))
+                .font(.system(size: 13))
                 .controlSize(.small)
 
             Picker("加速周期", selection: $menuBarPreferences.lowUsageRefreshIntervalSeconds) {
@@ -186,11 +187,11 @@ struct MingetSettingsView: View {
                     Text("每 " + String(seconds) + " 秒").tag(seconds)
                 }
             }
-            .font(.system(size: 11))
+            .font(.system(size: 13))
             .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
 
             HStack(spacing: 8) {
-                Text("5 小时阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("5 小时阈值").font(.system(size: 13)).foregroundStyle(.secondary)
                 Spacer()
                 Stepper(value: $menuBarPreferences.chatGPTFiveHourThresholdPercent,
                         in: 0...100,
@@ -203,7 +204,7 @@ struct MingetSettingsView: View {
             }
 
             HStack(spacing: 8) {
-                Text("周额度阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("周额度阈值").font(.system(size: 13)).foregroundStyle(.secondary)
                 Spacer()
                 Stepper(value: $menuBarPreferences.chatGPTWeeklyThresholdPercent,
                         in: 0...100,
@@ -216,24 +217,24 @@ struct MingetSettingsView: View {
             }
 
             HStack(spacing: 8) {
-                Text("DeepSeek CNY 阈值").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("DeepSeek CNY 阈值").font(.system(size: 13)).foregroundStyle(.secondary)
                 Spacer()
                 TextField("15.00", text: $menuBarPreferences.deepSeekBalanceThresholdCNYText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.roundedBorder).labelsHidden().accessibilityLabel("DeepSeek 低余额阈值")
                     .frame(width: 78)
                     .multilineTextAlignment(.trailing)
                     .disabled(!menuBarPreferences.lowUsageRefreshEnabled)
-                Text("元").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("元").font(.system(size: 13)).foregroundStyle(.secondary)
             }
             if menuBarPreferences.deepSeekBalanceThresholdCNY == nil {
                 Text("请输入大于等于 0 的数字；无效时 DeepSeek 加速会暂停。")
-                    .font(.system(size: 9))
+                    .font(.system(size: 13))
                     .foregroundStyle(.red)
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(model.menuBarRefreshStatusText)
-                    .font(.system(size: 9))
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
@@ -243,7 +244,7 @@ struct MingetSettingsView: View {
                 .controlSize(.small)
             }
             Text("阈值采用“剩余量严格低于”判断；只加快当前菜单栏选中的账号或余额来源。")
-                .font(.system(size: 9))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -254,180 +255,9 @@ struct MingetSettingsView: View {
         displayNames.displayName(for: profileID)
     }
 
-    private var displayNameGroup: some View {
-        DisplayNameSettingsView(preferences: displayNames)
-    }
-
-    // MARK: - Services
-
-    private var serviceGroup: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("服务").font(.system(size: 13, weight: .semibold)).padding(.bottom, 6)
-            ForEach(Array(model.profileStates.enumerated()), id: \.element.id) { index, state in
-                if index > 0 { Divider().padding(.vertical, 6) }
-                ServiceStatusRow(title: displayNames.displayName(for: state.profile.id),
-                                 subtitle: state.failureText ?? state.connectionText,
-                                 detail: state.recoveryHint ?? "CODEX_HOME \(state.profile.codexHomeDisplaySuffix)")
-            }
-            Divider().padding(.vertical, 6)
-            ServiceStatusRow(title: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek), subtitle: providerStatus(.deepseek),
-                             detail: menuBarPreferences.selection == .deepSeek
-                                 ? "菜单栏正在显示，隐藏详情卡不影响余额刷新"
-                                 : nil,
-                             toggle: $preferences.showDeepSeek,
-                             buttonTitle: deepSeekForm.isExpanded ? "收起" : "管理") {
-                toggleForm(.deepseek)
-            }
-            if deepSeekForm.isExpanded {
-                DeepSeekSettingsView(form: deepSeekForm).padding(.top, 8)
-            }
-            Divider().padding(.vertical, 6)
-            ServiceStatusRow(title: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode), subtitle: providerStatus(.commandcode),
-                             detail: nil, toggle: $preferences.showCommandCode,
-                             buttonTitle: commandCodeForm.isExpanded ? "收起" : "管理") {
-                toggleForm(.commandcode)
-            }
-            if commandCodeForm.isExpanded {
-                CommandCodeSettingsView(form: commandCodeForm).padding(.top, 8)
-            }
-        }
-        .settingsGroupBackground()
-    }
-
-    /// Single-open accordion: expanding one connection form collapses the other, so the fixed
-    /// page height cannot be overflowed by two open forms at once.
-    private func toggleForm(_ platform: ProviderPlatform) {
-        switch platform {
-        case .deepseek:
-            let willExpand = !deepSeekForm.isExpanded
-            commandCodeForm.collapse()
-            deepSeekForm.isExpanded = willExpand
-        case .commandcode:
-            let willExpand = !commandCodeForm.isExpanded
-            deepSeekForm.collapse()
-            commandCodeForm.isExpanded = willExpand
-        case .codex:
-            return
-        }
-    }
-
-    private func providerStatus(_ platform: ProviderPlatform) -> String {
-        guard let report = model.providerReports.first(where: { $0.platform == platform }) else { return "等待更新" }
-        switch report.connection {
-        case .connected: return "已连接"
-        case .stale: return "已连接，数据已过期"
-        case .connecting: return "正在获取…"
-        case .notConfigured: return "未连接"
-        case .authSuspended: return "需要重新连接"
-        case .needsAuthorization: return "需要授权"
-        case .unavailable, .unverified: return "暂不可用"
-        }
-    }
-
-    // MARK: - Footer
-
-    private var footer: some View {
-        HStack(spacing: 12) {
-            Text("版本 \(appVersion)").font(.system(size: 10)).foregroundStyle(.secondary)
-            Spacer()
-            if let onDetailWindow { Button("打开详情窗口") { onDetailWindow() } }
-            Button("关于") { showsAbout = true }
-                .popover(isPresented: $showsAbout, arrowEdge: .bottom) { MingetAboutView() }
-            Button("退出明明有数") { onQuit() }
-        }.controlSize(.small)
-    }
-
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.3"
-    }
-}
-
-private struct DisplayNameSettingsView: View {
-    @ObservedObject var preferences: DisplayNamePreferences
-    @State private var drafts: [String: String] = [:]
-    @State private var feedback: [String: String] = [:]
-
-    private static let serviceIDs = [
-        "chatgpt-a", "chatgpt-b",
-        DisplayNamePreferences.ServiceID.deepSeek,
-        DisplayNamePreferences.ServiceID.commandCode
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("显示名称").font(.system(size: 13, weight: .semibold))
-            Text("只修改详情页和设置里的显示文字，不改变账号、缓存或点火计划绑定。最多 40 个字符。")
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ForEach(Self.serviceIDs, id: \.self) { serviceID in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(fixedLabel(for: serviceID))
-                            .font(.system(size: 10, weight: .medium))
-                            .frame(width: 94, alignment: .leading)
-                        TextField(preferences.defaultName(for: serviceID),
-                                  text: draftBinding(for: serviceID))
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(size: 11))
-                        Button("保存") { save(serviceID) }
-                            .controlSize(.small)
-                        Button("默认") { reset(serviceID) }
-                            .controlSize(.small)
-                            .disabled(!preferences.customizedServiceIDs.contains(serviceID))
-                    }
-                    if let message = feedback[serviceID] {
-                        Text(message)
-                            .font(.system(size: 9))
-                            .foregroundStyle(message == "已保存" || message == "已恢复默认" ? Color.green : Color.red)
-                    }
-                }
-            }
-        }
-        .settingsGroupBackground()
-        .onAppear { syncDrafts() }
-    }
-
-    private func fixedLabel(for serviceID: String) -> String {
-        switch serviceID {
-        case "chatgpt-a": return "OpenAI 账号 A"
-        case "chatgpt-b": return "OpenAI 账号 B"
-        case DisplayNamePreferences.ServiceID.deepSeek: return "DeepSeek"
-        case DisplayNamePreferences.ServiceID.commandCode: return "Command Code"
-        default: return serviceID
-        }
-    }
-
-    private func draftBinding(for serviceID: String) -> Binding<String> {
-        Binding(get: {
-            drafts[serviceID] ?? preferences.displayName(for: serviceID)
-        }, set: {
-            drafts[serviceID] = $0
-            feedback.removeValue(forKey: serviceID)
-        })
-    }
-
-    private func save(_ serviceID: String) {
-        let value = drafts[serviceID] ?? preferences.displayName(for: serviceID)
-        if preferences.setDisplayName(value, for: serviceID) {
-            drafts[serviceID] = preferences.displayName(for: serviceID)
-            feedback[serviceID] = "已保存"
-        } else {
-            feedback[serviceID] = "名称最多 40 个字符"
-        }
-    }
-
-    private func reset(_ serviceID: String) {
-        preferences.resetDisplayName(for: serviceID)
-        drafts[serviceID] = preferences.defaultName(for: serviceID)
-        feedback[serviceID] = "已恢复默认"
-    }
-
-    private func syncDrafts() {
-        for serviceID in Self.serviceIDs {
-            drafts[serviceID] = preferences.displayName(for: serviceID)
-        }
+        guard Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "Minget" else { return "1.6.1" }
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.1"
     }
 }
 
@@ -439,7 +269,7 @@ private struct FireScheduleSettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("5 小时点火计划").font(.system(size: 13, weight: .semibold))
             Text("每日本地时间，勾选后生效；睡眠或启动错过时最多补跑 10 分钟。")
-                .font(.system(size: 9))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
 
             ForEach(FireScheduleTarget.allCases) { target in
@@ -456,7 +286,7 @@ private struct FireScheduleSettingsView: View {
                     }
 
                     if preferences.entries(for: target).isEmpty {
-                        Text("尚未添加").font(.system(size: 9)).foregroundStyle(.tertiary)
+                        Text("尚未添加").font(.system(size: 13)).foregroundStyle(.tertiary)
                     } else {
                         ForEach(preferences.entries(for: target)) { entry in
                             HStack(spacing: 8) {
@@ -473,7 +303,7 @@ private struct FireScheduleSettingsView: View {
                                     .frame(width: 92)
 
                                 Text(entry.isEnabled ? "已启用" : "未启用")
-                                    .font(.system(size: 9))
+                                    .font(.system(size: 13))
                                     .foregroundStyle(entry.isEnabled ? Color.green : Color.secondary)
                                 Spacer()
                                 Button(role: .destructive) {
@@ -489,7 +319,7 @@ private struct FireScheduleSettingsView: View {
 
                     if preferences.hasSubFiveHourGap(for: target) {
                         Text("相邻已启用时间小于 5 小时：仍会发起请求，但通常不会开启新窗口。")
-                            .font(.system(size: 9))
+                            .font(.system(size: 13))
                             .foregroundStyle(.orange)
                     }
                 }
@@ -497,10 +327,10 @@ private struct FireScheduleSettingsView: View {
             }
 
             Text("Command Code 使用钥匙串中的 Key 调用官方 CLI 最小请求，会消耗少量额度。")
-                .font(.system(size: 9))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
         }
-        .settingsGroupBackground()
+
     }
 
     private func dateBinding(_ entry: FireScheduleEntry) -> Binding<Date> {
@@ -528,31 +358,5 @@ private struct FireScheduleSettingsView: View {
             return displayNames.displayName(for: profileID)
         }
         return displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode)
-    }
-}
-
-private struct ServiceStatusRow: View {
-    let title: String; let subtitle: String; let detail: String?
-    var toggle: Binding<Bool>? = nil; var buttonTitle: String? = nil; var action: (() -> Void)? = nil
-    var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 12, weight: .medium))
-                Text(detail ?? subtitle).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
-                if detail != nil {
-                    Text(subtitle).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            Spacer()
-            if let toggle { Toggle("", isOn: toggle).labelsHidden().toggleStyle(.switch).controlSize(.small) }
-            if let buttonTitle, let action { Button(buttonTitle, action: action).controlSize(.small) }
-        }.padding(.vertical, 5)
-    }
-}
-
-private extension View {
-    func settingsGroupBackground() -> some View {
-        padding(12).background(Color(NSColor.controlBackgroundColor).opacity(0.82), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.06), lineWidth: 1) }
     }
 }

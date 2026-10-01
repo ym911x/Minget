@@ -10,17 +10,17 @@ import UsageMonitorCore
 enum DetailPageLayout {
 
     static let pageWidth: CGFloat = 440
-    static let margin: CGFloat = 12
-    static let contentWidth: CGFloat = 416
+    static let margin: CGFloat = 16
+    static let contentWidth: CGFloat = 408
     static let headerHeight: CGFloat = 36
-    static let tabHeight: CGFloat = 34
-    static let footerHeight: CGFloat = 36
+    static let tabHeight: CGFloat = 44
+    static let footerHeight: CGFloat = 40
     /// The gap between the header and cards, and between cards.
-    static let rowSpacing: CGFloat = 8
+    static let rowSpacing: CGFloat = 12
 
-    static let codexCardHeight: CGFloat = 178
+    static let codexCardHeight: CGFloat = 228
     static let deepSeekCardHeight: CGFloat = 72
-    static let commandCodeCardHeight: CGFloat = 281
+    static let commandCodeCardHeight: CGFloat = 312
 
     enum Kind: String, Equatable, Sendable {
         case header, chatGPTA, chatGPTB, deepSeek, commandCode
@@ -48,7 +48,7 @@ enum DetailPageLayout {
         return rows
     }
 
-    /// Complete preferred height with both service cards is 801 pt. A shorter viewport is
+    /// Legacy full-card geometry retained for historical callers. A shorter viewport is
     /// intentionally supported by `UsagePanelView` for small screens.
     static func pageHeight(showDeepSeek: Bool, showCommandCode: Bool) -> CGFloat {
         guard let last = rows(showDeepSeek: showDeepSeek, showCommandCode: showCommandCode).last else {
@@ -58,15 +58,15 @@ enum DetailPageLayout {
     }
 
     static func viewportHeight(preferredHeight: CGFloat, visibleFrame: CGRect?, inset: CGFloat = 8) -> CGFloat {
-        guard let visibleFrame, visibleFrame.height > 0 else { return preferredHeight }
-        return min(preferredHeight, max(280, visibleFrame.height - inset * 2))
+        guard let visibleFrame, visibleFrame.height > 0 else { return min(preferredHeight, 640) }
+        return min(preferredHeight, 640, max(0, visibleFrame.height - inset * 2))
     }
 }
 
 /// The daily overview shown from the menu bar and the regular detail window.
 ///
-/// One column, four cards. The popover and the regular detail window render this same view;
-/// only a viewport that cannot contain the preferred page gets a vertical scroll region.
+/// Compact account overview and full service detail share this view.
+/// Only the content area scrolls; navigation and actions remain reachable.
 struct UsagePanelView: View {
 
     // Convenience aliases so existing call sites and tests keep reading the page constants
@@ -108,14 +108,14 @@ struct UsagePanelView: View {
 
     var body: some View {
         let preferred = Self.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count)
-        let viewport = min(preferred, maxHeight ?? preferred)
-        let tabHeight = preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0
+        let viewport = min(preferred, 640, maxHeight ?? preferred)
+        let tabHeight = DetailPageLayout.tabHeight
         let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
 
         VStack(alignment: .leading, spacing: 0) {
             header
-            if preferences.displayMode == .byProvider { providerTabs }
-            if viewport < preferred {
+            providerTabs
+            if viewport < preferred || preferences.effectiveTab == .google {
                 ScrollView(.vertical, showsIndicators: true) {
                     cardStack
                 }
@@ -135,7 +135,8 @@ struct UsagePanelView: View {
     @ViewBuilder
     private var cardStack: some View {
         VStack(alignment: .leading, spacing: DetailPageLayout.rowSpacing) {
-            if preferences.effectiveTab == .all || preferences.effectiveTab == .chatGPT {
+            if preferences.effectiveTab == .all { overviewRows }
+            if preferences.effectiveTab == .chatGPT {
                 ForEach(model.profileStates) { state in
                     CodexProfileCard(state: state,
                                      displayName: displayNames.displayName(for: state.profile.id)) {
@@ -143,7 +144,7 @@ struct UsagePanelView: View {
                     }
                 }
             }
-            if preferences.showGoogle && (preferences.effectiveTab == .all || preferences.effectiveTab == .google) {
+            if preferences.showGoogle && preferences.effectiveTab == .google {
                 if model.google.accounts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Google / Antigravity").font(.headline)
@@ -153,53 +154,104 @@ struct UsagePanelView: View {
                     }.padding(12).frame(height: AntigravityOverviewCard.height)
                 }
                 ForEach(model.google.accounts) { state in
-                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account))
+                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account),
+                        expanded: Binding(get: { preferences.expandedGoogleAccounts.contains(state.id) },
+                                          set: { if $0 { preferences.expandedGoogleAccounts.insert(state.id) }
+                                                 else { preferences.expandedGoogleAccounts.remove(state.id) } }))
                 }
             }
-            if preferences.showDeepSeek && (preferences.effectiveTab == .all || preferences.effectiveTab == .deepSeek) {
+            if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {
                 DeepSeekOverviewCard(report: report(for: .deepseek),
                                      status: model.deepSeekStatus,
                                      displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
-                                     openSettings: { onSettings?() })
+                                     openSettings: { onAccounts?() })
             }
-            if preferences.showCommandCode && (preferences.effectiveTab == .all || preferences.effectiveTab == .commandCode) {
+            if preferences.showCommandCode && preferences.effectiveTab == .commandCode {
                 CommandCodeOverviewCard(report: report(for: .commandcode),
                                         displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
                                         fireState: model.commandCodeFireState,
                                         onFire: { model.fireCommandCode() },
-                                        openSettings: { onSettings?() })
+                                        openSettings: { onAccounts?() })
             }
         }
         .padding(.top, DetailPageLayout.rowSpacing)
     }
 
     static func preferredHeight(for preferences: DetailPreferences, googleAccountCount: Int = 2) -> CGFloat {
-        let googleHeight = CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + DetailPageLayout.rowSpacing)
-        let allHeight = DetailPageLayout.pageHeight(showDeepSeek: preferences.showDeepSeek,
-                                                   showCommandCode: preferences.showCommandCode)
-        let cardsHeight: CGFloat
+        let chrome = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.tabHeight + DetailPageLayout.footerHeight
+        let gap = DetailPageLayout.rowSpacing
         switch preferences.effectiveTab {
-        case .all: cardsHeight = allHeight + (preferences.showGoogle ? googleHeight : 0)
-        case .chatGPT: cardsHeight = DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false)
-        case .deepSeek: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.deepSeekCardHeight
-        case .google: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing + googleHeight
-        case .commandCode: cardsHeight = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.rowSpacing * 2 + DetailPageLayout.commandCodeCardHeight
+        case .all:
+            let count = 2 + (preferences.showGoogle ? max(1, googleAccountCount) : 0)
+                + (preferences.showDeepSeek ? 1 : 0) + (preferences.showCommandCode ? 1 : 0)
+            return chrome + CGFloat(count) * (64 + gap)
+        case .chatGPT: return chrome + 2 * (DetailPageLayout.codexCardHeight + gap)
+        case .google: return chrome + CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + gap)
+        case .deepSeek: return chrome + DetailPageLayout.deepSeekCardHeight + gap
+        case .commandCode: return chrome + DetailPageLayout.commandCodeCardHeight + gap
         }
-        return cardsHeight + DetailPageLayout.footerHeight + (preferences.displayMode == .byProvider ? DetailPageLayout.tabHeight : 0)
     }
 
     private var providerTabs: some View {
-        Picker("查看供应商", selection: Binding(get: { preferences.effectiveTab }, set: { preferences.selectedTab = $0 })) {
-            ForEach(preferences.visibleTabs, id: \.self) { tab in
-                Text(tabTitle(tab)).tag(tab)
+        HStack(spacing: 12) {
+            if preferences.effectiveTab != .all {
+                Button { preferences.selectedTab = .all } label: {
+                    Label("概览", systemImage: "chevron.left")
+                }.buttonStyle(.borderless).font(.system(size: 12))
+            }
+            Picker("查看服务", selection: Binding(get: { preferences.effectiveTab }, set: { preferences.selectedTab = $0 })) {
+                ForEach(preferences.visibleTabs, id: \.self) { tab in Text(tabTitle(tab)).tag(tab) }
+            }.pickerStyle(.menu).labelsHidden().frame(width: 145)
+            Spacer(minLength: 0)
+            Text(updateStatusText).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+        }.frame(height: DetailPageLayout.tabHeight)
+            .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
+            .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
+            .onChange(of: preferences.showGoogle) { _ in normalizeTab() }
+    }
+
+    @ViewBuilder private var overviewRows: some View {
+        ForEach(model.profileStates) { state in
+            OverviewAccountRow(service: .chatGPT, name: displayNames.displayName(for: state.id), status: state.connectionText,
+                values: "5 小时 " + QuotaPresentation.percentage(state.snapshot?.fiveHour?.remainingPercent)
+                    + "  ·  周 " + QuotaPresentation.percentage(state.snapshot?.weekly?.remainingPercent)) { preferences.selectedTab = .chatGPT }
+        }
+        if preferences.showGoogle {
+            if model.google.accounts.isEmpty {
+                OverviewAccountRow(service: .gemini, name: "Gemini", status: "未连接", values: "连接账号后查看额度") { onAccounts?() }
+            }
+            ForEach(model.google.accounts) { state in
+                let group = QuotaPresentation.primaryGroup(state.snapshot?.groups ?? [])
+                OverviewAccountRow(service: .gemini, name: model.google.displayName(state.account),
+                    status: state.statusText,
+                    values: "5 小时 " + QuotaPresentation.percentage(group?.buckets.first { $0.kind == .fiveHour }?.remainingFraction.map { $0 * 100 })
+                        + "  ·  周 " + QuotaPresentation.percentage(group?.buckets.first { $0.kind == .weekly }?.remainingFraction.map { $0 * 100 })) { preferences.selectedTab = .google }
             }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .frame(height: DetailPageLayout.tabHeight)
-        .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
-        .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
-        .onChange(of: preferences.showGoogle) { _ in normalizeTab() }
+        if preferences.showDeepSeek {
+            let report = report(for: .deepseek)
+            OverviewAccountRow(service: .deepSeek, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
+                status: providerConnectionText(report.connection),
+                values: !(report.connection == .connected || report.connection == .stale) || report.balances.isEmpty ? "余额暂不可用" : report.balances.map { DecimalFormatting.balanceText($0) }.joined(separator: "  ·  ")) { preferences.selectedTab = .deepSeek }
+        }
+        if preferences.showCommandCode {
+            let report = report(for: .commandcode)
+            let window = report.usage?.windows.first { $0.kind == .fiveHour }
+            OverviewAccountRow(service: .commandCode, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
+                status: providerConnectionText(report.connection),
+                values: "5 小时 " + CommandCodeCardPresentation.quotaText(window)) { preferences.selectedTab = .commandCode }
+        }
+    }
+
+    private func providerConnectionText(_ connection: ProviderConnectionState) -> String {
+        switch connection {
+        case .connected: return "已连接"
+        case .stale: return "缓存数据"
+        case .connecting: return "正在获取"
+        case .notConfigured: return "未连接"
+        case .authSuspended, .needsAuthorization: return "需要重新连接"
+        case .unavailable, .unverified: return "暂不可用"
+        }
     }
 
     private func normalizeTab() {
@@ -208,24 +260,28 @@ struct UsagePanelView: View {
 
     private func tabTitle(_ tab: DetailPreferences.ProviderTab) -> String {
         switch tab {
-        case .all: return "全部"
+        case .all: return "概览"
         case .chatGPT: return "ChatGPT"
         case .deepSeek: return "DeepSeek"
         case .commandCode: return "Command Code"
-        case .google: return "Google"
+        case .google: return "Gemini"
         }
     }
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("管理账号") { onAccounts?() }
+            Button { onAccounts?() } label: { Label("管理账号", systemImage: "person.crop.circle") }
             Spacer()
-            Button("设置") { onSettings?() }
-            Button("退出明明有数") { onQuit?() }
-        }
-        .buttonStyle(.borderless)
-        .font(.system(size: 11))
-        .frame(height: DetailPageLayout.footerHeight)
+            Button { onSettings?() } label: { Label("设置", systemImage: "gearshape") }
+            Menu {
+                Button("打开独立详情窗口") { NotificationCenter.default.post(name: .init("MingetShowDetailWindow"), object: nil) }
+                Button("关于明明有数") { onSettings?(); NotificationCenter.default.post(name: .init("MingetShowAbout"), object: nil) }
+                Divider()
+                Button("退出明明有数") { onQuit?() }
+            } label: { Image(systemName: "ellipsis.circle").frame(width: 24, height: 24) }
+                .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("更多操作")
+        }.buttonStyle(.borderless).font(.system(size: 12))
+            .frame(height: DetailPageLayout.footerHeight)
     }
 
     private var preferredHeight: CGFloat {
@@ -235,55 +291,21 @@ struct UsagePanelView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 10) {
-            HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text(Self.productName())
-                    .font(.system(size: 20, weight: .bold))
-                    .fixedSize()
-                Text("v\(appVersion)")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .fixedSize()
-            }
-
-            Spacer(minLength: 8)
-
-            Button {
-                model.refreshNow()
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: isAnyRefreshInFlight
-                          ? "arrow.triangle.2.circlepath"
-                          : "arrow.clockwise")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(updateStatusText)
-                        .font(.system(size: 11))
-                        .lineLimit(1)
-                }
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.borderless)
-            // Never disabled while a refresh runs: a click during an active cycle queues
-            // exactly one follow-up cycle (1.4.2 §3.1), it is not swallowed.
-            .accessibilityLabel("刷新，\(updateStatusText)")
-
-            Button {
-                onSettings?()
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 15, weight: .semibold))
+        HStack(spacing: 8) {
+            Text(Self.productName()).font(.system(size: 18, weight: .semibold))
+            Text("v\(appVersion)").font(.system(size: 11)).foregroundStyle(.secondary)
+            Spacer()
+            Button { model.refreshNow() } label: {
+                Image(systemName: "arrow.clockwise").font(.system(size: 14, weight: .medium))
                     .frame(width: 30, height: 30)
-            }
-            .buttonStyle(.borderless)
-            .disabled(onSettings == nil)
-            .accessibilityLabel("设置")
-        }
-        .frame(height: DetailPageLayout.headerHeight)
-        .frame(maxWidth: .infinity)
+            }.buttonStyle(.borderless).help("刷新全部额度")
+                .accessibilityLabel("刷新，\(updateStatusText)")
+        }.frame(height: DetailPageLayout.headerHeight)
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.0"
+        guard Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "Minget" else { return "1.6.1" }
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.1"
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
@@ -576,7 +598,7 @@ private extension View {
 struct DeepSeekOverviewCard: View {
 
     static let size = CGSize(width: DetailPageLayout.contentWidth, height: DetailPageLayout.deepSeekCardHeight)
-    static let logoSize: CGFloat = 34
+    static let logoSize: CGFloat = 28
 
     let report: ProviderReport
     let status: DeepSeekStatusSnapshot
@@ -625,12 +647,12 @@ struct DeepSeekOverviewCard: View {
                 }
             }
         }
-        .padding(12)
+        .padding(16)
         .frame(width: Self.size.width, height: Self.size.height, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
@@ -756,9 +778,9 @@ struct CommandCodeOverviewCard: View {
     static let summaryHeadingHeight: CGFloat = 17
     static let summaryLineHeight: CGFloat = 18
     static let summaryToFooterSpacing: CGFloat = 12
-    static let footerHeight: CGFloat = 16
+    static let footerHeight: CGFloat = 28
     static let valueWidth: CGFloat = 116
-    static let fireButtonWidth: CGFloat = 76
+    static let fireButtonWidth: CGFloat = 96
     static let fireButtonTitle = "5 小时点火"
     static let fireButtonRunningTitle = "点火中…"
     static let confirmationTitle = "启动 Command Code 5 小时额度窗口？"
@@ -791,12 +813,12 @@ struct CommandCodeOverviewCard: View {
             Spacer().frame(height: Self.summaryToFooterSpacing)
             fireFooter.frame(height: Self.footerHeight)
         }
-        .padding(12)
+        .padding(16)
         .frame(width: Self.size.width, height: Self.size.height, alignment: .topLeading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.82),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
@@ -828,27 +850,7 @@ struct CommandCodeOverviewCard: View {
                                       lastSuccessAt: report.lastSuccessAt,
                                       planFreshness: planFreshness)
             Spacer(minLength: 8)
-            if report.usage == nil && report.connection == .notConfigured {
-                Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
-                    .buttonStyle(.link)
-                    .font(.system(size: 10))
-            } else {
-                Button {
-                    showsFireConfirmation = true
-                } label: {
-                    HStack(spacing: 4) {
-                        if fireState.isFiring { ProgressView().controlSize(.small) }
-                        Text(fireState.isFiring ? Self.fireButtonRunningTitle : Self.fireButtonTitle)
-                            .font(.system(size: 10))
-                            .lineLimit(1)
-                    }
-                    .frame(width: Self.fireButtonWidth, height: 24)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(fireState.isFiring)
-                .accessibilityLabel("\(displayName) \(Self.fireButtonTitle)")
-            }
+
         }
         // The cached state must be readable, not just implied by the fainter tracks.
         .help(CommandCodeCardPresentation.helpText(connection: report.connection,
@@ -950,12 +952,11 @@ struct CommandCodeOverviewCard: View {
 
     private var fireFooter: some View {
         HStack(spacing: 6) {
-            Spacer(minLength: 0)
             Text(fireState.resultText)
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundStyle(fireResultColor)
                 .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+                .fixedSize(horizontal: false, vertical: false)
                 .layoutPriority(2)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("点火状态")
@@ -965,11 +966,33 @@ struct CommandCodeOverviewCard: View {
                       : fireState.history.map(\.displayLine).joined(separator: "\n"))
             if let drift = fireState.driftText {
                 Text("· \(drift)")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(fireResultColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .accessibilityHidden(true)
+            }
+            Spacer(minLength: 4)
+            if report.usage == nil && report.connection == .notConfigured {
+                Button(report.connection == .notConfigured ? "前往设置" : "查看设置") { openSettings() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+            } else {
+                Button {
+                    showsFireConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        if fireState.isFiring { ProgressView().controlSize(.small) }
+                        Text(fireState.isFiring ? Self.fireButtonRunningTitle : Self.fireButtonTitle)
+                            .font(.system(size: 11))
+                            .lineLimit(1)
+                    }
+                    .frame(width: Self.fireButtonWidth, height: 24)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(fireState.isFiring || onFire == nil)
+                .accessibilityLabel("\(displayName) \(Self.fireButtonTitle)")
             }
         }
     }
@@ -1194,7 +1217,7 @@ enum CommandCodeCardPresentation {
     }
 }
 
-private struct CommandCodeLogomark: View {
+struct CommandCodeLogomark: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {

@@ -2,144 +2,152 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
-/// One connection surface for first launch and later account management.
+struct AccountManagementRow<Actions: View>: View {
+    let service: ServiceSymbol
+    let name: String
+    let identity: String
+    let status: String
+    @ViewBuilder let actions: () -> Actions
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            ServiceMark(service: service)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name).font(.system(size: 15, weight: .semibold)).lineLimit(1).help(name)
+                if !identity.isEmpty { Text(identity).font(.system(size: 11)).foregroundStyle(.secondary).textSelection(.enabled) }
+                Text(status).font(.system(size: 11)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            actions().controlSize(.regular)
+        }.frame(minHeight: 64).accessibilityElement(children: .contain)
+    }
+}
+
+struct AccountNameSheet: View {
+    let defaultName: String
+    let onSave: (String) -> Bool
+    @State private var draft: String
+    @State private var error: String?
+    @Environment(\.dismiss) private var dismiss
+    init(name: String, defaultName: String, onSave: @escaping (String) -> Bool) {
+        self.defaultName = defaultName; self.onSave = onSave; _draft = State(initialValue: name)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("显示名称").font(.headline)
+            TextField(defaultName, text: $draft).textFieldStyle(.roundedBorder)
+            Text(error ?? "最多 40 个字符，仅修改本地显示文字。")
+                .font(.system(size: 11)).foregroundStyle(error == nil ? Color.secondary : .red)
+            HStack {
+                Button("恢复默认") { if onSave("") { dismiss() } }
+                Spacer()
+                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("保存") {
+                    if draft.trimmingCharacters(in: .whitespacesAndNewlines).count > 40 { error = "名称最多 40 个字符" }
+                    else if onSave(draft) { dismiss() }
+                    else { error = "名称无法保存" }
+                }.keyboardShortcut(.defaultAction)
+            }
+        }.padding(24).frame(width: 400)
+    }
+}
+
+/// Reused in the settings account pane and first-run guide. No second window or reader.
 struct AccountManagementView: View {
     @ObservedObject var model: UsageViewModel
     let firstRun: Bool
     let onDone: () -> Void
     @StateObject private var deepSeekForm: ConnectionFormState
     @StateObject private var commandCodeForm: ConnectionFormState
+    @State private var editingName: String?
 
     init(model: UsageViewModel, firstRun: Bool, onDone: @escaping () -> Void) {
-        self.model = model
-        self.firstRun = firstRun
-        self.onDone = onDone
+        self.model = model; self.firstRun = firstRun; self.onDone = onDone
         _deepSeekForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .deepseek))
         _commandCodeForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .commandcode))
     }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(firstRun ? "连接你的第一个账号" : "管理账号")
-                .font(.system(size: 20, weight: .bold))
-            Text("选择一个服务开始。其他账号以后仍可在这里连接。")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(model.profileStates) { state in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(model.displayNames.displayName(for: state.profile.id)).font(.headline)
-                                Text("ChatGPT").font(.system(size: 10)).foregroundStyle(.secondary)
-                                Spacer()
-                                if model.activeLoginProfile == state.profile.id {
-                                    Button("取消登录") { model.cancelChatGPTLogin() }
-                                } else {
-                                    Button(state.snapshot == nil ? "连接" : "重新连接") {
-                                        model.connectChatGPT(profileID: state.profile.id)
-                                    }
-                                    .disabled(model.activeLoginProfile != nil)
-                                }
-                            }
-                            Text(model.loginStatus[state.profile.id] ?? state.failureText ??
-                                 (state.snapshot == nil ? "未连接或额度暂不可用" : state.isStale ? "上次额度，连接待确认" : "已连接，额度已更新"))
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
-                            if let hint = state.recoveryHint {
-                                Text(hint).font(.system(size: 10)).foregroundStyle(.secondary)
-                            }
-                        }.connectionCard()
-                    }
-
-                    AntigravityConnectionView(google: model.google)
-                    providerRow(.deepseek, title: "DeepSeek", form: deepSeekForm)
-                    providerRow(.commandcode, title: "Command Code", form: commandCodeForm)
+        Form {
+            if firstRun {
+                Section {
+                    Text("连接你的第一个账号").font(.headline)
+                    Text("选择一个服务开始，其他账号以后仍可在这里连接。")
+                        .foregroundStyle(.secondary)
                 }
             }
-            HStack {
-                Spacer()
-                Button(firstRun && !hasConnectedSource ? "稍后再说" : "完成") { onDone() }
-                    .keyboardShortcut(.defaultAction)
+            Section("ChatGPT") {
+                ForEach(model.profileStates) { state in
+                    AccountManagementRow(service: .chatGPT, name: model.displayNames.displayName(for: state.id),
+                        identity: [state.identityLabel, state.displayEmail].compactMap { $0 }.joined(separator: " · "),
+                        status: model.loginStatus[state.id] ?? state.failureText ?? state.connectionText) {
+                        if model.activeLoginProfile == state.id {
+                            Button("取消登录") { model.cancelChatGPTLogin() }
+                        } else {
+                            Button(state.isConnectionHealthy || state.isConnectionCached ? "重新登录" : "登录") {
+                                model.connectChatGPT(profileID: state.id)
+                            }.disabled(model.activeLoginProfile != nil)
+                        }
+                        Menu {
+                            Button("显示名称…") { editingName = state.id }
+                        } label: { Image(systemName: "ellipsis.circle") }.menuStyle(.borderlessButton).fixedSize()
+                            .accessibilityLabel("\(model.displayNames.displayName(for: state.id)) 更多管理操作")
+                    }
+                    if let hint = state.recoveryHint { Text(hint).font(.system(size: 11)).foregroundStyle(.secondary) }
+                }
+            }
+            Section("Gemini · Google / Antigravity") { AntigravityConnectionView(google: model.google) }
+            Section("API 服务") {
+                providerRow(.deepseek, title: "DeepSeek", form: deepSeekForm)
+                providerRow(.commandcode, title: "Command Code", form: commandCodeForm)
+            }
+            if firstRun {
+                Section {
+                    Button(hasConnectedSource ? "完成并查看额度" : "稍后再说", action: onDone)
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+        }.formStyle(.grouped)
+        .sheet(isPresented: Binding(get: { editingName != nil }, set: { if !$0 { editingName = nil } })) {
+            if let id = editingName {
+                AccountNameSheet(name: model.displayNames.displayName(for: id), defaultName: model.displayNames.defaultName(for: id)) {
+                    model.displayNames.setDisplayName($0, for: id)
+                }
             }
         }
-        .padding(18)
-        .frame(width: 520, height: 580)
     }
-
     private var hasConnectedSource: Bool {
-        !model.google.connections.isEmpty
-        || model.profileStates.contains { !$0.isStale && $0.snapshot != nil }
-        || model.providerReports.contains { $0.connection == .connected && $0.isLive }
+        !model.google.connections.isEmpty || model.profileStates.contains { !$0.isStale && $0.snapshot != nil }
+            || model.providerReports.contains { $0.connection == .connected && $0.isLive }
     }
-
-    private func providerRow(_ platform: ProviderPlatform, title: String,
-                             form: ConnectionFormState) -> some View {
+    private func providerRow(_ platform: ProviderPlatform, title: String, form: ConnectionFormState) -> some View {
         let report = model.providerReports.first { $0.platform == platform }
-        let serviceID = platform == .deepseek
-            ? DisplayNamePreferences.ServiceID.deepSeek : DisplayNamePreferences.ServiceID.commandCode
-        let accountName = model.displayNames.displayName(for: serviceID)
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text(title).font(.headline)
-                if accountName != title {
-                    Text(accountName).font(.system(size: 10)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button(form.isExpanded ? "收起" : "连接或管理") { form.toggle() }
-            }
-            Text(providerStatus(report)).font(.system(size: 11)).foregroundStyle(.secondary)
-            CredentialFeedbackView(feedback: model.credentialFeedback(for: platform))
-            if form.isExpanded {
+        let id = platform == .deepseek ? DisplayNamePreferences.ServiceID.deepSeek : DisplayNamePreferences.ServiceID.commandCode
+        let name = model.displayNames.displayName(for: id)
+        return AccountManagementRow(service: platform == .deepseek ? .deepSeek : .commandCode, name: name,
+            identity: title + " · API Key", status: providerStatus(report)) {
+            Button((report?.connection ?? .notConfigured) == .notConfigured ? "连接" : "管理") { form.toggle() }
+            Menu { Button("显示名称…") { editingName = id } }
+                label: { Image(systemName: "ellipsis.circle") }.menuStyle(.borderlessButton).fixedSize()
+                .accessibilityLabel("\(name) 更多管理操作")
+        }.sheet(isPresented: Binding(get: { form.isExpanded }, set: { if !$0 { form.collapse() } })) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("管理 " + name).font(.headline)
+                CredentialFeedbackView(feedback: model.credentialFeedback(for: platform))
                 if platform == .deepseek { DeepSeekSettingsView(form: form) }
                 else { CommandCodeSettingsView(form: form) }
-            }
-        }.connectionCard()
+            }.padding(24).frame(width: 460)
+        }
     }
-
     private func providerStatus(_ report: ProviderReport?) -> String {
         guard let report else { return "正在检查连接状态…" }
         switch report.connection {
-        case .connected:
-            if report.isLive { return "连接成功，额度已更新" }
-            return report.lastSuccessAt == nil ? "已保存，正在读取额度…" : "已连接，上次额度可用"
-        case .stale: return "上次额度可用，当前读取失败"
-        case .connecting: return report.lastSuccessAt == nil ? "正在读取额度…" : "正在读取额度，显示上次数据"
+        case .connected: return report.isLive ? "已连接 · 额度已更新" : "已连接 · 上次额度"
+        case .stale: return "已保存 · 读取失败，显示上次额度"
+        case .connecting: return "正在读取额度…"
         case .notConfigured: return "未连接"
         case .authSuspended, .needsAuthorization: return "需要重新连接"
         case .unavailable, .unverified: return report.error?.displayText ?? "额度暂不可用"
         }
     }
-}
-
-private extension View {
-    func connectionCard() -> some View {
-        self.padding(12).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-final class AccountsWindowController: NSWindowController {
-    private let model: UsageViewModel
-    private let onDone: () -> Void
-    init(model: UsageViewModel, onDone: @escaping () -> Void) {
-        self.model = model
-        self.onDone = onDone
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 580),
-                              styleMask: [.titled, .closable, .miniaturizable],
-                              backing: .buffered, defer: false)
-        window.title = "管理账号"
-        window.isReleasedWhenClosed = false
-        window.center()
-        super.init(window: window)
-    }
-
-    func show(firstRun: Bool) {
-        window?.contentView = NSHostingView(rootView: AccountManagementView(model: model, firstRun: firstRun) { [weak self] in
-            self?.window?.orderOut(nil)
-            self?.onDone()
-        })
-        showWindow(nil)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }

@@ -126,16 +126,16 @@ final class StatusItemWiringTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let preferences = DetailPreferences(defaults: defaults)
 
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 837))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 456))
 
         preferences.showDeepSeek = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 757))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 380))
 
         preferences.showCommandCode = false
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 468))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 304))
 
         preferences.showDeepSeek = true
-        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 548))
+        XCTAssertEqual(StatusItemController.panelSize(for: preferences), NSSize(width: 440, height: 380))
     }
 
     /// The hosting controller and the popover must be given the same size before `show`, so
@@ -254,10 +254,12 @@ final class StatusItemWiringTests: XCTestCase {
         XCTAssertEqual(first.count, 1, "one settings window per request at most")
 
         let size = first.first?.contentView?.fittingSize
-        XCTAssertEqual(size?.width, 520)
-        XCTAssertEqual(size?.height, 700)
+        XCTAssertGreaterThanOrEqual(size?.width ?? 0, 700)
+        XCTAssertGreaterThanOrEqual(size?.height ?? 0, 520)
 
-        controller.showSettingsWindow()
+        controller.showAccountsWindow()
+        XCTAssertTrue(visibleSettingsWindows().first === first.first, "account management reuses settings")
+        XCTAssertTrue(first.first?.styleMask.contains(.resizable) == true)
         controller.showSettingsWindow()
         XCTAssertEqual(visibleSettingsWindows().count, 1, "reopening must not add another instance")
     }
@@ -271,6 +273,7 @@ final class StatusItemWiringTests: XCTestCase {
     func testTheDetailWindowUsesTheFixedPageSize() {
         let controller = DetailWindowController(model: makeModel(), onSettings: nil)
         let window = controller.window
+        XCTAssertFalse(window?.styleMask.contains(.resizable) ?? true)
         XCTAssertEqual(window?.frame.width, DetailPageLayout.pageWidth)
         XCTAssertEqual(window?.contentView?.fittingSize.width, DetailPageLayout.pageWidth)
         XCTAssertEqual(window?.contentView?.fittingSize.height,

@@ -189,7 +189,7 @@ final class DetailEvidenceRenderTests: XCTestCase {
         // 3. 440 × 468, light, only the two ChatGPT cards.
         livePreferences.showDeepSeek = false
         livePreferences.showCommandCode = false
-        XCTAssertEqual(UsagePanelView.preferredHeight(for: livePreferences), 468)
+        XCTAssertEqual(UsagePanelView.preferredHeight(for: livePreferences), 304)
         try write(try render(UsagePanelView(model: live, preferences: livePreferences),
                              size: CGSize(width: DetailPageLayout.pageWidth,
                                           height: UsagePanelView.preferredHeight(for: livePreferences)),

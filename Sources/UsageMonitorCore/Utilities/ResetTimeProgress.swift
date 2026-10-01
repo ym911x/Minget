@@ -111,23 +111,27 @@ public enum ResetTimeModel {
     public static func progress(expected kind: RateLimitWindow.Kind,
                                 window: RateLimitWindow?,
                                 now: Date) -> ResetTimeProgress {
+        guard segmentCount(for: kind) > 0 else { return ResetTimeProgress(state: .invalid, fills: []) }
+        guard let window else {
+            return ResetTimeProgress(state: .unknown, fills: [Double](repeating: 0, count: segmentCount(for: kind)))
+        }
+        guard window.kind == kind else {
+            return ResetTimeProgress(state: .invalid, fills: [Double](repeating: 0, count: segmentCount(for: kind)))
+        }
+        return progress(expected: kind, resetsAt: window.resetsAt,
+                        durationMinutes: window.windowDurationMinutes, now: now)
+    }
+
+    /// Time metadata can remain known even when a service omits its quota fraction.
+    public static func progress(expected kind: RateLimitWindow.Kind, resetsAt: Date?,
+                                durationMinutes: Int, now: Date) -> ResetTimeProgress {
         let count = segmentCount(for: kind)
         guard count > 0, let total = totalSeconds(for: kind), let expectedMinutes = expectedDurationMinutes(for: kind) else {
-            // No bar exists for this kind at all: not a displayable countdown.
             return ResetTimeProgress(state: .invalid, fills: [])
         }
         let empty = [Double](repeating: 0, count: count)
-
-        guard let window else {
-            return ResetTimeProgress(state: .unknown, fills: empty)
-        }
-        // A window whose identity does not match the row is never normalised into it.
-        guard window.kind == kind, window.windowDurationMinutes == expectedMinutes else {
-            return ResetTimeProgress(state: .invalid, fills: empty)
-        }
-        guard let resetsAt = window.resetsAt else {
-            return ResetTimeProgress(state: .unknown, fills: empty)
-        }
+        guard durationMinutes == expectedMinutes else { return ResetTimeProgress(state: .invalid, fills: empty) }
+        guard let resetsAt else { return ResetTimeProgress(state: .unknown, fills: empty) }
 
         let nowSeconds = now.timeIntervalSince1970
         let resetSeconds = resetsAt.timeIntervalSince1970

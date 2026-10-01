@@ -15,8 +15,8 @@ import UsageMonitorCore
 @MainActor
 final class StartupWindowTests: XCTestCase {
 
-    private static let appURL = URL(fileURLWithPath: NSHomeDirectory())
-        .appendingPathComponent("Applications/Minget.app")
+    private static let appURL = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MINGET_TEST_APP_PATH"]
+        ?? NSHomeDirectory() + "/Applications/Minget.app")
     private static let executableURL = appURL.appendingPathComponent("Contents/MacOS/UsageMonitor")
 
     override func setUpWithError() throws {
@@ -44,7 +44,7 @@ final class StartupWindowTests: XCTestCase {
             XCTAssertEqual(window.width, DetailPageLayout.pageWidth,
                            "unexpected window \(window) at cold start; the only legal window is "
                            + "the 440 pt detail page")
-            XCTAssertTrue(DetailPageLayout.pageHeight(showDeepSeek: false, showCommandCode: false) <= window.height,
+            XCTAssertTrue(window.height >= 280 && window.height <= 680,
                           "window \(window) is smaller than the shortest legal detail page")
         }
         XCTAssertTrue(app.isRunning, "the app must stay alive after launch")

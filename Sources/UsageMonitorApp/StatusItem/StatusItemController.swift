@@ -66,7 +66,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let dismissMonitor = PopoverDismissMonitor()
     private var detailWindowController: DetailWindowController?
     private var settingsWindowController: SettingsWindowController?
-    private var accountsWindowController: AccountsWindowController?
 
     private var model: UsageViewModel?
     private var lastGoogleAccountCount = 0
@@ -110,6 +109,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func install(model: UsageViewModel) {
         guard statusItem == nil else { return }   // idempotent: never two items
         self.model = model
+        NotificationCenter.default.publisher(for: .init("MingetShowDetailWindow")).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.showDetailWindow() }
+        }.store(in: &cancellables)
+        NotificationCenter.default.publisher(for: .init("MingetShowAbout")).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.settingsWindowController?.show(section: .about) }
+        }.store(in: &cancellables)
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem = item
@@ -185,8 +190,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         detailWindowController = nil
         settingsWindowController?.window?.orderOut(nil)
         settingsWindowController = nil
-        accountsWindowController?.window?.orderOut(nil)
-        accountsWindowController = nil
         if let item = statusItem {
             item.button?.subviews.forEach { $0.removeFromSuperview() }
             NSStatusBar.system.removeStatusItem(item)
@@ -415,20 +418,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 onDetailWindow: { [weak self] in self?.showDetailWindow() },
                 onQuit: { NSApp.terminate(nil) })
         }
-        settingsWindowController?.showWindow(nil)
+        settingsWindowController?.show()
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func showAccountsWindow(firstRun: Bool = false) {
-        guard let model else { return }
-        closePanel()
-        if accountsWindowController == nil {
-            accountsWindowController = AccountsWindowController(model: model) { [weak self] in
-                self?.showDetailWindow()
-            }
-        }
-        accountsWindowController?.show(firstRun: firstRun)
-        NSApp.activate(ignoringOtherApps: true)
+        showSettingsWindow()
+        settingsWindowController?.show(section: .accounts, firstRun: firstRun)
     }
 
     func makePanelViewController(maxHeight: CGFloat? = nil,
@@ -641,24 +637,37 @@ final class DetailWindowController: NSWindowController {
 /// Regular settings window. Daily schedules are user-extensible, so the bounded window owns
 /// a scrolling content region while keeping a fixed desktop footprint.
 final class SettingsWindowController: NSWindowController {
+    private let navigation = SettingsNavigation()
+    func show(section: SettingsSection? = nil, firstRun: Bool = false) {
+        if let section { navigation.section = section }
+        navigation.firstRun = firstRun
+        showWindow(nil)
+    }
+
 
     init(model: UsageViewModel,
          onDetailWindow: (() -> Void)?,
          onQuit: @escaping () -> Void) {
-        let view = MingetSettingsView(model: model,
-                                      onDetailWindow: onDetailWindow,
-                                      onQuit: onQuit)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0,
                                                   width: MingetSettingsView.pageSize.width,
                                                   height: MingetSettingsView.pageSize.height),
-                              styleMask: [.titled, .closable, .miniaturizable],
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered,
                               defer: false)
         window.title = "明明有数设置"
+        window.minSize = NSSize(width: 700, height: 520)
         window.isReleasedWhenClosed = false
         window.center()
-        window.contentView = NSHostingView(rootView: view)
         super.init(window: window)
+        let view = MingetSettingsView(model: model, onDetailWindow: onDetailWindow,
+            onQuit: onQuit, navigation: navigation, onDone: { [weak self] in
+                self?.navigation.firstRun = false
+                self?.close()
+                onDetailWindow?()
+            })
+        window.contentView = NSHostingView(rootView: view)
+        window.setContentSize(MingetSettingsView.pageSize)
+        window.setFrameAutosaveName("MingetUnifiedSettings")
     }
 
     @available(*, unavailable)

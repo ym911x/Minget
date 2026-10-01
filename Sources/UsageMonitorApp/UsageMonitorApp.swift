@@ -113,6 +113,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installSignalHandlers()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainActor.assumeIsolated { AppLifecycle.statusItem.showDetailWindow() }
+        return true
+    }
+
     /// Defers termination until the in-flight fetch and the owned child are quiescent.
     /// The join runs on a background queue, so the bounded wait here cannot deadlock the
     /// main actor (Round 3 blocker 2). PROJECT_SPEC.md §3.2: leave no orphaned

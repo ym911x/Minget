@@ -28,7 +28,7 @@ final class AntigravityModelTests: XCTestCase {
         let detail = DetailPreferences(defaults: defaults)
         XCTAssertFalse(detail.showGoogle)
         detail.showGoogle = true; detail.displayMode = .byProvider; detail.selectedTab = .google
-        XCTAssertEqual(detail.visibleTabs.last, .google)
+        XCTAssertEqual(detail.visibleTabs, [.all, .chatGPT, .google, .deepSeek, .commandCode])
         let two = UsagePanelView.preferredHeight(for: detail, googleAccountCount: 2)
         let one = UsagePanelView.preferredHeight(for: detail, googleAccountCount: 1)
         XCTAssertEqual(two - one, AntigravityOverviewCard.height + DetailPageLayout.rowSpacing)

@@ -47,8 +47,9 @@ final class DetailPreferences: ObservableObject {
         didSet { defaults.set(selectedTab.rawValue, forKey: Key.selectedTab) }
     }
 
+    @Published var expandedGoogleAccounts: Set<String> = []
+
     var effectiveTab: ProviderTab {
-        guard displayMode == .byProvider else { return .all }
         switch selectedTab {
         case .google where !showGoogle, .deepSeek where !showDeepSeek, .commandCode where !showCommandCode: return .all
         default: return selectedTab
@@ -56,7 +57,7 @@ final class DetailPreferences: ObservableObject {
     }
 
     var visibleTabs: [ProviderTab] {
-        [.all, .chatGPT] + (showDeepSeek ? [.deepSeek] : []) + (showCommandCode ? [.commandCode] : []) + (showGoogle ? [.google] : [])
+        [.all, .chatGPT] + (showGoogle ? [.google] : []) + (showDeepSeek ? [.deepSeek] : []) + (showCommandCode ? [.commandCode] : [])
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -68,8 +69,11 @@ final class DetailPreferences: ObservableObject {
         self.showDeepSeek = showDS
         self.showCommandCode = showCC
         self.displayMode = DisplayMode(rawValue: defaults.string(forKey: Key.displayMode) ?? "") ?? .all
-        let savedTab = ProviderTab(rawValue: defaults.string(forKey: Key.selectedTab) ?? "") ?? .all
+        let legacyAll = defaults.integer(forKey: "detail.navigationVersion") < 2 && (DisplayMode(rawValue: defaults.string(forKey: Key.displayMode) ?? "") ?? .all) == .all
+        let savedTab = legacyAll ? ProviderTab.all : ProviderTab(rawValue: defaults.string(forKey: Key.selectedTab) ?? "") ?? .all
+        defaults.set(2, forKey: "detail.navigationVersion")
         self.selectedTab = (savedTab == .deepSeek && !showDS)
             || (savedTab == .commandCode && !showCC) || (savedTab == .google && !showG) ? .all : savedTab
+        defaults.set(selectedTab.rawValue, forKey: Key.selectedTab)
     }
 }
