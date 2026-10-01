@@ -65,7 +65,7 @@ struct MingetSettingsView: View {
                     Section { Text("概览显示所有账号摘要；选择服务后查看完整额度。隐藏卡片不会改变菜单栏来源或停止刷新。") }
                 case .schedules:
                     Section("菜单栏低额度刷新") { lowUsageRefreshSettings }
-                    Section { FireScheduleSettingsView(preferences: model.fireSchedules, displayNames: displayNames) }
+                    Section { FireScheduleSettingsView(preferences: model.fireSchedules, displayNames: displayNames, targets: model.scheduleTargets) }
                 case .about:
                     Section("明明有数 · Minget") {
                         LabeledContent("版本", value: appVersion)
@@ -91,7 +91,7 @@ struct MingetSettingsView: View {
             Toggle("显示 Gemini", isOn: $preferences.showGoogle)
             Toggle("显示 DeepSeek", isOn: $preferences.showDeepSeek)
             Toggle("显示 Command Code", isOn: $preferences.showCommandCode)
-            Text("ChatGPT 两个账号始终保留；更多账号信息在“账号”页管理。")
+            Text("更多账号可在“账号”页添加和管理。")
                 .font(.system(size: 13)).foregroundStyle(.secondary)
         }
     }
@@ -106,8 +106,22 @@ struct MingetSettingsView: View {
                 ForEach(model.coordinator.profileIDs, id: \.self) { profileID in
                     Text(profileName(profileID)).tag(MenuBarPreferences.Selection.profile(profileID))
                 }
-                Text(displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek))
-                    .tag(MenuBarPreferences.Selection.deepSeek)
+                if model.accountRegistry == nil {
+                    Text(displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek)).tag(MenuBarPreferences.Selection.deepSeek)
+                } else {
+                    ForEach(model.managedAccounts.filter { $0.platform == .deepseek && !$0.removalPending }) { row in
+                        Text(model.accountName(row)).tag(row.id == "deepseek" ? MenuBarPreferences.Selection.deepSeek : .apiAccount(row.id))
+                    }
+                    if case .profile(let id) = menuBarPreferences.selection, !model.coordinator.profileIDs.contains(id) {
+                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.profile(id))
+                    }
+                    if case .apiAccount(let id) = menuBarPreferences.selection, !model.managedAccounts.contains(where: { $0.id == id && !$0.removalPending }) {
+                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.apiAccount(id))
+                    }
+                    if menuBarPreferences.selection == .deepSeek, !model.managedAccounts.contains(where: { $0.id == "deepseek" && !$0.removalPending }) {
+                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.deepSeek)
+                    }
+                }
                 ForEach(model.google.accounts) { state in
                     Text(model.google.displayName(state.account) + " · Google")
                         .tag(MenuBarPreferences.Selection.google(state.id))
@@ -264,6 +278,7 @@ struct MingetSettingsView: View {
 private struct FireScheduleSettingsView: View {
     @ObservedObject var preferences: FireSchedulePreferences
     @ObservedObject var displayNames: DisplayNamePreferences
+    let targets: [FireScheduleTarget]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -272,7 +287,7 @@ private struct FireScheduleSettingsView: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
 
-            ForEach(FireScheduleTarget.allCases) { target in
+            ForEach(targets) { target in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(displayName(for: target)).font(.system(size: 11, weight: .medium))
@@ -323,7 +338,7 @@ private struct FireScheduleSettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 }
-                if target != FireScheduleTarget.allCases.last { Divider() }
+                if target != targets.last { Divider() }
             }
 
             Text("Command Code 使用钥匙串中的 Key 调用官方 CLI 最小请求，会消耗少量额度。")
@@ -357,6 +372,6 @@ private struct FireScheduleSettingsView: View {
         if let profileID = target.profileID {
             return displayNames.displayName(for: profileID)
         }
-        return displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode)
+        return displayNames.displayName(for: target.rawValue)
     }
 }

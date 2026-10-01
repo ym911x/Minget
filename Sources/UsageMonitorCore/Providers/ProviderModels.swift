@@ -245,10 +245,13 @@ public struct ProviderReport: Equatable, Sendable {
 }
 
 /// Stable, non-secret identity of a stored credential. Values never live here.
-public enum ProviderCredentialKey: String, CaseIterable, Sendable {
-    case deepseekAPIKey = "deepseek.api-key"
-    case commandCodeAPIKey = "commandcode.api-key"
-    case antigravityManagementKey = "antigravity.management-key"
+public struct ProviderCredentialKey: RawRepresentable, Hashable, Sendable, CaseIterable {
+    public let rawValue: String
+    public init(rawValue: String) { self.rawValue = rawValue }
+    public static let deepseekAPIKey = Self(rawValue: "deepseek.api-key")
+    public static let commandCodeAPIKey = Self(rawValue: "commandcode.api-key")
+    public static let antigravityManagementKey = Self(rawValue: "antigravity.management-key")
+    public static let allCases: [Self] = [.deepseekAPIKey, .commandCodeAPIKey, .antigravityManagementKey]
 }
 
 /// What a reader knows about its own credential, from memory only.

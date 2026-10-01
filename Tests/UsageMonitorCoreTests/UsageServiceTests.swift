@@ -18,6 +18,8 @@ final class StubClient: CodexAppServerProviding {
     var loginHandler: ((String, Bool) -> Void)?
     var completeLoginBeforeStartReturns = false
     var cancelledLoginIDs: [String] = []
+    var logoutCalls = 0
+    var logoutError: UsageError?
 
     func start() throws {
         startCalls += 1
@@ -51,9 +53,35 @@ final class StubClient: CodexAppServerProviding {
         return ManagedLoginStart(id: "login-1", authorizationURL: URL(string: "https://chatgpt.com/auth")!)
     }
     func cancelManagedLogin(id: String, timeout: TimeInterval) throws { cancelledLoginIDs.append(id) }
+    func logoutManagedAccount(timeout: TimeInterval) throws {
+        logoutCalls += 1
+        if let logoutError { throw logoutError }
+    }
 }
 
 final class UsageServiceTests: XCTestCase {
+
+    func testManagedLogoutClearsOnlyTargetProfileCacheAndStopsClient() throws {
+        let cache = UsageCache(userDefaults: makeUserDefaults()), stub = StubClient()
+        cache.saveLastKnownAccountID("target@example.com", profileID: "target")
+        cache.saveLastKnownAccountID("other@example.com", profileID: "other")
+        let service = UsageService(factory: { stub }, cache: cache, profileID: "target")
+        try service.logoutManagedAccount()
+        XCTAssertEqual(stub.logoutCalls, 1)
+        XCTAssertGreaterThan(stub.stopCalls, 0)
+        XCTAssertNil(cache.loadLastKnownAccountID(profileID: "target"))
+        XCTAssertEqual(cache.loadLastKnownAccountID(profileID: "other"), "other@example.com")
+    }
+    func testFailedManagedLogoutRetainsCacheForRetryAndStopsClient() {
+        let cache = UsageCache(userDefaults: makeUserDefaults()), stub = StubClient()
+        cache.saveLastKnownAccountID("target@example.com", profileID: "target")
+        stub.logoutError = .rpcFailed(.other)
+        let service = UsageService(factory: { stub }, cache: cache, profileID: "target")
+        XCTAssertThrowsError(try service.logoutManagedAccount())
+        XCTAssertEqual(stub.logoutCalls, 1)
+        XCTAssertGreaterThan(stub.stopCalls, 0)
+        XCTAssertEqual(cache.loadLastKnownAccountID(profileID: "target"), "target@example.com")
+    }
 
     func testManagedLoginPausesReadsAndRejectsLateCompletionAfterCancel() throws {
         let stub = StubClient()

@@ -1,6 +1,13 @@
 import Foundation
 
-public enum AntigravitySlot: String, Codable, CaseIterable, Sendable { case a = "A", b = "B" }
+public struct AntigravitySlot: RawRepresentable, Codable, Hashable, CaseIterable, Sendable {
+    public let rawValue: String
+    public init(rawValue: String) { self.rawValue = rawValue }
+    public static let a = Self(rawValue: "A"), b = Self(rawValue: "B")
+    public static let allCases: [Self] = [.a, .b]
+    public init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(String.self) }
+    public func encode(to encoder: Encoder) throws { var container = encoder.singleValueContainer(); try container.encode(rawValue) }
+}
 
 public struct AntigravityConnection: Codable, Equatable, Sendable {
     public let slot: AntigravitySlot
@@ -18,7 +25,9 @@ public final class AntigravityProfileStore: @unchecked Sendable {
     public enum Failure: Error { case duplicateIdentity, invalidIdentity, invalidProfile }
     public let base: URL
     private let lock = NSRecursiveLock()
-    public init(base: URL = AntigravityCLILocator.base) { self.base = base.resolvingSymlinksInPath() }
+    private let registry: AccountRegistry?
+    public var pendingAccount: ManagedAccount?
+    public init(base: URL = AntigravityCLILocator.base, registry: AccountRegistry? = nil) { self.base = base.resolvingSymlinksInPath(); self.registry = registry }
     private var metadata: URL { base.appendingPathComponent("connections.json") }
     private var profiles: URL { base.appendingPathComponent("profiles", isDirectory: true) }
     public func home(_ uuid: UUID) -> URL { base.appendingPathComponent("profiles/\(uuid.uuidString)") }
@@ -27,13 +36,19 @@ public final class AntigravityProfileStore: @unchecked Sendable {
         return try readConnections()
     }
     private func readConnections() throws -> [AntigravityConnection] {
+        if let registry {
+            return registry.accounts.filter { $0.platform == .google }.compactMap { row in
+                guard let slot = row.googleSlot, let uuid = row.googleUUID, let email = row.googleEmail, let version = row.googleVersion else { return nil }
+                return AntigravityConnection(slot: .init(rawValue: slot), uuid: uuid, email: email, sourceVersion: version)
+            }
+        }
         guard FileManager.default.fileExists(atPath: metadata.path) else { return [] }
         guard metadata.resolvingSymlinksInPath().path == metadata.path,
               profiles.resolvingSymlinksInPath().path == profiles.path,
               let size = try FileManager.default.attributesOfItem(atPath: metadata.path)[.size] as? NSNumber,
               size.intValue <= 65_536 else { throw Failure.invalidProfile }
         let rows = try JSONDecoder().decode([AntigravityConnection].self, from: Data(contentsOf: metadata))
-        guard rows.count <= 2, Set(rows.map(\.slot)).count == rows.count,
+        guard Set(rows.map(\.slot)).count == rows.count,
               Set(rows.map(\.uuid)).count == rows.count, Set(rows.map(\.email)).count == rows.count,
               rows.allSatisfy({ AntigravityTerminal.normalizedEmail($0.email) == $0.email && $0.sourceVersion == AntigravityCLILocator.version && home($0.uuid).resolvingSymlinksInPath().path == home($0.uuid).path }) else {
             throw Failure.invalidIdentity
@@ -58,15 +73,21 @@ public final class AntigravityProfileStore: @unchecked Sendable {
         guard !rows.contains(where: { $0.slot != slot && ($0.email == email || $0.uuid == uuid) }) else { throw Failure.duplicateIdentity }
         let new = AntigravityConnection(slot: slot, uuid: uuid, email: email, sourceVersion: AntigravityCLILocator.version)
         rows.removeAll { $0.slot == slot }; rows.append(new)
-        try save(rows)
+        if let registry {
+            var row = registry.accounts.first { $0.googleSlot == slot.rawValue } ?? pendingAccount ?? registry.draft(.google)
+            row.googleSlot = slot.rawValue; row.googleUUID = uuid; row.googleEmail = email; row.googleVersion = new.sourceVersion
+            try registry.upsert(row)
+        } else { try save(rows) }
         return new
     }
     public func disconnect(_ connection: AntigravityConnection) throws {
         lock.lock(); defer { lock.unlock() }
+        pendingAccount = nil
         let rows = try readConnections().filter { $0.uuid != connection.uuid }
         // Delete only the exact UUID directory; reject symlink substitution of its ancestors.
         try removeProfile(connection.uuid)
-        try save(rows)
+        if let registry, let row = registry.accounts.first(where: { $0.googleSlot == connection.slot.rawValue }) { try registry.remove(row.id) }
+        else { try save(rows) }
     }
     public func removeProfile(_ uuid: UUID) throws {
         let directory = home(uuid)

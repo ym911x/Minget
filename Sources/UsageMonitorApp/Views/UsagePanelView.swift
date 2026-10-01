@@ -108,7 +108,7 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        let viewport = min(DetailPageLayout.stableViewportHeight, maxHeight ?? DetailPageLayout.stableViewportHeight)
+        let viewport = min(Self.presentationHeight(model: model), maxHeight ?? DetailPageLayout.stableViewportHeight)
         let tabHeight = DetailPageLayout.tabHeight
         let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
 
@@ -160,35 +160,67 @@ struct UsagePanelView: View {
                 }
             }
             if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {
-                DeepSeekOverviewCard(report: report(for: .deepseek),
-                                     status: model.deepSeekStatus,
-                                     displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
-                                     openSettings: { onAccounts?() })
+                if model.accountRegistry != nil {
+                    ForEach(model.managedAPIStates.filter { $0.account.platform == .deepseek }) { state in
+                        DeepSeekOverviewCard(report: state.report, status: model.deepSeekStatus, displayName: model.accountName(state.account), openSettings: { onAccounts?() })
+                    }
+                } else {
+                    DeepSeekOverviewCard(report: report(for: .deepseek), status: model.deepSeekStatus, displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek), openSettings: { onAccounts?() })
+                }
             }
             if preferences.showCommandCode && preferences.effectiveTab == .commandCode {
-                CommandCodeOverviewCard(report: report(for: .commandcode),
-                                        displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
-                                        fireState: model.commandCodeFireState,
-                                        onFire: { model.fireCommandCode() },
-                                        openSettings: { onAccounts?() })
+                if model.accountRegistry != nil {
+                    ForEach(model.managedAPIStates.filter { $0.account.platform == .commandcode }) { state in
+                        CommandCodeOverviewCard(report: state.report, displayName: model.accountName(state.account), fireState: model.managedCommandFireState(state.id), onFire: { model.fireManagedCommandCode(id: state.id) }, openSettings: { onAccounts?() })
+                    }
+                } else {
+                    CommandCodeOverviewCard(report: report(for: .commandcode), displayName: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode), fireState: model.commandCodeFireState, onFire: { model.fireCommandCode() }, openSettings: { onAccounts?() })
+                }
+            }
+            if model.accountRegistry != nil && preferences.effectiveTab != .all {
+                Button { model.addingPlatform = accountPlatform(for: preferences.effectiveTab); model.showAddAccount = true; onAccounts?() } label: { Label("添加账号", systemImage: "plus") }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
+            }
+            if model.accountRegistry != nil && model.managedAccounts.isEmpty && preferences.effectiveTab == .all {
+                Text("尚未添加账号").foregroundStyle(.secondary)
+                Button("添加账号") { model.addingPlatform = nil; model.showAddAccount = true; onAccounts?() }
             }
         }
         .padding(.top, DetailPageLayout.rowSpacing)
     }
 
-    static func preferredHeight(for preferences: DetailPreferences, googleAccountCount: Int = 2) -> CGFloat {
+    static func preferredHeight(for preferences: DetailPreferences, googleAccountCount: Int = 2, chatGPTAccountCount: Int = 2, deepSeekAccountCount: Int = 1, commandCodeAccountCount: Int = 1) -> CGFloat {
         let chrome = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.tabHeight + DetailPageLayout.footerHeight
         let gap = DetailPageLayout.rowSpacing
         switch preferences.effectiveTab {
         case .all:
-            let count = 2 + (preferences.showGoogle ? max(1, googleAccountCount) : 0)
-                + (preferences.showDeepSeek ? 1 : 0) + (preferences.showCommandCode ? 1 : 0)
+            let count = chatGPTAccountCount + (preferences.showGoogle ? max(1, googleAccountCount) : 0)
+                + (preferences.showDeepSeek ? deepSeekAccountCount : 0) + (preferences.showCommandCode ? commandCodeAccountCount : 0)
             return chrome + CGFloat(count) * (64 + gap)
-        case .chatGPT: return chrome + 2 * (DetailPageLayout.codexCardHeight + gap)
+        case .chatGPT: return chrome + CGFloat(max(1, chatGPTAccountCount)) * (DetailPageLayout.codexCardHeight + gap)
         case .google: return chrome + CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + gap)
-        case .deepSeek: return chrome + DetailPageLayout.deepSeekCardHeight + gap
-        case .commandCode: return chrome + DetailPageLayout.commandCodeCardHeight + gap
+        case .deepSeek: return chrome + CGFloat(max(1, deepSeekAccountCount)) * (DetailPageLayout.deepSeekCardHeight + gap)
+        case .commandCode: return chrome + CGFloat(max(1, commandCodeAccountCount)) * (DetailPageLayout.commandCodeCardHeight + gap)
         }
+    }
+
+    /// Size the shell from the account list, keeping it stable while navigating services.
+    static func presentationHeight(model: UsageViewModel) -> CGFloat {
+        guard model.accountRegistry != nil else { return DetailPageLayout.stableViewportHeight }
+        let rows = model.managedAccounts.filter { !$0.removalPending }
+        let chrome = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.tabHeight + DetailPageLayout.footerHeight
+        let heights = AccountPlatform.allCases.map { platform -> CGFloat in
+            let count = rows.filter { $0.platform == platform }.count
+            let card: CGFloat
+            switch platform {
+            case .chatGPT: card = DetailPageLayout.codexCardHeight
+            case .google: card = AntigravityOverviewCard.height
+            case .deepseek: card = DetailPageLayout.deepSeekCardHeight
+            case .commandcode: card = DetailPageLayout.commandCodeCardHeight
+            }
+            return CGFloat(count) * (card + DetailPageLayout.rowSpacing)
+        }
+        return min(640, max(260, chrome + CGFloat(rows.count) * (64 + DetailPageLayout.rowSpacing), chrome + (heights.max() ?? 0) + 40))
     }
 
     private var providerTabs: some View {
@@ -247,6 +279,15 @@ struct UsagePanelView: View {
                     isCached: state.isCached) { preferences.selectedTab = .google }
             }
         }
+        if model.accountRegistry != nil {
+            ForEach(model.managedAPIStates.filter { $0.account.platform == .deepseek && preferences.showDeepSeek || $0.account.platform == .commandcode && preferences.showCommandCode }) { state in
+                let report = state.report
+                OverviewAccountRow(service: state.account.platform == .deepseek ? .deepSeek : .commandCode, name: model.accountName(state.account), status: state.account.removalPending ? "移除未完成" : providerConnectionText(report.connection),
+                    summary: state.account.platform == .deepseek ? .balances(report.connection == .connected || report.connection == .stale ? report.balances : []) : .credits(report.usage?.windows.first { $0.kind == .fiveHour }), isCached: report.connection == .stale) {
+                        preferences.selectedTab = state.account.platform == .deepseek ? .deepSeek : .commandCode
+                    }
+            }
+        } else {
         if preferences.showDeepSeek {
             let report = report(for: .deepseek)
             OverviewAccountRow(service: .deepSeek, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
@@ -261,6 +302,11 @@ struct UsagePanelView: View {
                 status: providerConnectionText(report.connection), summary: .credits(window),
                 isCached: report.connection == .stale) { preferences.selectedTab = .commandCode }
         }
+        }
+    }
+
+    private func accountPlatform(for tab: DetailPreferences.ProviderTab) -> AccountPlatform? {
+        switch tab { case .chatGPT: return .chatGPT; case .google: return .google; case .deepSeek: return .deepseek; case .commandCode: return .commandcode; case .all: return nil }
     }
 
     private func providerConnectionText(_ connection: ProviderConnectionState) -> String {
@@ -305,7 +351,9 @@ struct UsagePanelView: View {
     }
 
     private var preferredHeight: CGFloat {
-        Self.preferredHeight(for: preferences)
+        if model.accountRegistry == nil { return Self.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count) }
+        let addHeight: CGFloat = preferences.effectiveTab == .all ? 0 : 40
+        return max(260, Self.preferredHeight(for: preferences, googleAccountCount: model.google.accounts.count, chatGPTAccountCount: model.profileStates.count, deepSeekAccountCount: model.managedAPIStates.filter { $0.account.platform == .deepseek }.count, commandCodeAccountCount: model.managedAPIStates.filter { $0.account.platform == .commandcode }.count) + addHeight)
     }
 
     // MARK: Header

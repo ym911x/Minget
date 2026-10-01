@@ -8,35 +8,37 @@ public final class DeepSeekReading: ProviderReading, @unchecked Sendable {
     public var isAutomaticRefreshEnabled: Bool { true }
 
     private let provider: DeepSeekProvider
+    public let credentialKey: ProviderCredentialKey
     private let access: CredentialAccessCoordinator
 
     public init(provider: DeepSeekProvider, credentials: ProviderCredentialStoring,
-                accessQueue: DispatchQueue? = nil) {
+                credentialKey: ProviderCredentialKey = .deepseekAPIKey, accessQueue: DispatchQueue? = nil) {
         self.provider = provider
+        self.credentialKey = credentialKey
         self.access = accessQueue.map { CredentialAccessCoordinator(store: credentials, queue: $0) }
             ?? CredentialAccessCoordinator(store: credentials)
     }
 
     public var credentialState: ProviderCredentialState {
-        ProviderCredentialState(phase: access.phase(for: .deepseekAPIKey))
+        ProviderCredentialState(phase: access.phase(for: credentialKey))
     }
     public var isConfigured: Bool { credentialState.isConfigured }
     public var onCredentialPhaseChange: (() -> Void)? {
         get { access.onPhaseChange }
         set { access.onPhaseChange = newValue }
     }
-    public func primeCredentialState() async { await access.prime([.deepseekAPIKey]) }
+    public func primeCredentialState() async { await access.prime([credentialKey]) }
     @discardableResult public func authorizeCredentialAccess() async -> Bool {
-        await access.value(for: .deepseekAPIKey, purpose: .userRequestedRead, interaction: .allowed).isAvailable
+        await access.value(for: credentialKey, purpose: .userRequestedRead, interaction: .allowed).isAvailable
     }
     public func read() async throws -> ProviderReadResult {
-        let outcome = await access.value(for: .deepseekAPIKey, purpose: .providerRead, interaction: .allowed)
+        let outcome = await access.value(for: credentialKey, purpose: .providerRead, interaction: .allowed)
         guard let key = outcome.secret, !key.isEmpty else { throw Self.failure(for: outcome) }
         let balances = try await provider.fetchBalances(apiKey: key)
         return ProviderReadResult(accountID: DeepSeekProvider.accountFingerprint(forAPIKey: key), balances: balances, consoleURL: nil)
     }
-    public func storeAPIKey(_ key: String) throws { try access.store(key, for: .deepseekAPIKey) }
-    public func disconnect() throws { try access.remove(.deepseekAPIKey) }
+    public func storeAPIKey(_ key: String) throws { try access.store(key, for: credentialKey) }
+    public func disconnect() throws { try access.remove(credentialKey) }
     static func failure(for outcome: CredentialAccessOutcome) -> ProviderFailure {
         switch outcome {
         case .available: return .other
@@ -58,23 +60,25 @@ public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
     public var isAutomaticRefreshEnabled: Bool { true }
 
     private let provider: CommandCodeProvider
+    public let credentialKey: ProviderCredentialKey
     private let access: CredentialAccessCoordinator
 
-    public init(provider: CommandCodeProvider, credentials: ProviderCredentialStoring, accessQueue: DispatchQueue? = nil) {
+    public init(provider: CommandCodeProvider, credentials: ProviderCredentialStoring, credentialKey: ProviderCredentialKey = .commandCodeAPIKey, accessQueue: DispatchQueue? = nil) {
         self.provider = provider
+        self.credentialKey = credentialKey
         self.access = accessQueue.map { CredentialAccessCoordinator(store: credentials, queue: $0) }
             ?? CredentialAccessCoordinator(store: credentials)
     }
 
-    public var credentialState: ProviderCredentialState { ProviderCredentialState(phase: access.phase(for: .commandCodeAPIKey)) }
+    public var credentialState: ProviderCredentialState { ProviderCredentialState(phase: access.phase(for: credentialKey)) }
     public var isConfigured: Bool { credentialState.isConfigured }
     public var onCredentialPhaseChange: (() -> Void)? {
         get { access.onPhaseChange }
         set { access.onPhaseChange = newValue }
     }
-    public func primeCredentialState() async { await access.prime([.commandCodeAPIKey]) }
+    public func primeCredentialState() async { await access.prime([credentialKey]) }
     @discardableResult public func authorizeCredentialAccess() async -> Bool {
-        await access.value(for: .commandCodeAPIKey, purpose: .userRequestedRead, interaction: .allowed).isAvailable
+        await access.value(for: credentialKey, purpose: .userRequestedRead, interaction: .allowed).isAvailable
     }
     public func read() async throws -> ProviderReadResult {
         try await read(auxiliaryPolicy: .automatic)
@@ -83,7 +87,7 @@ public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
     /// The policy belongs to this exact read. Keeping it out of mutable one-shot state stops
     /// an older credential generation from consuming a newer reconnect's forced refresh.
     public func read(auxiliaryPolicy: CommandCodeProvider.AuxiliaryPolicy) async throws -> ProviderReadResult {
-        let outcome = await access.value(for: .commandCodeAPIKey, purpose: .providerRead, interaction: .allowed)
+        let outcome = await access.value(for: credentialKey, purpose: .providerRead, interaction: .allowed)
         guard let key = outcome.secret, !key.isEmpty else { throw DeepSeekReading.failure(for: outcome) }
         let usage = try await provider.fetchUsage(apiKey: key, auxiliaryPolicy: auxiliaryPolicy)
         return ProviderReadResult(accountID: CommandCodeProvider.accountFingerprint(forAPIKey: key), balances: [], usage: usage, consoleURL: URL(string: "https://commandcode.ai/studio/"))
@@ -92,7 +96,7 @@ public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
     /// Returns the already app-owned Key for an explicitly authorised fire. Scheduled work
     /// is background-only and can never open a Keychain prompt; a manual button may ask once.
     public func fireCredential(userInitiated: Bool) async -> CredentialAccessOutcome {
-        await access.value(for: .commandCodeAPIKey,
+        await access.value(for: credentialKey,
                            purpose: userInitiated ? .manualFire : .scheduledFire,
                            interaction: userInitiated ? .allowed : .disallowed)
     }
@@ -104,6 +108,6 @@ public final class CommandCodeReading: ProviderReading, @unchecked Sendable {
         guard let key = outcome.secret, !key.isEmpty else { throw DeepSeekReading.failure(for: outcome) }
         return try await provider.fetchFiveHourReset(apiKey: key)
     }
-    public func storeAPIKey(_ key: String) throws { try access.store(key, for: .commandCodeAPIKey) }
-    public func disconnect() throws { try access.remove(.commandCodeAPIKey) }
+    public func storeAPIKey(_ key: String) throws { try access.store(key, for: credentialKey) }
+    public func disconnect() throws { try access.remove(credentialKey) }
 }

@@ -112,7 +112,7 @@ public enum MenuBarRefreshPolicy {
             trigger = chatGPTTrigger(snapshot: profileSnapshot,
                                      fiveHourThresholdPercent: settings.chatGPTFiveHourThresholdPercent,
                                      weeklyThresholdPercent: settings.chatGPTWeeklyThresholdPercent)
-        case .deepSeek:
+        case .deepSeek, .apiAccount:
             trigger = deepSeekTrigger(report: deepSeekReport,
                                       savedCurrency: deepSeekCurrency,
                                       thresholdCNY: settings.deepSeekBalanceThresholdCNY)

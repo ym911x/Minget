@@ -1,0 +1,8 @@
+Extracted from final swift-tests.log; MINGET_TEST_APP_PATH=/tmp/minget-1.6.3-final/Minget.app
+Test Suite 'StartupWindowTests' started at 2026-10-01 18:51:36.613.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testColdStartShowsNoWindowOtherThanTheDetailPage]' passed (6.190 seconds).
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' started.
+Test Case '-[UsageMonitorAppTests.StartupWindowTests testQuitLeavesNoOwnedCodexChildBehind]' passed (4.512 seconds).
+Test Suite 'StartupWindowTests' passed at 2026-10-01 18:51:47.315.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 10.701 (10.702) seconds

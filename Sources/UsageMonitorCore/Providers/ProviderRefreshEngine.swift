@@ -95,6 +95,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         var lastError: ProviderFailure?
         var authSuspended = false
         var hasAttempted = false
+        var restoredCache = false
     }
 
     /// An in-flight read plus a token used to retire only that read, and the credential
@@ -188,6 +189,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
                                   lastSuccessAt: nil, connection: connection,
                                   isLive: false, error: error, consoleURL: consoleURL)
         }
+        if state.restoredCache { return cachedReport(platform: platform, state: state, connection: .stale, consoleURL: consoleURL) }
         if let lastSuccessAt = state.lastSuccessAt {
             return ProviderReport(platform: platform,
                                   accountID: state.accountID,
@@ -200,6 +202,14 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
                                   consoleURL: consoleURL)
         }
         return connectingReport(platform: platform, consoleURL: consoleURL)
+    }
+
+    public func restoreCachedAccount(platform: ProviderPlatform, accountID: String) {
+        locked {
+            guard states[platform] == nil, let entry = cache.load(platform: platform, accountID: accountID) else { return }
+            var state = State(); state.accountID = accountID; state.lastSuccessAt = entry.lastSuccessAt
+            state.usage = entry.usage; state.hasAttempted = true; state.restoredCache = true; states[platform] = state
+        }
     }
 
     public func allReports() -> [ProviderReport] {
@@ -422,6 +432,7 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         let now = clock()
         locked {
             var state = states[platform] ?? State()
+            state.restoredCache = false
             state.lastSuccessAt = now
             state.accountID = result.accountID
             state.usage = result.usage

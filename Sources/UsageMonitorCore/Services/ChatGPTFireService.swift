@@ -86,6 +86,18 @@ public final class ChatGPTFireService: @unchecked Sendable {
     /// The process list is copied under the lock and released before any waiting, so a
     /// concurrent natural exit, timeout or duplicate `stopAll()` cannot deadlock against it.
     /// Only each child's own PID is signalled.
+    private var cancelledProfiles = Set<String>()
+
+    public func stop(profileID: String) {
+        lock.lock(); cancelledProfiles.insert(profileID); let process = activeProcesses[profileID]; lock.unlock()
+        guard let process, process.isRunning else { return }
+        process.terminate()
+        let deadline = Date().addingTimeInterval(terminateGrace)
+        while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+        if process.isRunning && process.processIdentifier > 0 { kill(process.processIdentifier, SIGKILL) }
+        process.waitUntilExit()
+    }
+
     public func stopAll(terminateGrace: TimeInterval? = nil) {
         lock.lock()
         let processes = Array(activeProcesses.values)
@@ -110,7 +122,7 @@ public final class ChatGPTFireService: @unchecked Sendable {
     /// thread. Only the fixed categories below are ever reported.
     public func fire(profile: ChatGPTAccountProfile) -> ChatGPTFireProcessOutcome {
         lock.lock()
-        guard !runningProfiles.contains(profile.id) else {
+        guard !runningProfiles.contains(profile.id), !cancelledProfiles.contains(profile.id) else {
             lock.unlock()
             return .alreadyRunning
         }
@@ -166,11 +178,11 @@ public final class ChatGPTFireService: @unchecked Sendable {
         Self.drainDiscarding(stdoutPipe.fileHandleForReading)
         Self.drainDiscarding(stderrPipe.fileHandleForReading)
 
-        lock.lock(); activeProcesses[profile.id] = process; lock.unlock()
-
-        do {
-            try process.run()
-        } catch {
+        lock.lock()
+        guard !cancelledProfiles.contains(profile.id) else { lock.unlock(); return .launchFailed }
+        activeProcesses[profile.id] = process
+        do { try process.run(); lock.unlock() } catch {
+            lock.unlock()
             Diagnostics.log("fire: launch failed")
             return .launchFailed
         }

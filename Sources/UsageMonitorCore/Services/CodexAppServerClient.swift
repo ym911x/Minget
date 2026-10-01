@@ -19,6 +19,7 @@ public protocol CodexAppServerProviding: AnyObject {
     func readAccount(timeout: TimeInterval) throws -> CodexAccount?
     func startManagedLogin(timeout: TimeInterval) throws -> ManagedLoginStart
     func cancelManagedLogin(id: String, timeout: TimeInterval) throws
+    func logoutManagedAccount(timeout: TimeInterval) throws
     func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void)
 }
 
@@ -43,6 +44,7 @@ extension CodexAppServerProviding {
     public func cancelManagedLogin(id: String, timeout: TimeInterval) throws {
         throw UsageError.rpcFailed(.other)
     }
+    public func logoutManagedAccount(timeout: TimeInterval) throws { throw UsageError.rpcFailed(.other) }
     public func setLoginCompletionHandler(_ handler: @escaping (String, Bool) -> Void) {}
 }
 
@@ -180,6 +182,10 @@ public final class CodexAppServerClient: CodexAppServerProviding {
             throw UsageError.rpcFailed(.malformedResponse)
         }
         return ManagedLoginStart(id: id, authorizationURL: url)
+    }
+
+    public func logoutManagedAccount(timeout: TimeInterval = 10) throws {
+        _ = try transport.request(method: "account/logout", params: [:], timeout: timeout)
     }
 
     public func cancelManagedLogin(id: String, timeout: TimeInterval = 5) throws {

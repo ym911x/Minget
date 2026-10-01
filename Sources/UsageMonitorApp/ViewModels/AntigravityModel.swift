@@ -28,7 +28,8 @@ public final class AntigravityModel: ObservableObject {
     @Published public private(set) var names: [String: String]
     @Published public private(set) var activeLoginSlot: AntigravitySlot?
     @Published public private(set) var isPreparingCLI = false
-    private let store: AntigravityProfileStore
+    let store: AntigravityProfileStore
+    let registry: AccountRegistry?
     private let reader: AntigravityUsageReading
     private let defaults: UserDefaults
     private var tasks: [UUID: Task<Void, Never>] = [:]
@@ -46,7 +47,8 @@ public final class AntigravityModel: ObservableObject {
 
     public init(credentials: ProviderCredentialStoring = KeychainCredentialStore(), defaults: UserDefaults = .standard,
                 store: AntigravityProfileStore = AntigravityProfileStore(),
-                reader: AntigravityUsageReading = AntigravityUsageService(), migrateLegacy: Bool = true) {
+                reader: AntigravityUsageReading = AntigravityUsageService(), registry: AccountRegistry? = nil, migrateLegacy: Bool = true) {
+        self.registry = registry
         self.store = store; self.reader = reader; self.defaults = defaults
         names = defaults.dictionary(forKey: Self.namesKey) as? [String: String] ?? [:]
         if migrateLegacy {
@@ -69,11 +71,24 @@ public final class AntigravityModel: ObservableObject {
             }
         }
     }
-    public func displayName(_ account: AntigravityAccount) -> String { names[account.id] ?? account.label }
+    public func displayName(_ account: AntigravityAccount) -> String {
+        registry?.accounts.first { $0.googleEmail == account.email }?.name ?? names[account.id] ?? account.label
+    }
+    public var slots: [AntigravitySlot] {
+        if let registry { return registry.accounts.filter { $0.platform == .google }.compactMap { $0.googleSlot.map(AntigravitySlot.init(rawValue:)) } }
+        return connections.isEmpty ? AntigravitySlot.allCases : Array(Set(connections.map(\.slot) + AntigravitySlot.allCases)).sorted { $0.rawValue < $1.rawValue }
+    }
+    var pendingAccount: ManagedAccount?
+    public var onAccountsChanged: (() -> Void)?
+    func addAccount(_ row: ManagedAccount) { pendingAccount = row; store.pendingAccount = row; login(.init(rawValue: row.googleSlot!)) }
+
     public func setName(_ name: String, accountID: String) {
         let value = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
         if value.isEmpty { names.removeValue(forKey: accountID) } else { names[accountID] = value }
         defaults.set(names, forKey: Self.namesKey)
+        if let registry, var row = registry.accounts.first(where: { $0.googleEmail == accountID }) {
+            row.name = value.isEmpty ? "Google 账号 \(row.ordinal)" : value; try? registry.upsert(row)
+        }
     }
     public func connection(for slot: AntigravitySlot) -> AntigravityConnection? { connections.first { $0.slot == slot } }
     public func loginStatus(for slot: AntigravitySlot) -> String {
@@ -100,13 +115,17 @@ public final class AntigravityModel: ObservableObject {
             self.didLogin(connection); self.feedback = "登录成功，正在读取额度"
             DetailPreferences.shared.showGoogle = true
             self.refresh(force: true)
-        }, onClose: { [weak self] in self?.activeLoginSlot = nil; self?.loginWindow = nil })
+        }, onClose: { [weak self] in self?.activeLoginSlot = nil; self?.loginWindow = nil; self?.pendingAccount = nil; self?.store.pendingAccount = nil })
         loginWindow?.present()
     }
     func didLogin(_ connection: AntigravityConnection) {
+        if var row = pendingAccount, row.googleSlot == connection.slot.rawValue {
+            row.googleUUID = connection.uuid; row.googleEmail = connection.email; row.googleVersion = connection.sourceVersion
+            do { try registry?.upsert(row); pendingAccount = nil; store.pendingAccount = nil } catch { feedback = "账号记录保存失败，请重试"; return }
+        }
         let old = connections.first { $0.slot == connection.slot && $0.uuid != connection.uuid }
         let previous = old.flatMap { tasks[$0.uuid] }
-        reloadConnections(); persist()
+        reloadConnections(); persist(); onAccountsChanged?()
         if names[connection.email] == nil, let legacy = defaults.dictionary(forKey: "antigravity.names.v1") as? [String: String],
            let name = legacy[connection.email] { setName(name, accountID: connection.email) }
         if let old {
@@ -116,7 +135,16 @@ public final class AntigravityModel: ObservableObject {
             }
         }
     }
-    public func cancelLogin() { loginWindow?.close() }
+    public func cancelLogin() { loginWindow?.close(); pendingAccount = nil; store.pendingAccount = nil }
+    func removeConnection(_ connection: AntigravityConnection) async throws {
+        if activeLoginSlot == connection.slot { cancelLogin() }
+        let previous = tasks.removeValue(forKey: connection.uuid); previous?.cancel()
+        pending.remove(connection.uuid); suspended.insert(connection.uuid)
+        await previous?.value
+        try store.disconnect(connection)
+        names.removeValue(forKey: connection.email); defaults.set(names, forKey: Self.namesKey)
+        reloadConnections(); persist(); onAccountsChanged?()
+    }
     public func disconnect(_ slot: AntigravitySlot) {
         guard let connection = connection(for: slot) else { return }
         let previous = tasks.removeValue(forKey: connection.uuid)
@@ -127,13 +155,14 @@ public final class AntigravityModel: ObservableObject {
         Task { [weak self] in
             await previous?.value
             guard let self else { return }
-            do { try store.disconnect(connection); reloadConnections(); persist(); feedback = "已断开本机账号 " + slot.rawValue }
+            do { try store.disconnect(connection); reloadConnections(); persist(); feedback = "已移除本机账号"; onAccountsChanged?() }
             catch { reloadConnections(); feedback = "本机账号清理失败，请重试" }
         }
     }
     public func reloadConnections() {
         do {
-            let next = try store.connections().sorted { $0.slot.rawValue < $1.slot.rawValue }
+            let stored = try store.connections()
+            let next = registry == nil ? stored.sorted { $0.slot.rawValue < $1.slot.rawValue } : stored
             for old in connections where !next.contains(old) {
                 tasks.removeValue(forKey: old.uuid)?.cancel(); pending.remove(old.uuid)
                 attempts.removeValue(forKey: old.uuid); suspended.remove(old.uuid); retryUntil.removeValue(forKey: old.uuid)
@@ -155,7 +184,7 @@ public final class AntigravityModel: ObservableObject {
     }
     public func refresh(force: Bool, now: Date = Date(), afterWake: Bool = false) {
         guard !stopped else { return }
-        for connection in connections {
+        for connection in connections where registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true {
             if tasks[connection.uuid] != nil { if force { pending.insert(connection.uuid) }; continue }
             if suspended.contains(connection.uuid) && !force { continue }
             if let until = retryUntil[connection.uuid], now < until { continue }
@@ -179,7 +208,7 @@ public final class AntigravityModel: ObservableObject {
             let result: Result<AntigravitySnapshot, Error>
             do { result = .success(try await reader.read(connection: connection, home: store.home(id))) }
             catch { result = .failure(error) }
-            guard epoch == currentEpoch, !stopped, connections.contains(connection),
+            guard epoch == currentEpoch, !stopped, !Task.isCancelled, registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true, connections.contains(connection),
                   let index = accounts.firstIndex(where: { $0.id == connection.email }) else { return }
             accounts[index].isFetching = false
             switch result {
@@ -208,7 +237,7 @@ public final class AntigravityModel: ObservableObject {
                 if failure.isAuthenticationFailure { suspended.insert(id) }
             }
             persist(); tasks[id] = nil; updateRefreshing()
-            if pending.remove(id) != nil && !suspended.contains(id) { launch(connection, now: Date()) }
+            if pending.remove(id) != nil && !suspended.contains(id) && registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true { launch(connection, now: Date()) }
         }
         updateRefreshing()
     }

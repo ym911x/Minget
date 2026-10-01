@@ -26,7 +26,7 @@ public final class DisplayNamePreferences: ObservableObject {
     }
 
     private let defaults: UserDefaults
-    private let defaultNames: [String: String]
+    private var defaultNames: [String: String]
 
     @Published private(set) var names: [String: String]
 
@@ -38,7 +38,7 @@ public final class DisplayNamePreferences: ObservableObject {
         let stored = defaults.dictionary(forKey: Key.names) as? [String: String] ?? [:]
         var loadedNames: [String: String] = [:]
         for item in stored {
-            guard ServiceID.all.contains(item.key),
+            guard !item.key.isEmpty,
                   Self.isValid(item.value) else { continue }
             let trimmed = Self.normalized(item.value)
             if !trimmed.isEmpty, trimmed != defaultNames[item.key] {
@@ -47,6 +47,9 @@ public final class DisplayNamePreferences: ObservableObject {
         }
         self.names = loadedNames
     }
+
+    public func register(_ id: String, defaultName: String) { defaultNames[id] = defaultName; objectWillChange.send() }
+    public func unregister(_ id: String) { names.removeValue(forKey: id); defaultNames.removeValue(forKey: id); persist(); objectWillChange.send() }
 
     public func displayName(for serviceID: String) -> String {
         names[serviceID] ?? defaultName(for: serviceID)
@@ -62,7 +65,7 @@ public final class DisplayNamePreferences: ObservableObject {
     /// Returns false when the value exceeds the documented 40-character limit.
     @discardableResult
     public func setDisplayName(_ rawValue: String, for serviceID: String) -> Bool {
-        guard ServiceID.all.contains(serviceID) else { return false }
+        guard defaultNames[serviceID] != nil else { return false }
         let value = Self.normalized(rawValue)
         guard Self.isValid(value) else { return false }
 
@@ -76,7 +79,7 @@ public final class DisplayNamePreferences: ObservableObject {
     }
 
     public func resetDisplayName(for serviceID: String) {
-        guard ServiceID.all.contains(serviceID) else { return }
+        guard defaultNames[serviceID] != nil else { return }
         names.removeValue(forKey: serviceID)
         persist()
     }

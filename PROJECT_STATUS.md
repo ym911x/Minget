@@ -1,23 +1,21 @@
 # 当前项目状态
 
-更新：2026-10-01（Asia/Shanghai）。本文件为当前任务入口，历史结论从版本索引查阅。
+更新：2026-10-01（Asia/Shanghai）。本文件为当前入口，历史结论从版本索引查阅。
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 已公开版本 | 1.6.2，标签代码 `a8a9526`，公开 Latest Release 已核验；按用户要求未重新测试，见本轮 PUBLICATION.md |
-| 当前任务 | 1.6.2 聚合导览页布局优化，已实现、完整测试与签名构建通过，正式安装及本机界面检查完成；用户最终体验和现场边界保留，已公开发布，沿用此前验证，不重新测试 |
-| 主项目目录 | 本目录；main已快进到1.6.2发布提交 `a8a9526`，发布台账随后的文档提交同步 |
-| 本轮开发分支 | `codex/minget-1-6-2` 已合入main；当前主目录在main，无活动开发任务 |
-| 正式安装应用 | 1.6.2，1.6.1已备份；正式路径 `/Applications/Minget.app`；个人目录旧路径为兼容软链接，签名、指纹及从系统应用程序启动已核对，见本轮验收台账 |
-| 旧工作区 | 1.5.0 / Google 1.6.0 已合入发布基线，保留为只读历史工作区，禁止继续开发 |
-| 当前代码图谱 | 无；旧图谱已隔离，不能用于解释当前实现 |
+| 当前本机版本 | 1.6.3，多账号添加与管理已实现，完整回归、Release 签名、备份安装及入口检查通过；真实新账号取数、真实移除及新账号点火待验收 |
+| 公开版本 | 1.6.2，开工时核对公开基线；本轮不推送、不建标签、不公开发布 |
+| 主目录 main | `ee7bc0a`，此前 1.6.2 已发布基线及其文档台账；保持原样 |
+| 当前开发分支 | `codex/minget-1-6-3`，从干净 main 开始，唯一活动开发入口在本目录 |
+| 正式安装应用 | `/Applications/Minget.app` 为严格签名 1.6.3；个人目录旧路径仍为兼容软链接；1.6.2 备份见本轮 ROLLBACK.md |
+| 旧工作区 | 1.5.0 / Google 1.6.0 已合入发布基线，仅保留历史，不继续开发 |
+| 当前代码图谱 | 无；旧图谱已隔离，不用于解释本轮实现 |
 
-## 工作入口
+## 当前工作资料
 
-- [1.6.2 需求](docs/versions/1.6.2/REQUIREMENTS.md) · [实施任务](docs/versions/1.6.2/IMPLEMENTATION_TASKS.md)
-- [审核](docs/versions/1.6.2/REVIEW.md) · [验收](docs/versions/1.6.2/ACCEPTANCE.md)
-- [1.6.1 发布基线](docs/versions/1.6.1/PUBLICATION.md) · [历史版本索引](docs/versions/README.md)
+[1.6.3 需求](docs/versions/1.6.3/REQUIREMENTS.md) · [实施任务](docs/versions/1.6.3/IMPLEMENTATION_TASKS.md) · [实施记录](docs/versions/1.6.3/IMPLEMENTATION_REPORT.md) · [审核](docs/versions/1.6.3/REVIEW.md) · [验收](docs/versions/1.6.3/ACCEPTANCE.md) · [回滚](docs/versions/1.6.3/ROLLBACK.md)。
 
-## 状态口径
+[1.6.2 发布记录](docs/versions/1.6.2/PUBLICATION.md) · [历史版本索引](docs/versions/README.md)。
 
-代码完成、自动测试、签名构建、真实界面、真实取数、用户体验验收、公开发布分别记录；任何一项不得代替另一项。历史版本文档保留当时结论，不作为当前任务状态。
+代码、自动测试、签名、真实界面、真实取数、用户体验和公开发布分别记录，任何一项不得代替另一项。

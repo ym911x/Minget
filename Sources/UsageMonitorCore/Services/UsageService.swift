@@ -286,6 +286,17 @@ public final class UsageService: @unchecked Sendable {
         }
     }
 
+    /// Call only after this profile has been detached from refresh and fire scheduling.
+    public func logoutManagedAccount() throws {
+        stop(); resume()
+        defer { stop() }
+        lock.lock(); let current = generation; lock.unlock()
+        let active = try acquireClient(generationAtStart: current)
+        try active.handshake(timeout: CodexAppServerClient.handshakeTimeout)
+        try active.logoutManagedAccount(timeout: 10)
+        if let profileID { cache.clearProfile(profileID) }
+    }
+
     public func cancelManagedLogin() {
         lock.lock()
         let id = interactiveLoginID

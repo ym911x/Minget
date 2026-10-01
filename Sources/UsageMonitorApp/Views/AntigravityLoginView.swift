@@ -8,7 +8,7 @@ struct AntigravityLoginView: View {
     @State private var code = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("登录 Google 账号 \(model.slot.rawValue)").font(.title2.bold())
+            Text("登录 Google 账号").font(.title2.bold())
             Text(model.status).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
             ScrollView([.horizontal, .vertical]) {
                 Text(model.screen).font(.system(size: 11, design: .monospaced))

@@ -19,6 +19,22 @@ import UsageMonitorCore
 @MainActor
 public final class UsageViewModel: ObservableObject {
 
+    var accountManagementUnavailable = false
+    var accountRegistry: AccountRegistry?
+    var accountDefaults: UserDefaults = .standard
+    var accountCredentials: ProviderCredentialStoring?
+    var accountTransport: ProviderTransport?
+    var apiRuntimes: [String: APIAccountRuntime] = [:]
+    var pendingChatGPTAccount: ManagedAccount?
+    var removedChatGPTRuntimes: [String: CodexProfileRuntime] = [:]
+    @Published var managedAccounts: [ManagedAccount] = []
+    @Published var managedAPIStates: [APIAccountState] = []
+    @Published var accountMessage = ""
+    @Published var showAddAccount = false
+    @Published var addingPlatform: AccountPlatform?
+    @Published var additionalFireStates: [String: CommandCodeFireViewState] = [:]
+    var managedAPITasks: [String: Task<Void, Never>] = [:]
+
     // MARK: ChatGPT profiles
 
     /// One entry per enabled profile, in the fixed order account A, account B. A single
@@ -32,7 +48,7 @@ public final class UsageViewModel: ObservableObject {
     // MARK: Providers
 
     /// One report per detail-panel platform, in display order.
-    @Published public private(set) var providerReports: [ProviderReport] = []
+    @Published public internal(set) var providerReports: [ProviderReport] = []
     @Published private(set) var commandCodeFireState = CommandCodeFireViewState()
     /// The latest unauthenticated observation from DeepSeek's public status page. A failed
     /// page read remains visibly unavailable; it is never converted into a healthy state.
@@ -45,12 +61,12 @@ public final class UsageViewModel: ObservableObject {
     /// A manual refresh arrived while a cycle was running: exactly one follow-up cycle is
     /// owed once that cycle ends (1.4.2 §3.1). Automatic arrivals never set this.
     private var pendingManualRefresh = false
-    @Published public private(set) var isProviderRefreshing = false
+    @Published public internal(set) var isProviderRefreshing = false
     @Published public private(set) var isDeepSeekStatusRefreshing = false
     /// Per-platform, fixed-vocabulary feedback for the credential settings forms (Round 6).
     @Published public private(set) var credentialFeedback: [ProviderPlatform: CredentialFeedback] = [:]
     /// Bumped whenever relative timestamps should be re-evaluated (staleness ages).
-    @Published public private(set) var tick = 0
+    @Published public internal(set) var tick = 0
     @Published public private(set) var isCredentialDiagnosticOn = CredentialAccessLog.isEnabled
 
     /// Owns the per-profile runtimes and their services.
@@ -62,8 +78,8 @@ public final class UsageViewModel: ObservableObject {
     let displayNames: DisplayNamePreferences
     let google: AntigravityModel
     private var googleObserver: AnyCancellable?
-    private let fireService: ChatGPTFireService
-    private let commandCodeFireService: CommandCodeFireService
+    let fireService: ChatGPTFireService
+    let commandCodeFireService: CommandCodeFireService
     let fireSchedules: FireSchedulePreferences
 
     /// Non-optional by design (Round 6): a view model without an engine has no save path
@@ -126,8 +142,8 @@ public final class UsageViewModel: ObservableObject {
     /// How long to wait after a successful request before the confirming refresh, and how
     /// long to wait before the single retry. Fixed by REQUIREMENTS.md §7.2; injectable so
     /// tests do not have to sleep for real.
-    private let fireConfirmDelay: TimeInterval
-    private let fireRetryDelay: TimeInterval
+    let fireConfirmDelay: TimeInterval
+    let fireRetryDelay: TimeInterval
 
     /// A new 5-hour window counts as confirmed only when the service's reset time moved
     /// forward by at least this much. `exit 0` alone proves nothing. The number itself lives
@@ -146,7 +162,7 @@ public final class UsageViewModel: ObservableObject {
     private var providerRefreshTask: Task<Void, Never>?
     private var menuBarRefreshTask: Task<Void, Never>?
     private var deepSeekStatusTask: Task<Void, Never>?
-    private var fireTasks: [String: Task<Void, Never>] = [:]
+    var fireTasks: [String: Task<Void, Never>] = [:]
     private var deepSeekStatusCheckedAt: Date?
     private(set) var isStopped = false
 
@@ -242,7 +258,22 @@ public final class UsageViewModel: ObservableObject {
     /// The selection is validated when it is loaded, so a stale or hand-edited preference
     /// falls back to account A rather than to "no source".
     public func menuBarSource() -> MenuBarSource {
+        if accountRegistry != nil {
+            if managedAccounts.isEmpty { return .unavailable("请添加账号") }
+            let exists: Bool
+            switch menuBarPreferences.selection {
+            case .profile(let id), .apiAccount(let id): exists = managedAccounts.contains { $0.id == id && !$0.removalPending }
+            case .deepSeek: exists = managedAccounts.contains { $0.id == "deepseek" && !$0.removalPending }
+            case .google(let email): exists = managedAccounts.contains { $0.googleEmail == email && !$0.removalPending }
+            }
+            if !exists {
+                let removed = accountDefaults.stringArray(forKey: AccountRegistry.removedSelectionsKey) ?? []
+                return .unavailable(removed.contains(menuBarPreferences.selection.storageValue) ? "账号已移除，请重新选择" : "请选择菜单栏账号")
+            }
+        }
         switch menuBarPreferences.selection {
+        case .apiAccount(let id):
+            return .deepSeek(deepSeekMenuBarContent(report: managedAPIStates.first { $0.id == id }?.report))
         case .profile(let id):
             if let state = profileStates.first(where: { $0.profile.id == id }) {
                 return .chatGPT(shortLabel: state.profile.shortLabel,
@@ -278,6 +309,7 @@ public final class UsageViewModel: ObservableObject {
     /// Current adaptive decision for the source shown in the menu bar. A nil interval means
     /// the ordinary detail/provider timer is sufficient and no extra request is scheduled.
     public var currentMenuBarRefreshDecision: MenuBarRefreshDecision {
+        if accountRegistry != nil, case .unavailable = menuBarSource() { return .inactive }
         let selectedSnapshot: UsageSnapshot?
         let normalInterval: TimeInterval
         switch menuBarPreferences.selection {
@@ -285,7 +317,7 @@ public final class UsageViewModel: ObservableObject {
         case .profile(let profileID):
             selectedSnapshot = profileState(profileID)?.snapshot
             normalInterval = currentCodexInterval
-        case .deepSeek:
+        case .deepSeek, .apiAccount:
             selectedSnapshot = nil
             normalInterval = providerRefreshInterval
         }
@@ -336,15 +368,16 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private var deepSeekReport: ProviderReport? {
-        providerReports.first { $0.platform == .deepseek }
+        if case .apiAccount(let id) = menuBarPreferences.selection { return managedAPIStates.first { $0.id == id }?.report }
+        return providerReports.first { $0.platform == .deepseek }
     }
 
     /// The DeepSeek half of the menu bar, resolved from the current report.
     ///
     /// A stale report keeps its amount and adds the warning marker; a report with nothing
     /// attributable shows `DS —` with a warning. A zero balance can never be produced here.
-    private func deepSeekMenuBarContent() -> MenuBarDeepSeekContent {
-        guard let report = deepSeekReport else {
+    private func deepSeekMenuBarContent(report input: ProviderReport? = nil) -> MenuBarDeepSeekContent {
+        guard let report = input ?? deepSeekReport else {
             return MenuBarDeepSeekContent(currency: nil, amount: nil, isCached: false)
         }
         let isCached = report.connection == .stale
@@ -363,11 +396,14 @@ public final class UsageViewModel: ObservableObject {
 
     /// Starts the app: immediate refresh of both profiles, then on both schedules.
     public func start() {
+        guard !accountManagementUnavailable else { return }
         Diagnostics.log("viewmodel start")
         isStopped = false
         googleObserver = google.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { self?.tick += 1 }
         }
+        resumePendingRemovals()
+        primeManagedCredentials()
         google.start()
         scheduleTimers()
         observeClockChanges()
@@ -472,6 +508,8 @@ public final class UsageViewModel: ObservableObject {
         }
         isStopped = true
         google.stop()
+        for task in managedAPITasks.values { task.cancel() }; managedAPITasks.removeAll()
+        for runtime in apiRuntimes.values { runtime.engine.invalidateAttribution(platform: runtime.platform) }
         googleObserver?.cancel(); googleObserver = nil
         activeLoginProfile = nil
         loginAttemptID = nil
@@ -504,6 +542,8 @@ public final class UsageViewModel: ObservableObject {
         let coordinator = self.coordinator
         let fireService = self.fireService
         let commandCodeFireService = self.commandCodeFireService
+        let managedFireServices = apiRuntimes.values.map(\.fireService)
+        let detachedServices = removedChatGPTRuntimes.values.map(\.service)
         joinQueue.async {
             task?.cancel()
             // `fire()` blocks in `Process.waitUntilExit()`, so cancelling the task above does
@@ -511,6 +551,8 @@ public final class UsageViewModel: ObservableObject {
             // from outliving the app (REVISION_SPEC.md §9.1).
             fireService.stopAll()
             commandCodeFireService.stop()
+            for service in managedFireServices { service.stop() }
+            for service in detachedServices { service.stop() }
             coordinator.stop()
             Diagnostics.log("viewmodel stopped")
             completion?()
@@ -577,7 +619,7 @@ public final class UsageViewModel: ObservableObject {
     /// Creates an additional timer only while the currently selected source is below its
     /// configured threshold. The ordinary ChatGPT/provider timers remain responsible for all
     /// other accounts and providers.
-    private func rescheduleMenuBarRefreshTimer() {
+    func rescheduleMenuBarRefreshTimer() {
         guard !isStopped else { return }
         guard let interval = currentMenuBarRefreshDecision.interval else {
             menuBarRefreshTimer?.cancel()
@@ -612,7 +654,10 @@ public final class UsageViewModel: ObservableObject {
                 _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
                 await self?.finishMenuBarProfileRefresh()
             }
+        case .apiAccount(let id):
+            refreshManagedAPI(id: id, force: false)
         case .deepSeek:
+            if accountRegistry != nil { refreshManagedAPI(id: "deepseek", force: false); return }
             let engine = providerEngine
             menuBarRefreshTask = Task { [weak self] in
                 await engine.refresh(platform: .deepseek, force: false)
@@ -731,6 +776,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     private func panelWillOpenProviders() {
+        if accountRegistry != nil { refreshManagedAPIs(force: false); return }
         for platform in [ProviderPlatform.deepseek, .commandcode] {
             guard providerEngine.shouldRefreshOnPanelOpen(platform) else { continue }
             refreshProvider(platform, force: false)
@@ -805,6 +851,7 @@ public final class UsageViewModel: ObservableObject {
         loginAttemptID = nil
         loginStatus[id] = "已取消登录"
         Task.detached { service.cancelManagedLogin() }
+        cancelPendingChatGPT()
     }
 
     private func finishChatGPTLogin(profileID: String, attemptID: UUID, success: Bool) {
@@ -821,6 +868,7 @@ public final class UsageViewModel: ObservableObject {
 
     private func publishLoginRefresh(profileID: String, attemptID: UUID) {
         guard loginAttemptID == attemptID else { return }
+        completePendingChatGPT(profileID: profileID)
         publishProfileStates()
         let state = profileStates.first(where: { $0.profile.id == profileID })
         loginStatus[profileID] = (state?.snapshot != nil && state?.isStale == false && state?.failure == nil)
@@ -833,9 +881,8 @@ public final class UsageViewModel: ObservableObject {
         guard !isStopped else { return }
         google.refresh(force: true)
         refresh(resetFailureBudget: true)
-        for report in providerReports {
-            refreshProvider(report.platform, force: true)
-        }
+        if accountRegistry != nil { refreshManagedAPIs(force: true) }
+        else { for report in providerReports { refreshProvider(report.platform, force: true) } }
         refreshDeepSeekStatus(force: true)
     }
 
@@ -927,6 +974,7 @@ public final class UsageViewModel: ObservableObject {
     /// the engine itself, so an unverified endpoint is never polled on a timer.
     public func refreshProviders(force: Bool) {
         guard !isStopped else { return }
+        if accountRegistry != nil { refreshManagedAPIs(force: force); return }
         guard !isProviderRefreshing else { return }
         isProviderRefreshing = true
         providerRefreshTask = Task { [weak self] in
@@ -978,7 +1026,7 @@ public final class UsageViewModel: ObservableObject {
         }
     }
 
-    private func finishProviderRefresh() {
+    func finishProviderRefresh() {
         guard !isStopped else { return }
         isProviderRefreshing = engineHasWork()
         publishProviderReports()
@@ -986,17 +1034,21 @@ public final class UsageViewModel: ObservableObject {
         rescheduleMenuBarRefreshTimer()
     }
 
-    private func engineHasWork() -> Bool {
+    func engineHasWork() -> Bool {
+        if accountRegistry != nil { return apiRuntimes.values.contains { $0.engine.isFetching($0.platform) } }
         return [ProviderPlatform.deepseek, .commandcode].contains { providerEngine.isFetching($0) }
     }
 
-    private func publishProviderReports() {
-        providerReports = providerEngine.allReports()
+    func publishProviderReports() {
+        if accountRegistry != nil { publishManagedAPIStates() }
+        else { providerReports = providerEngine.allReports() }
     }
 
     /// Publishes the current runtime state of both profiles as value snapshots.
-    private func publishProfileStates() {
-        profileStates = coordinator.runtimes.map { CodexProfileViewState(runtime: $0.state()) }
+    func publishProfileStates() {
+        profileStates = coordinator.runtimes.filter { runtime in
+            accountRegistry == nil || managedAccounts.contains { $0.id == runtime.profileID && !$0.removalPending }
+        }.map { CodexProfileViewState(runtime: $0.state()) }
     }
 
     // MARK: - Fire
@@ -1009,7 +1061,7 @@ public final class UsageViewModel: ObservableObject {
     /// least `windowConfirmationThreshold` produces the confirmed text.
     @discardableResult
     public func fire(profileID: String) -> Bool {
-        guard !isStopped, let runtime = coordinator.runtime(for: profileID) else { return false }
+        guard !isStopped, accountRegistry?.account(profileID)?.removalPending != true, let runtime = coordinator.runtime(for: profileID) else { return false }
         let current = runtime.state()
         guard !current.isFiring else { return false }
 
@@ -1229,15 +1281,12 @@ public final class UsageViewModel: ObservableObject {
     /// the work, so a temporarily busy target may still run on the next tick inside the
     /// ten-minute catch-up window.
     func evaluateFireSchedules(at date: Date, calendar: Calendar = .current) {
-        guard !isStopped else { return }
+        guard !ProcessInfo.processInfo.arguments.contains("--disable-scheduled-fire"), !isStopped else { return }
         for occurrence in fireSchedules.dueOccurrences(at: date, calendar: calendar) {
             let accepted: Bool
-            switch occurrence.entry.target {
-            case .chatGPTA, .chatGPTB:
-                accepted = occurrence.entry.target.profileID.map { fire(profileID: $0) } ?? false
-            case .commandCode:
-                accepted = fireCommandCode(userInitiated: false)
-            }
+            let id = occurrence.entry.target.rawValue
+            if let profileID = occurrence.entry.target.profileID { accepted = fire(profileID: profileID) }
+            else { accepted = fireManagedCommandCode(id: id, userInitiated: false) }
             if accepted { fireSchedules.markFired(occurrence) }
         }
     }

@@ -102,6 +102,7 @@ public struct MenuBarDeepSeekContent: Equatable, Sendable {
 /// the DeepSeek source carries no time rows at all, because the balance endpoint has no
 /// window to draw.
 public enum MenuBarSource: Equatable, Sendable {
+    case unavailable(String)
     case chatGPT(shortLabel: String,
                  display: UsageDisplay,
                  connectionState: UsageService.ConnectionState)
@@ -120,6 +121,9 @@ public enum MenuBarContentBuilder {
                             now: Date,
                             mode: MenuBarSpaceMode) -> MenuBarContent {
         switch source {
+        case .unavailable(let message):
+            return MenuBarContent(mode: mode, text: message, attention: .warning, showsTimeBars: false,
+                fiveHour: .init(state: .invalid, fills: []), weekly: .init(state: .invalid, fills: []), isCached: false)
         case .chatGPT(let shortLabel, let display, let connectionState):
             let snapshot = display.snapshot
             let rows = ResetTimeModel.rows(snapshot: snapshot, now: now)

@@ -10,7 +10,7 @@ import UsageMonitorCore
 @MainActor
 final class AppContainer {
 
-    /// Both ChatGPT profiles, each with its own `codex app-server` child and `CODEX_HOME`.
+    /// Each ChatGPT account owns a `codex app-server` child and `CODEX_HOME`.
     /// Replaces the single `codexService` of 1.2.1 (IMPLEMENTATION_TASKS.md §2).
     let codexProfiles: CodexProfilesCoordinator
     let providerCache: ProviderCache
@@ -26,8 +26,8 @@ final class AppContainer {
     /// (KEYCHAIN_REVISION_PLAN.md P1.2 and P1.7).
     init(credentials: ProviderCredentialStoring = KeychainCredentialStore(),
          transport: ProviderTransport = URLSessionProviderTransport(),
-         menuBarPreferences: MenuBarPreferences = .shared) {
-        codexProfiles = CodexProfilesCoordinator()
+         menuBarPreferences: MenuBarPreferences = .shared, accountRegistry: AccountRegistry? = nil) {
+        codexProfiles = CodexProfilesCoordinator(profiles: accountRegistry.map { $0.accounts.compactMap(\.profile) } ?? ChatGPTAccountProfile.defaults)
         providerCache = ProviderCache()
         let deepSeek = DeepSeekReading(provider: DeepSeekProvider(transport: transport),
                                        credentials: credentials)
@@ -37,12 +37,13 @@ final class AppContainer {
         providerEngine = ProviderRefreshEngine(readers: [deepSeek, commandCode], cache: providerCache)
         displayNames = .shared
         model = UsageViewModel(coordinator: codexProfiles,
-                               google: AntigravityModel(credentials: credentials),
+                               google: AntigravityModel(credentials: credentials, store: AntigravityProfileStore(registry: accountRegistry), registry: accountRegistry),
                                providerEngine: providerEngine,
                                menuBarPreferences: menuBarPreferences,
                                displayNames: displayNames,
                                fireSchedules: .shared,
                                deepSeekStatusReader: DeepSeekStatusProvider(transport: transport))
+        if let accountRegistry { model.installAccountManagement(registry: accountRegistry, credentials: credentials, transport: transport) }
         statusItem = StatusItemController()
     }
 }
@@ -50,7 +51,21 @@ final class AppContainer {
 /// Single application-lifetime container.
 @MainActor
 enum AppLifecycle {
-    static let container = AppContainer()
+    static let container: AppContainer = {
+        do {
+            let legacy = !FirstRunGate.shouldPresent()
+            let connections = UserDefaults.standard.data(forKey: AccountRegistry.storageKey) == nil
+                ? try AntigravityProfileStore().connections() : []
+            let registry = try AccountRegistry(legacy: legacy, googleConnections: connections)
+            return AppContainer(accountRegistry: registry)
+        } catch {
+            // Fail closed: do not overwrite malformed metadata or silently re-enable removed accounts.
+            let container = AppContainer()
+            container.model.accountManagementUnavailable = true
+            container.model.accountMessage = "账号记录无法读取，请修复本机元数据后重启"
+            return container
+        }
+    }()
     static var model: UsageViewModel { container.model }
     static var statusItem: StatusItemController { container.statusItem }
 }

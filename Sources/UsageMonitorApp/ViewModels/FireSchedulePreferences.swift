@@ -2,27 +2,16 @@ import Foundation
 import Combine
 import UsageMonitorCore
 
-enum FireScheduleTarget: String, Codable, CaseIterable, Identifiable, Sendable {
-    case chatGPTA = "chatgpt-a"
-    case chatGPTB = "chatgpt-b"
-    case commandCode = "commandcode"
-
+struct FireScheduleTarget: RawRepresentable, Codable, Hashable, CaseIterable, Identifiable, Sendable {
+    let rawValue: String
+    init(rawValue: String) { self.rawValue = rawValue }
+    static let chatGPTA = Self(rawValue: "chatgpt-a"), chatGPTB = Self(rawValue: "chatgpt-b"), commandCode = Self(rawValue: "commandcode")
+    static let allCases: [Self] = [.chatGPTA, .chatGPTB, .commandCode]
     var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .chatGPTA: return "OpenAI 账号 A"
-        case .chatGPTB: return "OpenAI 账号 B"
-        case .commandCode: return "Command Code"
-        }
-    }
-
-    var profileID: String? {
-        switch self {
-        case .chatGPTA, .chatGPTB: return rawValue
-        case .commandCode: return nil
-        }
-    }
+    var displayName: String { rawValue == "commandcode" ? "Command Code" : rawValue }
+    var profileID: String? { rawValue.hasPrefix("chatgpt-") ? rawValue : nil }
+    init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(String.self) }
+    func encode(to encoder: Encoder) throws { var container = encoder.singleValueContainer(); try container.encode(rawValue) }
 }
 
 struct FireScheduleEntry: Codable, Equatable, Identifiable, Sendable {
@@ -121,6 +110,13 @@ public final class FireSchedulePreferences: ObservableObject {
         normalizeAndPersist()
     }
 
+    func removeAccount(_ id: String) {
+        let ids = entries.filter { $0.target.rawValue == id }.map(\.id)
+        for id in ids { remove(id) }
+    }
+    func disableAccount(_ id: String) {
+        for entry in entries where entry.target.rawValue == id { setEnabled(false, for: entry.id) }
+    }
     func entries(for target: FireScheduleTarget) -> [FireScheduleEntry] {
         entries.filter { $0.target == target }
             .sorted { lhs, rhs in

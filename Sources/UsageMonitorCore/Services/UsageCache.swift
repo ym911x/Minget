@@ -181,6 +181,16 @@ public final class UsageCache: @unchecked Sendable {
     ///
     /// Per profile on purpose: a single global value is exactly what let two long-lived
     /// profiles overwrite each other's attribution before 1.3.0.
+    public func clearProfile(_ profileID: String) {
+        queue.sync {
+            var entries = loadProfileEntries()
+            entries = entries.filter { !$0.key.hasPrefix(profileID + "\u{1F}") }
+            persistProfileEntries(entries)
+            var ids = loadProfileAccountIDs(); ids.removeValue(forKey: profileID)
+            if let data = try? JSONEncoder().encode(ids) { userDefaults.set(data, forKey: profileAccountIDKey) }
+        }
+    }
+
     public func saveLastKnownAccountID(_ accountID: String, profileID: String) {
         guard !accountID.isEmpty, !profileID.isEmpty else { return }
         queue.sync {

@@ -1,7 +1,7 @@
 # 服务端点与取数依据
 
 更新日期：2026-10-01
-适用版本：1.6.0
+适用版本：1.6.3
 
 本文件记录正式版本实际使用的数据来源、验证级别和安全边界。开发期间的完整调查记录已归档至 `docs/archive/v1.0/evidence/PROVIDER_ENDPOINTS_DEVELOPMENT.md`。
 
@@ -12,6 +12,14 @@
 | A | 在本机真实服务或真实账号上完成验证 |
 | B | 有服务商公开文档或官方部署代码支持，且由自动化测试固定请求和响应结构 |
 | C | 仅由自动化测试或第三方资料支持，尚未完成真实账号验证 |
+
+## 1.6.3 多账号边界
+
+- 每个连接使用稳定账号 ID。ChatGPT 沿用官方 app-server，每个 Profile 独立 `CODEX_HOME`；Google 继续使用固定官方 CLI 与 UUID 隔离目录。
+- DeepSeek、Command Code 新增连接拥有自己的 Keychain account、reader、刷新引擎和缓存命名空间。原有单连接条目原位沿用，元数据迁移不读取 Key。
+- 请求端点和模型请求授权规则不变。重复检测只使用实际观察到的身份或既有不可逆 Key 指纹，不推断不同 Key 是否属于同一服务商账户。
+- 移除 ChatGPT 连接新增官方 `account/logout`，作用于该 Profile 的 app-server。接口依据：[官方文档](https://learn.chatgpt.com/docs/app-server)。Minget 不直接编辑认证文件。
+- 第三、第四个账号和 API 多连接的自动测试只证明接线与隔离。真实新账号登录、额度核对和真实移除的验收状态见 `docs/versions/1.6.3/ACCEPTANCE.md`。
 
 ## Google / Antigravity（1.6.0）
 

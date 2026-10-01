@@ -155,6 +155,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
                         self?.noteContentMayHaveChanged()
+                        self?.resizeVisiblePanel()
                         if let self, let count = self.model?.google.accounts.count,
                            count != self.lastGoogleAccountCount {
                             self.lastGoogleAccountCount = count
@@ -325,7 +326,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
         let screen = buttonWindow.screen ?? NSScreen.main
         let preferences = DetailPreferences.shared
-        let size = Self.panelSize(for: preferences, visibleFrame: screen?.visibleFrame, googleAccountCount: model?.google.accounts.count ?? 0)
+        let size = Self.panelSize(for: preferences, visibleFrame: screen?.visibleFrame, googleAccountCount: model?.google.accounts.count ?? 0, model: model)
 
         // A short screen is handled by the page's scroll region. Only an unavailable width
         // still requires the regular detail window fallback.
@@ -371,7 +372,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func resizeVisiblePanel() {
         guard popover.isShown, let button = statusItem?.button else { return }
         let frame = button.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
-        let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame, googleAccountCount: model?.google.accounts.count ?? 0)
+        let size = Self.panelSize(for: DetailPreferences.shared, visibleFrame: frame, googleAccountCount: model?.google.accounts.count ?? 0, model: model)
         // Never replace a visible host for view state changes. SwiftUI updates its
         // observed model in place; only a changed screen constraint may resize the shell.
         guard popover.contentSize != size else { return }
@@ -439,8 +440,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// The panel's content size for the current display preferences.
     static func panelSize(for preferences: DetailPreferences,
-                          visibleFrame: CGRect? = nil, googleAccountCount: Int = 2) -> NSSize {
-        let preferredHeight = DetailPageLayout.stableViewportHeight
+                          visibleFrame: CGRect? = nil, googleAccountCount: Int = 2, model: UsageViewModel? = nil) -> NSSize {
+        let preferredHeight = model.map { UsagePanelView.presentationHeight(model: $0) } ?? DetailPageLayout.stableViewportHeight
         return NSSize(width: DetailPageLayout.pageWidth,
                       height: DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                               visibleFrame: visibleFrame))
@@ -543,6 +544,7 @@ final class PanelHostingController: NSHostingController<UsagePanelView> {
 final class DetailWindowController: NSWindowController {
 
     private let model: UsageViewModel
+    private var cancellables: Set<AnyCancellable> = []
 
     init(model: UsageViewModel,
          onSettings: (() -> Void)?,
@@ -550,7 +552,7 @@ final class DetailWindowController: NSWindowController {
          onQuit: (() -> Void)? = nil) {
         self.model = model
         let preferences = DetailPreferences.shared
-        let preferredHeight = DetailPageLayout.stableViewportHeight
+        let preferredHeight = UsagePanelView.presentationHeight(model: model)
         let maxHeight = DetailPageLayout.viewportHeight(preferredHeight: 2_000,
                                                         visibleFrame: NSScreen.main?.visibleFrame)
         let panel = UsagePanelView(model: model,
@@ -570,12 +572,14 @@ final class DetailWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: panel)
         super.init(window: window)
-
+        model.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.applyPreferredContentSize() } }
+        }.store(in: &cancellables)
     }
 
     private func applyPreferredContentSize() {
         guard let window else { return }
-        let preferredHeight = DetailPageLayout.stableViewportHeight
+        let preferredHeight = UsagePanelView.presentationHeight(model: model)
         let height = DetailPageLayout.viewportHeight(preferredHeight: preferredHeight,
                                                      visibleFrame: NSScreen.main?.visibleFrame)
         let size = NSSize(width: DetailPageLayout.pageWidth, height: height)

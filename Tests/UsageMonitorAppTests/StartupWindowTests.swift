@@ -70,6 +70,7 @@ final class StartupWindowTests: XCTestCase {
     private func launch() throws -> Process {
         let process = Process()
         process.executableURL = Self.executableURL
+        process.arguments = ["--disable-scheduled-fire"]
         // A distinct defaults domain would need a signed bundle change; the app only reads and
         // writes its own non-secret preferences, which this run leaves untouched.
         process.standardOutput = FileHandle.nullDevice

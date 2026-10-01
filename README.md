@@ -7,7 +7,13 @@
 **你的 AI 使用，心里有数。**<br>
 *Your AI usage, at a glance.*
 
-Minget 是一个 macOS 菜单栏应用，用于集中查看两个隔离的 ChatGPT (Codex) 账号、DeepSeek、Command Code 的额度、余额和使用状态。并支持两个 Google / Antigravity 账号的官方额度查询。
+Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatGPT (Codex)、Google / Antigravity 账号，以及多个 DeepSeek、Command Code 连接的额度、余额和使用状态。
+
+## v1.6.3：账号添加与多账号管理（本机迭代）
+
+在“管理账号”顶部点击 **添加账号** 并选择平台；平台分组和对应服务详情也提供添加按钮。支持第三个及更多 ChatGPT、Google 账号，以及多个 DeepSeek、Command Code 连接。账号可独立命名、重新连接、查看额度和移除；移除菜单栏当前来源后提示重新选择。新增点火计划默认关闭。
+
+现有登录目录和 Keychain 条目沿用，首次启动迁移本应用元数据。本机已签名安装；实施与真实账号验收状态见 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.3 验收](docs/versions/1.6.3/ACCEPTANCE.md)。1.6.3 尚未公开发布，公开基线仍为 1.6.2。
 
 ## v1.6.2：聚合导览页布局优化（2026-10-01）
 
@@ -345,3 +351,7 @@ open "$HOME/Applications/Minget.app"
 Run the test suite with `swift test --scratch-path "${TMPDIR:-/tmp}/minget-tests"`. Build and test caches stay outside the iCloud-hosted repository. Real-interface and live-service evidence is recorded separately in the current acceptance ledger; a missing or unconfirmed provider field remains unavailable rather than replaced by a fixture.
 
 The source code is available under the [MIT License](LICENSE). The Minget name, Chinese name, M² mark, and logo remain project brand identifiers; see [Trademark and Brand Notice](TRADEMARKS.md). The current local build uses a project-created stable signing identity and has not been notarized by Apple.
+
+### 1.6.3 local iteration
+
+Add independent ChatGPT, Google, DeepSeek and Command Code accounts from Manage Accounts or the provider detail page. Existing CLI homes and Keychain entries are retained. New fire schedules start disabled; removing the selected source asks you to choose again. Real new-account acceptance is tracked separately from automated validation. This iteration has not been published.

@@ -1,10 +1,10 @@
 # 当前审核状态
 
-当前审核对象为 **1.6.2 聚合导览页布局优化**，代码、测试、签名构建及本机界面检查通过；用户最终体验及现场边界保留。用户授权直接发布，沿用已有证据，不重新测试；见 [发布记录](docs/versions/1.6.2/PUBLICATION.md)。
+当前对象为 **1.6.3 账号添加与多账号管理**。代码复核、完整回归、Release 严格签名、备份安装和本机入口检查通过；真实新增账号、移除及点火操作保留待验收。本轮未推送或公开发布。
 
 - [当前项目状态](PROJECT_STATUS.md)
-- [实施报告](docs/versions/1.6.2/IMPLEMENTATION_REPORT.md)
-- [代码与验证审核](docs/versions/1.6.2/REVIEW.md)
-- [验收台账](docs/versions/1.6.2/ACCEPTANCE.md)
+- [实施记录](docs/versions/1.6.3/IMPLEMENTATION_REPORT.md)
+- [代码与验证审核](docs/versions/1.6.3/REVIEW.md)
+- [验收台账](docs/versions/1.6.3/ACCEPTANCE.md)
 
-历史版本及其发布证据保持原样。
+历史版本记录保持原样。

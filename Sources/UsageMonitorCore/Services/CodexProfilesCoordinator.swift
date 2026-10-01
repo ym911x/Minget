@@ -18,9 +18,12 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     public typealias ServiceFactory = (ChatGPTAccountProfile) -> UsageService
 
     /// Enabled profiles, in the fixed display order (account A left, account B right).
-    public let runtimes: [CodexProfileRuntime]
+    private let lock = NSRecursiveLock()
+    private var storedRuntimes: [CodexProfileRuntime]
+    public var runtimes: [CodexProfileRuntime] { lock.lock(); defer { lock.unlock() }; return storedRuntimes }
+    private let makeService: ServiceFactory
 
-    private let byID: [String: CodexProfileRuntime]
+    private var byID: [String: CodexProfileRuntime]
 
     public init(profiles: [ChatGPTAccountProfile] = ChatGPTAccountProfile.defaults,
                 makeService: @escaping ServiceFactory) {
@@ -31,7 +34,8 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
             runtimes.append(runtime)
             byID[profile.id] = runtime
         }
-        self.runtimes = runtimes
+        self.makeService = makeService
+        self.storedRuntimes = runtimes
         self.byID = byID
     }
 
@@ -48,6 +52,18 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
         }
     }
 
+    public func add(_ profile: ChatGPTAccountProfile) {
+        lock.lock(); defer { lock.unlock() }
+        guard byID[profile.id] == nil else { return }
+        let runtime = CodexProfileRuntime(profile: profile, service: makeService(profile))
+        storedRuntimes.append(runtime); byID[profile.id] = runtime
+    }
+    @discardableResult public func detach(_ id: String) -> CodexProfileRuntime? {
+        lock.lock(); defer { lock.unlock() }
+        storedRuntimes.removeAll { $0.profileID == id }
+        return byID.removeValue(forKey: id)
+    }
+
     public var profileIDs: [String] { runtimes.map(\.profileID) }
 
     /// Retry gates that still belong to automatic retryable profiles. The UI timer uses
@@ -61,21 +77,21 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     }
 
     public func runtime(for profileID: String) -> CodexProfileRuntime? {
-        byID[profileID]
+        lock.lock(); defer { lock.unlock() }; return byID[profileID]
     }
 
     /// The `CODEX_HOME` this profile's child will run with, resolved without launching
     /// anything. Used by the isolation tests; the value itself is never logged.
     public func resolvedCodexHome(for profileID: String,
                                   homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL? {
-        byID[profileID]?.profile.codexHomeURL(homeDirectory: homeDirectory)
+        runtime(for: profileID)?.profile.codexHomeURL(homeDirectory: homeDirectory)
     }
 
     /// The full child environment this profile will be launched with.
     public func childEnvironment(for profileID: String,
                                  base: [String: String] = ProcessInfo.processInfo.environment,
                                  homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser) -> [String: String]? {
-        guard let profile = byID[profileID]?.profile else { return nil }
+        guard let profile = runtime(for: profileID)?.profile else { return nil }
         return UsageService.childEnvironment(base: base,
                                              codexHome: profile.codexHomeURL(homeDirectory: homeDirectory))
     }
@@ -89,7 +105,7 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
                       handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
                       identityTimeout: TimeInterval = CodexAppServerClient.identityTimeout,
                       quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout) -> Result<UsageService.FetchResult, Error> {
-        guard let runtime = byID[profileID] else {
+        guard let runtime = runtime(for: profileID) else {
             return .failure(UsageError.rpcFailed(.other))
         }
         runtime.recordFetchStart()
@@ -118,7 +134,7 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
                                     resetFailureBudget: Bool = false,
                                     handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
                                     quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout) -> Result<UsageService.FetchResult, Error> {
-        guard let runtime = byID[profileID] else {
+        guard let runtime = runtime(for: profileID) else {
             return .failure(UsageError.rpcFailed(.other))
         }
         runtime.recordFetchStart()
@@ -153,7 +169,7 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
         handshakeTimeout: TimeInterval = CodexAppServerClient.handshakeTimeout,
         quotaTimeout: TimeInterval = CodexAppServerClient.quotaTimeout
     ) -> UsageService.WakeProbeResult {
-        guard let runtime = byID[profileID] else { return .suppressed }
+        guard let runtime = runtime(for: profileID) else { return .suppressed }
         let outcome = runtime.service.probeRateLimitsAfterWake(handshakeTimeout: handshakeTimeout,
                                                                quotaTimeout: quotaTimeout)
         if case .refreshed(let result) = outcome {
@@ -165,11 +181,11 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     // MARK: - Fire state (owned by the view model, stored per runtime)
 
     public func recordFireStart(profileID: String) {
-        byID[profileID]?.recordFireStart()
+        runtime(for: profileID)?.recordFireStart()
     }
 
     public func recordFireFinished(profileID: String, result: ChatGPTFireResult, driftSeconds: TimeInterval? = nil) {
-        byID[profileID]?.recordFireFinished(result, driftSeconds: driftSeconds)
+        runtime(for: profileID)?.recordFireFinished(result, driftSeconds: driftSeconds)
     }
 
     // MARK: - Shutdown
@@ -184,7 +200,7 @@ public final class CodexProfilesCoordinator: @unchecked Sendable {
     /// manual calls bypass it entirely (1.4.2 §3.3 — the ladder is wired into the
     /// scheduler, not just into the service's own gate).
     public func isAutomaticRetryGated(profileID: String) -> Bool {
-        guard let runtime = byID[profileID] else { return false }
+        guard let runtime = runtime(for: profileID) else { return false }
         return runtime.service.isRetryBackoffActive || runtime.service.isManualRetryRequired
     }
 

@@ -172,15 +172,15 @@ cat > "$STAGING_CONTENTS/Resources/README.txt" <<'TXT'
 你的 AI 使用，心里有数。
 Your AI usage, at a glance.
 
-Runs one long-lived `codex app-server` child per ChatGPT profile — two profiles,
-each with its own CODEX_HOME and its own child process — and reads account rate
-limits over stdio JSON-RPC. Both profiles refresh in parallel. Only normalized
-usage numbers are cached.
+Runs one long-lived `codex app-server` child per connected ChatGPT account,
+each with its own CODEX_HOME, and reads account rate limits over stdio JSON-RPC.
+Accounts refresh independently. Only normalized usage numbers are cached.
 
 Google / Antigravity login uses the official CLI in a private, per-account local
 profile. Minget does not read the CLI's authentication data. Provider keys supplied
 in the app are stored in macOS Keychain.
-Launch with --show-accounts to open the connection form.
+Use Manage Accounts > Add Account to add another connection on any platform.
+Launch with --show-accounts to open account management.
 
 Contents/MacOS/MingetCLI is the QA smoke diagnostic:
   Minget.app/Contents/MacOS/MingetCLI

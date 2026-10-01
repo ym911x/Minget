@@ -109,10 +109,11 @@ public final class ProviderCache: @unchecked Sendable {
     public static let maxAgeForPanelOpenRefresh: TimeInterval = 60
 
     private let userDefaults: UserDefaults
-    private let storageKey = "UsageMonitor.providerBalances.v2"
+    private let storageKey: String
     private let queue = DispatchQueue(label: "usagemonitor.provider-cache")
 
-    public init(userDefaults: UserDefaults = .standard) {
+    public init(userDefaults: UserDefaults = .standard, namespace: String? = nil) {
+        self.storageKey = namespace.map { "UsageMonitor.providerBalances.account." + $0 } ?? "UsageMonitor.providerBalances.v2"
         self.userDefaults = userDefaults
     }
 

@@ -18,6 +18,7 @@ public final class MenuBarPreferences: ObservableObject {
     public enum Selection: Equatable, Hashable, Codable, Sendable {
         case profile(String)
         case deepSeek
+        case apiAccount(String)
         case google(String)
 
         /// The exact string written to `UserDefaults`.
@@ -25,6 +26,7 @@ public final class MenuBarPreferences: ObservableObject {
             switch self {
             case .profile(let id): return id
             case .deepSeek: return Self.deepSeekStorageValue
+            case .apiAccount(let id): return "api:" + id
             case .google(let id): return "antigravity:" + Data(id.utf8).base64EncodedString()
             }
         }
@@ -35,6 +37,7 @@ public final class MenuBarPreferences: ObservableObject {
         /// An unknown id yields nil so the caller can fall back to the documented default
         /// instead of displaying an account that does not exist.
         public init?(storageValue: String, knownProfileIDs: [String]) {
+            if storageValue.hasPrefix("api:"), storageValue.count > 4 { self = .apiAccount(String(storageValue.dropFirst(4))); return }
             if storageValue.hasPrefix("antigravity:"),
                let data = Data(base64Encoded: String(storageValue.dropFirst(12))),
                let id = String(data: data, encoding: .utf8), !id.isEmpty {
@@ -147,7 +150,7 @@ public final class MenuBarPreferences: ObservableObject {
         // A missing or corrupt value falls back to account A. The app never scans the user's
         // home directory looking for another account to display.
         self.selection = Selection(storageValue: defaults.string(forKey: Key.selection) ?? "",
-                                   knownProfileIDs: knownProfileIDs) ?? fallback
+                                   knownProfileIDs: knownProfileIDs + AccountRegistry.storedProfileIDs(defaults: defaults)) ?? fallback
         let storedCurrency = defaults.string(forKey: Key.deepSeekCurrency)
         self.deepSeekCurrency = (storedCurrency?.isEmpty == false) ? storedCurrency : nil
         self.lowUsageRefreshEnabled = defaults.object(forKey: Key.refreshEnabled) as? Bool
@@ -218,6 +221,7 @@ public final class MenuBarPreferences: ObservableObject {
         switch selection {
         case .deepSeek:
             return "DeepSeek"
+        case .apiAccount: return "DeepSeek"
         case .google:
             return "Google"
         case .profile(let id):

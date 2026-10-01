@@ -67,7 +67,12 @@ struct AccountManagementView: View {
         _deepSeekForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .deepseek))
         _commandCodeForm = StateObject(wrappedValue: ConnectionFormState(model: model, platform: .commandcode))
     }
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if model.accountManagementUnavailable { Text(model.accountMessage).padding(24) }
+        else if model.accountRegistry != nil { ManagedAccountManagementView(model: model, firstRun: firstRun, onDone: onDone) }
+        else { legacyBody }
+    }
+    private var legacyBody: some View {
         Form {
             if firstRun {
                 Section {
