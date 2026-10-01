@@ -10,7 +10,7 @@
 
 | 版本 | 发布 | 需求 | 实施任务 | 实施报告 | 审核 | 验收 | 发布说明 | 截图 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1.0.2 | 是 | REVISION_SPEC.md | REVISION_SPEC.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
+| 1.0.2 | 是 | REVISION_SPEC.md | REVISION_SPEC.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | 本目录 evidence/ |
 | 1.1.0 | 是 | DEVELOPMENT_PLAN.md | DEVELOPMENT_PLAN.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | assets/screenshots/v1.1.0/ |
 | 1.1.1 | 是 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | assets/screenshots/v1.1.1/ |
 | 1.1.2 | 是 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | — |
