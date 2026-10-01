@@ -54,3 +54,7 @@ MINGET_ARCHIVE_PATH=/tmp/minget-1.6.3-archive/Minget.app \
 用户七账号截图暴露了固定 640 pt 上限导致最后一行被截住的问题。修改 UsagePanelView、SharedQuotaViews、StatusItemController 与 DetailPanelLayoutTests，概要 684 pt 时完整显示且没有滚动容器，详情继续滚动。定向 61 项及完整 660 项（655 通过、5 既有跳过、0 失败）通过；Release 严格签名、签名候选真实窗口、备份安装及正式窗口复验完成。详见 OVERVIEW_HEIGHT_FIX.md。此前实施记录中的 640 pt 上限为初版行为，已被本次修正替代。
 
 命令沿用此前 scratch，构建 MINGET_STAGING_DIR / MINGET_RUN_PATH / MINGET_ARCHIVE_PATH 分别指向 `/tmp/minget-1.6.3-overview-{stage,candidate,archive}/Minget.app`；完整测试 MINGET_TEST_APP_PATH 指向本轮 candidate，MINGET_EVIDENCE_DIR 为 `/tmp/minget-1.6.3-overview-evidence`。日志为 evidence/overview-*，版本仍为 1.6.3，无远端操作。
+
+## 公开发布收尾
+
+用户验收并明确授权后，v1.6.3 已公开发布；发布源码提交 a5c5043，GitHub CI 测试及应用构建通过，main 同步发布代码与后续台账。未上传本机 App 或真实账号截图，未重新安装应用。核验见 PUBLICATION.md。

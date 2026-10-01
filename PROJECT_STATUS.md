@@ -4,17 +4,17 @@
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 当前本机版本 | 1.6.3，多账号添加与管理已实现，完整回归、Release 签名、备份安装及入口检查通过；第三个 Google 已添加并取得官方地区资格拒绝证据，提示与缓存标记已修正；七账号概要已增高至完整显示，无概要滚动容器（屏幕容纳时），660 项回归及真实窗口复验通过；其取数及其他真实新账号、移除、点火待验收 |
-| 公开版本 | 1.6.2 为开工公开基线；用户已验收并授权发布 1.6.3，实际核验见本轮 PUBLICATION.md |
-| 主目录 main | `ee7bc0a`，此前 1.6.2 已发布基线及其文档台账；保持原样 |
-| 当前开发分支 | `codex/minget-1-6-3`，从干净 main 开始，唯一活动开发入口在本目录 |
+| 当前本机版本 | 1.6.3，多账号添加与管理已实现，完整回归、Release 签名、备份安装及入口检查通过；第三个 Google 已添加并取得官方地区资格拒绝证据，提示与缓存标记已修正；七账号概要已增高至完整显示，无概要滚动容器（屏幕容纳时），660 项回归及真实窗口复验通过，用户已验收概要；其取数及其他真实新账号、移除、点火待验收 |
+| 公开版本 | 1.6.3 已公开发布为 Latest，标签与发布提交核验一致，GitHub 测试及构建 CI 通过；见本轮 PUBLICATION.md |
+| 主目录 main | v1.6.3 发布代码 `a5c5043` 及后续发布台账，已快进同步，保持与 origin/main 一致 |
+| 当前开发分支 | 当前 `main`；`codex/minget-1-6-3` 已完成并合入，无活动实现任务 |
 | 正式安装应用 | `/Applications/Minget.app` 为严格签名 1.6.3；个人目录旧路径仍为兼容软链接；1.6.2 与各次 1.6.3 修正前备份见本轮 ROLLBACK.md |
 | 旧工作区 | 1.5.0 / Google 1.6.0 已合入发布基线，仅保留历史，不继续开发 |
 | 当前代码图谱 | 无；旧图谱已隔离，不用于解释本轮实现 |
 
 ## 当前工作资料
 
-[1.6.3 需求](docs/versions/1.6.3/REQUIREMENTS.md) · [实施任务](docs/versions/1.6.3/IMPLEMENTATION_TASKS.md) · [实施记录](docs/versions/1.6.3/IMPLEMENTATION_REPORT.md) · [审核](docs/versions/1.6.3/REVIEW.md) · [验收](docs/versions/1.6.3/ACCEPTANCE.md) · [回滚](docs/versions/1.6.3/ROLLBACK.md)。
+[1.6.3 发布记录](docs/versions/1.6.3/PUBLICATION.md) · [1.6.3 需求](docs/versions/1.6.3/REQUIREMENTS.md) · [实施任务](docs/versions/1.6.3/IMPLEMENTATION_TASKS.md) · [实施记录](docs/versions/1.6.3/IMPLEMENTATION_REPORT.md) · [审核](docs/versions/1.6.3/REVIEW.md) · [验收](docs/versions/1.6.3/ACCEPTANCE.md) · [回滚](docs/versions/1.6.3/ROLLBACK.md)。
 
 [1.6.2 发布记录](docs/versions/1.6.2/PUBLICATION.md) · [历史版本索引](docs/versions/README.md)。
 

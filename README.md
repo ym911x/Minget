@@ -13,7 +13,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 在“管理账号”顶部点击 **添加账号** 并选择平台；平台分组和对应服务详情也提供添加按钮。支持第三个及更多 ChatGPT、Google 账号，以及多个 DeepSeek、Command Code 连接。账号可独立命名、重新连接、查看额度和移除；移除菜单栏当前来源后提示重新选择。新增点火计划默认关闭。概要面板按实际账号数增高，屏幕容纳时全部行完整显示且无滚动容器，服务详情仍可滚动。
 
-现有登录目录和 Keychain 条目沿用，首次启动迁移本应用元数据。本机已签名安装；实施与真实账号验收状态见 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.3 验收](docs/versions/1.6.3/ACCEPTANCE.md)。用户已验收概要并授权发布 1.6.3；发布核验见 [1.6.3 发布记录](docs/versions/1.6.3/PUBLICATION.md)。
+现有登录目录和 Keychain 条目沿用，首次启动迁移本应用元数据。本机已签名安装；实施与真实账号验收状态见 [PROJECT_STATUS.md](PROJECT_STATUS.md) 和 [1.6.3 验收](docs/versions/1.6.3/ACCEPTANCE.md)。已公开发布 [v1.6.3](https://github.com/ym911x/Minget/releases/tag/v1.6.3)，GitHub CI 测试与应用构建通过；核验见 [1.6.3 发布记录](docs/versions/1.6.3/PUBLICATION.md)。
 
 ## v1.6.2：聚合导览页布局优化（2026-10-01）
 

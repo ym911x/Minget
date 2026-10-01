@@ -1,0 +1,83 @@
+{
+  "conclusion": "success",
+  "headSha": "a5c504327b41aba3f24a2b8f0cb74af88a112546",
+  "jobs": [
+    {
+      "completedAt": "2026-10-01T14:33:59Z",
+      "conclusion": "success",
+      "databaseId": 110418985964,
+      "name": "test",
+      "startedAt": "2026-10-01T14:31:50Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-01T14:31:52Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-01T14:31:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:31:55Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v7",
+          "number": 2,
+          "startedAt": "2026-10-01T14:31:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:31:58Z",
+          "conclusion": "success",
+          "name": "Show Swift version",
+          "number": 3,
+          "startedAt": "2026-10-01T14:31:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:33:20Z",
+          "conclusion": "success",
+          "name": "Run tests",
+          "number": 4,
+          "startedAt": "2026-10-01T14:31:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:33:55Z",
+          "conclusion": "success",
+          "name": "Build application bundle",
+          "number": 5,
+          "startedAt": "2026-10-01T14:33:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:33:56Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v7",
+          "number": 10,
+          "startedAt": "2026-10-01T14:33:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-01T14:33:57Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "startedAt": "2026-10-01T14:33:56Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/ym911x/Minget/actions/runs/36877035643/job/110418985964"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/ym911x/Minget/actions/runs/36877035643",
+  "test_results": {
+    "executed": 660,
+    "passed": 605,
+    "skipped": 55,
+    "failures": 0,
+    "basis": "GitHub Actions Run tests log final XCTest summary"
+  },
+  "build_signing": "ad-hoc CI; strict bundle verification passed"
+}

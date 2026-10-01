@@ -9,3 +9,5 @@
 本机完整回归 660 项：655 通过、5 项既有环境跳过、0 失败。Release 严格签名、备份安装和真实窗口检查通过，用户已确认概要显示并授权发布。第三个 Google 账号仍因官方地区资格受限而无法读取额度，其他真实新增账号及移除/点火场景的待验收状态见验收台账。
 
 继续以源码形式分发，GitHub 提供 Source code ZIP/TAR；不附加本地签名、未经公证的安装包。日常本机应用为 `/Applications/Minget.app`，版本 1.6.3。
+
+GitHub CI 的测试与应用构建均通过：[CI 核验](https://github.com/ym911x/Minget/actions/runs/36877035643)。
