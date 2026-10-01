@@ -3,7 +3,7 @@ Building for debugging...
 [2 / 11] UsageMonitorCore
 [5 / 14] UsageMonitorCore
 [12 / 21] UsageMonitorCore
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: warning: 'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 132 |         // C `Boolean`, so the round trip is done in `Bool`.
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
@@ -11,7 +11,7 @@ Building for debugging...
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
 136 |         return {
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 133 |         var previous = DarwinBoolean(true)
 134 |         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
 135 |         _ = SecKeychainSetUserInteractionAllowed(false)
@@ -19,7 +19,7 @@ Building for debugging...
 136 |         return {
 137 |             guard readStatus == errSecSuccess else {
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 138 |                 // The previous state could not be read: restore the documented default
 139 |                 // instead of leaving interaction disabled.
 140 |                 _ = SecKeychainSetUserInteractionAllowed(true)
@@ -27,7 +27,7 @@ Building for debugging...
 141 |                 return
 142 |             }
 
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
+$PROJECT_ROOT/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: warning: 'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated [#DeprecatedDeclaration]
 141 |                 return
 142 |             }
 143 |             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
@@ -48,7 +48,7 @@ Building for debugging...
 [57 / 63] UsageMonitorApp-product
 [60 / 63] UsageMonitorAppTests-product
 [72 / 75] UsageMonitorAppTests-product
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorAppTests/ProductionWiringTests.swift:114:40: warning: 'is' test is always true
+$PROJECT_ROOT/Tests/UsageMonitorAppTests/ProductionWiringTests.swift:114:40: warning: 'is' test is always true
 112 |         let entryPoint: () -> Void = MingetMain.main
 113 |         _ = entryPoint
 114 |         XCTAssertTrue(AppDelegate.self is NSApplicationDelegate.Type)

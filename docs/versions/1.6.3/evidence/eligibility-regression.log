@@ -74,20 +74,20 @@ Test Suite 'AntigravityLoginFlowTests' started at 2026-10-01 21:07:19.968.
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testEveryProfilePathIsAbsoluteAndSharedBetweenLoginAndQuery]' started.
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testEveryProfilePathIsAbsoluteAndSharedBetweenLoginAndQuery]' passed (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt]' started.
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:48: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt] : Test skipped - Explicit official CLI synthetic input probe
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:48: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt] : Test skipped - Explicit official CLI synthetic input probe
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialCLIReceivesSyntheticCodeAndRejectsIt]' skipped (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized]' started.
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:36: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized] : Test skipped - Explicit official CLI login probe; no credential input
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:36: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized] : Test skipped - Explicit official CLI login probe; no credential input
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialLoginMethodAndAuthorizationURLAreRecognized]' skipped (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress]' started.
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:67: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress] : Test skipped - Explicit official CLI cancellation probe
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:67: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress] : Test skipped - Explicit official CLI cancellation probe
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOfficialReadCancellationJoinsWithoutMainActorProgress]' skipped (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOnboardingAfterCodeDoesNotDisplayEchoOrWrappedFragments]' started.
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testOnboardingAfterCodeDoesNotDisplayEchoOrWrappedFragments]' passed (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRateLimitErrorIsClassifiedWithoutInventingRetryDuration]' started.
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRateLimitErrorIsClassifiedWithoutInventingRetryDuration]' passed (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait]' started.
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:84: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait] : Test skipped - Explicit official CLI read-only probe
+$PROJECT_ROOT/Tests/UsageMonitorCoreTests/AntigravityLoginFlowTests.swift:84: -[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait] : Test skipped - Explicit official CLI read-only probe
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testRealEmptyProfileStopsAuthenticationWait]' skipped (0.000 seconds).
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testThemeTrustAndUnknownPrompt]' started.
 Test Case '-[UsageMonitorCoreTests.AntigravityLoginFlowTests testThemeTrustAndUnknownPrompt]' passed (0.000 seconds).
@@ -1073,7 +1073,7 @@ Test Suite 'CommandCodeAccessibilityTests' started at 2026-10-01 21:07:50.972.
 Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryIsStillDrawnAsARealControl]' started.
 Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryIsStillDrawnAsARealControl]' passed (0.051 seconds).
 Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction]' started.
-/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Tests/UsageMonitorAppTests/CommandCodeAccessibilityTests.swift:154: -[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction] : Test skipped - not executed: this process is AX-trusted but exposes no accessibility windows (kAXWindows returned none while NSApp has 2 window(s)), so there is no tree to walk. An XCTest runner is not a GUI app. Use the standalone harness in IMPLEMENTATION_REPORT.md §10, or VoiceOver, to re-verify R1.
+$PROJECT_ROOT/Tests/UsageMonitorAppTests/CommandCodeAccessibilityTests.swift:154: -[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction] : Test skipped - not executed: this process is AX-trusted but exposes no accessibility windows (kAXWindows returned none while NSApp has 2 window(s)), so there is no tree to walk. An XCTest runner is not a GUI app. Use the standalone harness in IMPLEMENTATION_REPORT.md §10, or VoiceOver, to re-verify R1.
 Test Case '-[UsageMonitorAppTests.CommandCodeAccessibilityTests testTheSettingsEntryKeepsItsOwnElementAndPressAction]' skipped (0.332 seconds).
 Test Suite 'CommandCodeAccessibilityTests' passed at 2026-10-01 21:07:51.356.
 	 Executed 2 tests, with 1 test skipped and 0 failures (0 unexpected) in 0.383 (0.383) seconds

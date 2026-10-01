@@ -1,6 +1,6 @@
 Installed version: 1.6.3
 Official app: /Applications/Minget.app
-Backup app: /Users/yuyimeng/Applications/Minget Backups/1.6.3-before-eligibility-fix-20261001-212226/Minget.app
+Backup app: $HOME/Applications/Minget Backups/1.6.3-before-eligibility-fix-20261001-212226/Minget.app
 Strict signatures: candidate, archive, backup, staging, installed passed
 UsageMonitor SHA-256: 94a6426bdc78d0d28930b812d033aae1756e140f29218ddb62e3515cc8277ff7 (candidate/archive/installed match)
 MingetCLI SHA-256: 9f770668570980b3fe45c6bb0242d40c1852472be733a78422605d0aeb9e8a3c (candidate/archive/installed match)
