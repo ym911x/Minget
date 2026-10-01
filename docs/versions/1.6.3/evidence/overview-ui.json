@@ -1,0 +1,17 @@
+{
+  "version": "1.6.3",
+  "formal_app": "/Applications/Minget.app",
+  "observation": "native AX and screenshots observed, original output not persisted",
+  "overview_account_rows": 7,
+  "preferred_content_height_pt": 684,
+  "candidate_window_all_rows_and_footer_visible": true,
+  "candidate_overview_scroll_container_present": false,
+  "candidate_google_detail_scroll_container_present": true,
+  "candidate_google_detail_scroll_to_last_and_add_verified": true,
+  "installed_window_all_rows_and_footer_visible": true,
+  "installed_overview_scroll_container_present": false,
+  "popover_shared_layout_automated_checks": "passed",
+  "popover_manual_screenshot": "not obtained",
+  "short_screen_fallback": "scroll only if physical screen cannot contain full overview",
+  "scheduled_fire_disabled_for_ui_validation": true
+}

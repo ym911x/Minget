@@ -247,6 +247,7 @@ private struct OverviewUsageGraphic: View {
 }
 
 struct OverviewAccountRow: View {
+    static let height: CGFloat = 64
     let service: ServiceSymbol
     let name: String
     let status: String
@@ -279,7 +280,7 @@ struct OverviewAccountRow: View {
                 OverviewUsageGraphic(summary: summary, isCached: isCached, now: now)
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary).frame(width: 10).accessibilityHidden(true)
-            }.padding(.horizontal, 12).frame(height: 64)
+            }.padding(.horizontal, 12).frame(height: Self.height)
                 .background(Color(NSColor.controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
                 .contentShape(RoundedRectangle(cornerRadius: 12))
         }.buttonStyle(.plain)

@@ -59,8 +59,8 @@ enum DetailPageLayout {
     }
 
     static func viewportHeight(preferredHeight: CGFloat, visibleFrame: CGRect?, inset: CGFloat = 8) -> CGFloat {
-        guard let visibleFrame, visibleFrame.height > 0 else { return min(preferredHeight, 640) }
-        return min(preferredHeight, 640, max(0, visibleFrame.height - inset * 2))
+        guard let visibleFrame, visibleFrame.height > 0 else { return preferredHeight }
+        return min(preferredHeight, max(0, visibleFrame.height - inset * 2))
     }
 }
 
@@ -108,18 +108,24 @@ struct UsagePanelView: View {
     }
 
     var body: some View {
-        let viewport = min(Self.presentationHeight(model: model), maxHeight ?? DetailPageLayout.stableViewportHeight)
+        let preferred = Self.presentationHeight(model: model, preferences: preferences)
+        let viewport = min(preferred, maxHeight ?? preferred)
         let tabHeight = DetailPageLayout.tabHeight
         let cardViewport = max(0, viewport - DetailPageLayout.margin * 2 - DetailPageLayout.headerHeight - tabHeight - DetailPageLayout.footerHeight)
 
         VStack(alignment: .leading, spacing: 0) {
             header
             providerTabs
-            ScrollView(.vertical, showsIndicators: false) {
-                cardStack
+            Group {
+                if preferences.effectiveTab == .all && Self.overviewHeight(model: model, preferences: preferences) <= viewport {
+                    cardStack
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                } else {
+                    ScrollView(.vertical, showsIndicators: false) { cardStack }
+                }
             }
             .id(preferences.effectiveTab)
-            .frame(height: cardViewport)
+            .frame(height: cardViewport, alignment: .top)
 
             Spacer(minLength: 0)
             footer
@@ -196,7 +202,7 @@ struct UsagePanelView: View {
         case .all:
             let count = chatGPTAccountCount + (preferences.showGoogle ? max(1, googleAccountCount) : 0)
                 + (preferences.showDeepSeek ? deepSeekAccountCount : 0) + (preferences.showCommandCode ? commandCodeAccountCount : 0)
-            return chrome + CGFloat(count) * (64 + gap)
+            return chrome + CGFloat(count) * (OverviewAccountRow.height + gap)
         case .chatGPT: return chrome + CGFloat(max(1, chatGPTAccountCount)) * (DetailPageLayout.codexCardHeight + gap)
         case .google: return chrome + CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + gap)
         case .deepSeek: return chrome + CGFloat(max(1, deepSeekAccountCount)) * (DetailPageLayout.deepSeekCardHeight + gap)
@@ -204,8 +210,18 @@ struct UsagePanelView: View {
         }
     }
 
-    /// Size the shell from the account list, keeping it stable while navigating services.
-    static func presentationHeight(model: UsageViewModel) -> CGFloat {
+    /// Overview rows must fit in full; only the physical screen may constrain them.
+    static func overviewHeight(model: UsageViewModel, preferences: DetailPreferences) -> CGFloat {
+        let api = model.managedAPIStates
+        let count = model.profileStates.count + (preferences.showGoogle ? max(1, model.google.accounts.count) : 0)
+            + (preferences.showDeepSeek ? (model.accountRegistry == nil ? 1 : api.filter { $0.account.platform == .deepseek }.count) : 0)
+            + (preferences.showCommandCode ? (model.accountRegistry == nil ? 1 : api.filter { $0.account.platform == .commandcode }.count) : 0)
+        let chrome = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.tabHeight + DetailPageLayout.footerHeight
+        return chrome + CGFloat(count) * (OverviewAccountRow.height + DetailPageLayout.rowSpacing)
+    }
+
+    /// Keep service navigation stable, but never cap a complete overview at the detail height.
+    static func presentationHeight(model: UsageViewModel, preferences: DetailPreferences = .shared) -> CGFloat {
         guard model.accountRegistry != nil else { return DetailPageLayout.stableViewportHeight }
         let rows = model.managedAccounts.filter { !$0.removalPending }
         let chrome = DetailPageLayout.margin * 2 + DetailPageLayout.headerHeight + DetailPageLayout.tabHeight + DetailPageLayout.footerHeight
@@ -220,7 +236,8 @@ struct UsagePanelView: View {
             }
             return CGFloat(count) * (card + DetailPageLayout.rowSpacing)
         }
-        return min(640, max(260, chrome + CGFloat(rows.count) * (64 + DetailPageLayout.rowSpacing), chrome + (heights.max() ?? 0) + 40))
+        return max(260, overviewHeight(model: model, preferences: preferences),
+                   min(DetailPageLayout.stableViewportHeight, chrome + (heights.max() ?? 0) + 40))
     }
 
     private var providerTabs: some View {

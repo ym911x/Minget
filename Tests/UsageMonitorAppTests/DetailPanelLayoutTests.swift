@@ -170,7 +170,7 @@ final class DetailPanelLayoutTests: XCTestCase {
 
     // MARK: §4.2 Scroll only when the viewport is shorter than preferred
 
-    func testDetailPageKeepsOneContentScrollRegionAcrossServices() {
+    func testOverviewHasNoScrollContainerWhenAllRowsFit() {
         let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.NoScroll"))
         let model = makeModel()
 
@@ -185,9 +185,63 @@ final class DetailPanelLayoutTests: XCTestCase {
                                    height: UsagePanelView.preferredHeight(for: preferences))
             hosting.layoutSubtreeIfNeeded()
 
-            XCTAssertTrue(containsScrollContainer(hosting),
-                           "\(showDeepSeek)/\(showCommandCode): page keeps its internal scroll region")
+            XCTAssertFalse(containsScrollContainer(hosting),
+                           "\(showDeepSeek)/\(showCommandCode): the complete overview must not scroll")
         }
+    }
+
+    func testSevenAccountOverviewGrowsBeyondOldCapAndOnlyScrollsOnShortScreen() throws {
+        let defaults = makeDefaults("DetailPanelLayout.SevenAccounts")
+        let registry = try AccountRegistry(defaults: defaults)
+        for platform in [AccountPlatform.chatGPT, .chatGPT, .google, .google, .google, .deepseek, .commandcode] {
+            var account = registry.draft(platform)
+            if platform == .google {
+                account.googleUUID = UUID()
+                account.googleEmail = "demo\(account.ordinal)@example.com"
+                account.googleVersion = AntigravityCLILocator.version
+            }
+            try registry.upsert(account)
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let credentials = InMemoryCredentialStore()
+        let google = AntigravityModel(credentials: credentials, defaults: defaults,
+            store: AntigravityProfileStore(base: directory, registry: registry), registry: registry, migrateLegacy: false)
+        let model = UsageViewModel(coordinator: CodexProfilesCoordinator(profiles: registry.accounts.compactMap(\.profile)), google: google,
+            providerEngine: ProviderRefreshEngine(readers: [], cache: ProviderCache(userDefaults: defaults)),
+            menuBarPreferences: MenuBarPreferences(defaults: defaults), displayNames: DisplayNamePreferences(defaults: defaults),
+            fireSchedules: FireSchedulePreferences(defaults: defaults))
+        model.installAccountManagement(registry: registry, credentials: credentials, transport: ManagedAccountTests.Transport(), defaults: defaults)
+        let preferences = DetailPreferences(defaults: defaults)
+        preferences.showGoogle = true
+        XCTAssertEqual(UsagePanelView.overviewHeight(model: model, preferences: preferences), 684)
+        XCTAssertEqual(UsagePanelView.presentationHeight(model: model, preferences: preferences), 684)
+        let normalScreen = CGRect(x: 0, y: 0, width: 1512, height: 900)
+        for tab in [DetailPreferences.ProviderTab.all, .google, .chatGPT] {
+            preferences.selectedTab = tab
+            XCTAssertEqual(StatusItemController.panelSize(for: preferences, visibleFrame: normalScreen, model: model).height, 684)
+        }
+        preferences.selectedTab = .all
+        let hosting = NSHostingView(rootView: UsagePanelView(model: model, preferences: preferences, maxHeight: 884, refreshOnAppear: false))
+        hosting.frame = NSRect(x: 0, y: 0, width: 440, height: 684)
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertEqual(hosting.fittingSize.height, 684)
+        XCTAssertFalse(containsScrollContainer(hosting), "All seven rows must fit without a scroll container")
+        let shortSize = StatusItemController.panelSize(for: preferences, visibleFrame: CGRect(x: 0, y: 0, width: 1512, height: 600), model: model)
+        XCTAssertEqual(shortSize.height, 584)
+        let shortHost = NSHostingView(rootView: UsagePanelView(model: model, preferences: preferences, maxHeight: shortSize.height, refreshOnAppear: false))
+        shortHost.frame = NSRect(origin: .zero, size: shortSize)
+        shortHost.layoutSubtreeIfNeeded()
+        XCTAssertTrue(containsScrollContainer(shortHost), "Screen limits must not leave accounts off screen")
+    }
+
+    func testServiceDetailKeepsItsScrollContainer() {
+        let preferences = DetailPreferences(defaults: makeDefaults("DetailPanelLayout.ServiceScroll"))
+        preferences.selectedTab = .chatGPT
+        let hosting = NSHostingView(rootView: UsagePanelView(model: makeModel(), preferences: preferences, maxHeight: 640))
+        hosting.frame = NSRect(x: 0, y: 0, width: 440, height: 640)
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(containsScrollContainer(hosting))
     }
 
     func testDetailPageAddsOneScrollRegionWhenViewportIsShort() {

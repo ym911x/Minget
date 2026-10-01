@@ -48,3 +48,9 @@ MINGET_ARCHIVE_PATH=/tmp/minget-1.6.3-archive/Minget.app \
 用户提供第三个 Google 账号无法取数的现场截图。通过该账号自建隔离目录的官方 `/usage`，定位到地区资格检查拒绝。修正错误分类及无快照缓存标签，见 [诊断与修正](GOOGLE_ELIGIBILITY_FIX.md)；原连接、名称与计划保留。
 
 本轮定向 15 项及完整 658 项（653 通过、5 跳过、0 失败）通过；签名构建并备份安装完成，正式安装版真实界面确认提示、官方链接、无虚假缓存和原两个 Google 账号成功刷新。构建使用 `/tmp/minget-1.6.3-eligibility-{stage,candidate,archive}/Minget.app`，完整测试的 `MINGET_TEST_APP_PATH` 指向本轮 candidate，其余 scratch 和禁用定时点火参数沿用上文。没有推送、发布或改 Google 设置。
+
+## 概要高度修正交付
+
+用户七账号截图暴露了固定 640 pt 上限导致最后一行被截住的问题。修改 UsagePanelView、SharedQuotaViews、StatusItemController 与 DetailPanelLayoutTests，概要 684 pt 时完整显示且没有滚动容器，详情继续滚动。定向 61 项及完整 660 项（655 通过、5 既有跳过、0 失败）通过；Release 严格签名、签名候选真实窗口、备份安装及正式窗口复验完成。详见 OVERVIEW_HEIGHT_FIX.md。此前实施记录中的 640 pt 上限为初版行为，已被本次修正替代。
+
+命令沿用此前 scratch，构建 MINGET_STAGING_DIR / MINGET_RUN_PATH / MINGET_ARCHIVE_PATH 分别指向 `/tmp/minget-1.6.3-overview-{stage,candidate,archive}/Minget.app`；完整测试 MINGET_TEST_APP_PATH 指向本轮 candidate，MINGET_EVIDENCE_DIR 为 `/tmp/minget-1.6.3-overview-evidence`。日志为 evidence/overview-*，版本仍为 1.6.3，无远端操作。

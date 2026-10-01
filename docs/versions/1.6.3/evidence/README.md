@@ -10,3 +10,5 @@
 本目录不保存真实用户账号截图、AX 明细或认证文件。记录仅用于本机交付，没有公开发布。
 
 `eligibility-*` 为第三个 Google 账号反馈后的修正证据：diagnostic 仅保存固定分类/计数、不含个人身份或原始报告；focused-tests / regression 为本轮自动测试；release-build 与 install 为当前安装版。初版测试与安装证据保留作历史记录，不代表当前二进制指纹。
+
+`overview-*` 为七账号概要增高修正：focused-tests 与 regression 为本轮测试，release-build / install 为当前二进制签名和指纹，ui 仅为脱敏现场结果。真实截图未留存；此前安装指纹为历史记录。
