@@ -1,0 +1,29 @@
+== signing identity: Minget Local Signing ==
+== swift build (release) ==
+Building for production...
+[1 / 1]
+[2 / 5] UsageMonitorApp-product
+[3 / 6] UsageMonitorApp-product
+[5 / 6] UsageMonitorApp-product
+[6 / 6] UsageMonitorApp-product
+Build complete! (8.26秒)
+== staging /tmp/minget-1.6.4-stage/Minget.app ==
+== codesign (Minget Local Signing) ==
+/tmp/minget-1.6.4-stage/Minget.app: replacing existing signature
+== strict verification in staging ==
+--prepared:/private/tmp/minget-1.6.4-stage/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-1.6.4-stage/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-1.6.4-stage/Minget.app: valid on disk
+/tmp/minget-1.6.4-stage/Minget.app: satisfies its Designated Requirement
+/tmp/minget-1.6.4-stage/Minget.app/Contents/Info.plist: OK
+== install to /Applications/Minget.app ==
+--prepared:/Applications/Minget.app/Contents/MacOS/MingetCLI
+--validated:/Applications/Minget.app/Contents/MacOS/MingetCLI
+/Applications/Minget.app: valid on disk
+/Applications/Minget.app: satisfies its Designated Requirement
+== archive copy to /tmp/minget-1.6.4-archive/Minget.app ==
+/tmp/minget-1.6.4-archive/Minget.app: valid on disk
+/tmp/minget-1.6.4-archive/Minget.app: satisfies its Designated Requirement
+built:   /Applications/Minget.app
+archive: /tmp/minget-1.6.4-archive/Minget.app
+EXIT=0

@@ -1,0 +1,32 @@
+1.6.4 本机测试安装记录
+首次安装：2026-10-09 11:38（Asia/Shanghai）
+修复版重装：2026-10-09 12:25（Asia/Shanghai）
+性质：用户明确要求装入本机正式路径进行测试，不是发布。未打标签、未推送、未建 Release。
+
+安装结果
+- 正式路径 /Applications/Minget.app 为 1.6.4（CFBundleShortVersionString = 1.6.4）。
+- 个人目录兼容链接 ~/Applications/Minget.app 仍指向 /Applications/Minget.app，未改动。
+- 签名身份：Minget Local Signing。staging、正式路径与 archive 三处均通过
+  `codesign --verify --strict`，构建与安装日志：evidence/logs/release-build.log（退出码 0）。
+- 用户首次测试后按反馈修正拖动实现（见 IMPLEMENTATION_REPORT.md「拖动反馈修正」），
+  重新构建、签名并覆盖安装；两次安装都先退出正在运行的实例。
+
+指纹（修复版，当前安装）
+- UsageMonitor：57824c9262bb3b51b3c144fbe43692e83e1885bb57de5bd5f2d8f09bd0245d6d
+- MingetCLI：  8093ab54ba3902e26f8dee7bee1aea67b562478e7243cc9d7ef0014422ecfb3a
+- 首次安装版 UsageMonitor（长按版本，已被修复版替换）：1912dd2ccb35d1ee95fef2db7d607ef54f865d10e60854534a0f5165a72a9f89
+
+被替换的旧版本
+- 安装前 1.6.3 UsageMonitor：ecee8a3d38869eaaec681685a92d9c219ef030d1d81920337a5240631c1f1551
+- 安装前 1.6.3 MingetCLI：  9f770668570980b3fe45c6bb0242d40c1852472be733a78422605d0aeb9e8a3c
+- 备份：/Users/yuyimeng/Applications/Minget Backups/1.6.3-before-1.6.4-20261009-113738/Minget.app
+  （替换前的完整应用包，已通过严格签名校验，两个可执行文件指纹与安装前一致）
+
+构建产物位置
+- scratch：/tmp/minget-1.6.4-release
+- staging：/tmp/minget-1.6.4-stage/Minget.app（候选，已签名）
+- archive：/tmp/minget-1.6.4-archive/Minget.app（审查副本）
+
+启动
+- 修复版安装后以正式路径启动，进程 62184 /Applications/Minget.app/Contents/MacOS/UsageMonitor。
+- 本记录不包含真实账号、Key、余额或认证信息。

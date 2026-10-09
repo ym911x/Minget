@@ -1,0 +1,40 @@
+1.6.4 本机验证记录
+采集时间：2026-10-09，Asia/Shanghai
+
+环境
+- macOS 27.0.1 (26A434)，Apple Silicon arm64
+- Swift 6.4（swift-driver 1.168.6），Xcode 27.0 (27A266a)
+- 工作区：worktree `codex/minget-1-6-4`，起点为干净 main 的 `73c3f9a`
+- 版本号：VERSION = 1.6.4（应用仍为源码构建，未签名、未安装到 /Applications）
+
+执行的命令
+1. 构建
+   swift build --scratch-path /tmp/minget-1.6.4-build --disable-sandbox
+   结果：Build complete，退出码 0。日志 evidence/logs/build.log
+
+2. 完整回归
+   swift test --scratch-path /tmp/minget-1.6.4-build --disable-sandbox
+   结果：Core 462 项（4 项显式官方 CLI 探针跳过），App 214 项（1 项 AX 信任限制跳过），
+   合计 676 项，5 项既有跳过，0 失败，退出码 0。日志 evidence/logs/swift-tests.log
+
+3. 新增定向测试
+   swift test --filter OverviewReorderTests
+   结果：15 项全部通过，覆盖解析（偏好优先、未知追加末尾、失效清理、去重）、移动与越界收敛、
+   位移方向、落位吸附、持久化往返、只读不落盘、幂等提交、行几何常量。
+
+4. 示例渲染证据
+   MINGET_REORDER_EVIDENCE=<dir> swift test --filter OverviewReorderEvidenceTests
+   结果：从真实 `UsagePanelView` 组件导出排序前/后各明暗两张，5 个示例账号，无真实账号、Key 或余额。
+   图片：evidence/screenshots/overview-order-{before,after}-{light,dark}.png
+
+5. 进程时序测试的隔离复跑
+   swift test --filter AntigravityCLIProcessTests/testAuthenticationWaitIsStoppedBeforeTotalTimeout
+   swift test --filter CommandCodeFireServiceTests/testStopTerminatesTheOwnedChild
+   结果：两项在隔离运行中各 5 次与 3 次全部通过（各约 0.1–0.7 秒，测试自身预算 2–3 秒）。
+
+负载下的环境性波动（未记为通过，也未改断言）
+- 并行满载的完整回归中，上述两项进程时序测试各失败过一次：认证等待用例超时（3.05 秒 > 2.0 秒预算），
+  stop 用例未在其 3 秒窗口内看到子进程 pid 文件。
+- 两项都位于本轮未改动的 `UsageMonitorCore`（本轮只改 `UsageMonitorApp` 视图与新增偏好对象），
+  隔离复跑与最终完整回归均通过。原始失败日志保留在本机
+  `artifacts/tasks/2026-10-09-overview-reorder/logs/swift-tests-full.log`（该目录不入库）。

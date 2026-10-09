@@ -248,6 +248,9 @@ private struct OverviewUsageGraphic: View {
 
 struct OverviewAccountRow: View {
     static let height: CGFloat = 64
+    /// The vertical distance one row occupies in the overview stack. The card stack uses
+    /// `DetailPageLayout.rowSpacing`, so a reorder target is a whole number of these apart.
+    static var pitch: CGFloat { height + DetailPageLayout.rowSpacing }
     let service: ServiceSymbol
     let name: String
     let status: String
@@ -255,6 +258,16 @@ struct OverviewAccountRow: View {
     var isCached = false
     /// Fixed reference time is only used by deterministic local presentation previews.
     var referenceDate: Date? = nil
+    /// True only for a real account row in the overview: the left logo becomes the drag
+    /// handle. The empty Gemini placeholder keeps `false` so it can never be reordered.
+    var isReorderable = false
+    /// Reports the live vertical drag in window coordinates. The first call of a gesture also
+    /// starts the drag, so a press that moves takes hold without any hold delay.
+    var onReorderDragChanged: ((CGFloat) -> Void)?
+    /// Reports the end of a drag. `true` commits the drop position; `false` cancels.
+    var onReorderDragEnded: ((Bool) -> Void)?
+    /// Keyboard and VoiceOver alternatives to dragging, wired to the same order store.
+    var onReorderStep: ((_ up: Bool) -> Void)?
     let onOpen: () -> Void
 
     var body: some View {
@@ -270,7 +283,11 @@ struct OverviewAccountRow: View {
     private func row(now: Date) -> some View {
         Button(action: onOpen) {
             HStack(spacing: 10) {
-                ServiceMark(service: service)
+                if isReorderable {
+                    reorderHandle
+                } else {
+                    ServiceMark(service: service)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name).font(.system(size: 15, weight: .semibold)).lineLimit(1).help(name)
                     Text(status).font(.system(size: 11)).lineLimit(1)
@@ -287,4 +304,49 @@ struct OverviewAccountRow: View {
             .help("\(name)，\(status)，\(summary.description(now: now))，查看完整额度")
             .accessibilityLabel("\(name)，\(status)，\(summary.description(now: now))\(isCached ? "，缓存数据" : "")，查看详情")
     }
+
+    /// The logo as a drag handle.
+    ///
+    /// A plain click still opens the row: the drag only takes over once the pointer has moved
+    /// past `dragThreshold`, which a click never does. The gesture has high priority so the
+    /// surrounding row button cannot claim the same press first.
+    private var reorderHandle: some View {
+        ServiceMark(service: service)
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle().inset(by: -4))
+            .help("拖动可排序")
+            .accessibilityLabel("拖动排序：\(name)")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: onReorderStep?(false)
+                case .decrement: onReorderStep?(true)
+                @unknown default: break
+                }
+            }
+            .highPriorityGesture(reorderGesture)
+            .onDisappear { onReorderDragEnded?(false) }
+    }
+
+    /// The drag translation is measured in the window's coordinate space on purpose.
+    ///
+    /// A local space is measured against the handle's own moving frame: the row follows the
+    /// pointer while the gesture keeps reporting the distance from a frame that is itself
+    /// moving, so the two feed back into each other and the row stutters and trails. Window
+    /// coordinates do not move with the row, so the reported distance is the pointer's alone.
+    private var reorderGesture: some Gesture {
+        DragGesture(minimumDistance: Self.dragThreshold, coordinateSpace: .global)
+            .onChanged { value in
+                onReorderDragChanged?(value.translation.height)
+            }
+            .onEnded { value in
+                onReorderDragChanged?(value.translation.height)
+                onReorderDragEnded?(true)
+            }
+    }
+
+    /// How far the pointer must travel before a press becomes a reorder instead of a click.
+    /// Small enough that the row starts moving at once, large enough that a click on the logo
+    /// still opens the row.
+    static let dragThreshold: CGFloat = 3
 }

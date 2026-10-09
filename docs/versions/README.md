@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.3](1.6.3/IMPLEMENTATION_REPORT.md)，本机实现、测试、严格签名和备份安装完成；真实新增账号等现场待验收项见 [验收](1.6.3/ACCEPTANCE.md)。已公开发布 1.6.3，CI 与 Release 核验通过；核验见 [1.6.3 发布记录](1.6.3/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前迭代：[1.6.4](1.6.4/IMPLEMENTATION_REPORT.md)，概要页拖动排序已实现并固化，本机完整回归 679 项通过，Release 严格签名装入正式路径，用户复测确认拖动体验；未发布，等待发布任务。现场待核对项见 [验收](1.6.4/ACCEPTANCE.md)。上一版本 1.6.3 已公开发布，CI 与 Release 核验通过；核验见 [1.6.3 发布记录](1.6.3/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -29,6 +29,8 @@
 | 1.6.2 | 是，沿用已有验证；本轮不重跑 CI | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
 
 | 1.6.3 | 已发布，CI 与 Release 核验通过 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+
+| 1.6.4 | 否，已固化等待发布任务 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | — | 本目录 evidence/ 示例渲染 |
 
 ## 各版本的额外资料
 

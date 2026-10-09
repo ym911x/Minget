@@ -1,0 +1,22 @@
+1.6.4 固化核对记录
+时间：2026-10-09 12:40（Asia/Shanghai）
+目的：确认即将固化的源码与用户已测试的安装版是同一份，避免发布任务使用不一致的构建。
+
+核对方法
+- 取 Release 构建日志（evidence/logs/release-build.log）的写入时间 12:25:26 作为构建时刻。
+- 列出 Sources/ 与 Tests/ 下所有晚于该时刻的 .swift 文件。
+- 比对正式路径与 archive 的 UsageMonitor 指纹。
+
+结果
+- 晚于构建时刻的源码文件：无。用户确认的安装版即当前源码。
+- /Applications/Minget.app/Contents/MacOS/UsageMonitor
+  57824c9262bb3b51b3c144fbe43692e83e1885bb57de5bd5f2d8f09bd0245d6d
+- /tmp/minget-1.6.4-archive/Minget.app/Contents/MacOS/UsageMonitor
+  57824c9262bb3b51b3c144fbe43692e83e1885bb57de5bd5f2d8f09bd0245d6d
+- MingetCLI 两处同为 8093ab54ba3902e26f8dee7bee1aea67b562478e7243cc9d7ef0014422ecfb3a。
+- 签名身份 Minget Local Signing，正式路径与 archive 均通过 `codesign --verify --strict`。
+
+说明
+- 该指纹对应的源码在固化提交中；用户复测使用的就是这一版本。
+- 发布任务若重新构建，应重新核对指纹并记录，不能沿用本记录的数字。
+- 本记录不含真实账号、Key、余额或认证信息。

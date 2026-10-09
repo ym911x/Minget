@@ -83,6 +83,14 @@ struct UsagePanelView: View {
     @ObservedObject var model: UsageViewModel
     @ObservedObject private var preferences: DetailPreferences
     @ObservedObject private var displayNames: DisplayNamePreferences
+    @ObservedObject private var orderPreferences: OverviewAccountOrderPreferences
+    /// Live reorder drag state. It is held here, not in a row, so the 30-second timeline
+    /// refresh inside each row can never reset an in-flight drag.
+    @State private var dragActiveID: String?
+    @State private var dragOriginIndex: Int?
+    @State private var dragDropIndex = 0
+    @State private var dragFrozenOrder: [String] = []
+    @State private var dragTranslation: CGFloat = 0
     var onSettings: (() -> Void)?
     var onAccounts: (() -> Void)?
     var onQuit: (() -> Void)?
@@ -92,6 +100,7 @@ struct UsagePanelView: View {
     init(model: UsageViewModel,
          preferences: DetailPreferences = .shared,
          displayNames: DisplayNamePreferences? = nil,
+         orderPreferences: OverviewAccountOrderPreferences = .shared,
          maxHeight: CGFloat? = nil,
          refreshOnAppear: Bool = true,
          onSettings: (() -> Void)? = nil,
@@ -100,6 +109,7 @@ struct UsagePanelView: View {
         self.model = model
         _preferences = ObservedObject(wrappedValue: preferences)
         _displayNames = ObservedObject(wrappedValue: displayNames ?? model.displayNames)
+        _orderPreferences = ObservedObject(wrappedValue: orderPreferences)
         self.maxHeight = maxHeight
         self.refreshOnAppear = refreshOnAppear
         self.onSettings = onSettings
@@ -133,7 +143,6 @@ struct UsagePanelView: View {
         .padding(DetailPageLayout.margin)
         .frame(width: DetailPageLayout.pageWidth, height: viewport, alignment: .top)
         .background(.regularMaterial)
-        .transaction { $0.animation = nil }
         .onAppear { if refreshOnAppear { model.panelWillOpen() } }
     }
 
@@ -282,43 +291,196 @@ struct UsagePanelView: View {
     }
 
     @ViewBuilder private var overviewRows: some View {
-        ForEach(model.profileStates) { state in
-            OverviewAccountRow(service: .chatGPT, name: displayNames.displayName(for: state.id), status: state.connectionText,
-                summary: .codex(state.snapshot), isCached: state.isStale) { preferences.selectedTab = .chatGPT }
+        ForEach(Array(displayedOverviewRows.enumerated()), id: \.element.id) { index, rowItem in
+            let transform = reorderTransform(index: index)
+            overviewCard(rowItem)
+                .offset(y: transform.offset)
+                // The held row must track the pointer exactly, so its own travel is never
+                // animated. Every other row only changes offset when the held row crosses a
+                // slot boundary, and that change is the slide.
+                .animation(transform.isDragged ? nil : Self.reorderAnimation, value: transform.offset)
+                .scaleEffect(transform.isDragged ? 1.02 : 1)
+                .shadow(color: .black.opacity(transform.isDragged ? 0.18 : 0),
+                        radius: transform.isDragged ? 8 : 0, y: transform.isDragged ? 4 : 0)
+                .zIndex(transform.isDragged ? 1 : 0)
+        }
+    }
+
+    /// One account sources for the overview, in the order they are drawn.
+    private enum OverviewRowItem: Identifiable {
+        case placeholder(id: String, service: ServiceSymbol, name: String, status: String, onOpen: () -> Void)
+        case account(id: String, service: ServiceSymbol, name: String, status: String,
+                     summary: OverviewUsageSummary, isCached: Bool, onOpen: () -> Void)
+
+        var id: String {
+            switch self {
+            case .placeholder(let id, _, _, _, _), .account(let id, _, _, _, _, _, _): return id
+            }
+        }
+    }
+
+    private var overviewBaseRows: [OverviewRowItem] {
+        var rows: [OverviewRowItem] = model.profileStates.map { state in
+            .account(id: state.id, service: .chatGPT, name: displayNames.displayName(for: state.id),
+                     status: state.connectionText, summary: .codex(state.snapshot), isCached: state.isStale) {
+                preferences.selectedTab = .chatGPT
+            }
         }
         if preferences.showGoogle {
             if model.google.accounts.isEmpty {
-                OverviewAccountRow(service: .gemini, name: "Gemini", status: "未连接", summary: .gemini([])) { onAccounts?() }
+                rows.append(.placeholder(id: "google-empty", service: .gemini, name: "Gemini", status: "未连接") { onAccounts?() })
             }
-            ForEach(model.google.accounts) { state in
-                OverviewAccountRow(service: .gemini, name: model.google.displayName(state.account),
-                    status: state.statusText, summary: .gemini(state.snapshot?.groups ?? []),
-                    isCached: state.hasCachedData) { preferences.selectedTab = .google }
+            rows += model.google.accounts.map { state in
+                .account(id: state.id, service: .gemini, name: model.google.displayName(state.account),
+                         status: state.statusText, summary: .gemini(state.snapshot?.groups ?? []),
+                         isCached: state.hasCachedData) { preferences.selectedTab = .google }
             }
         }
         if model.accountRegistry != nil {
-            ForEach(model.managedAPIStates.filter { $0.account.platform == .deepseek && preferences.showDeepSeek || $0.account.platform == .commandcode && preferences.showCommandCode }) { state in
+            rows += model.managedAPIStates.filter {
+                $0.account.platform == .deepseek && preferences.showDeepSeek
+                    || $0.account.platform == .commandcode && preferences.showCommandCode
+            }.map { state in
                 let report = state.report
-                OverviewAccountRow(service: state.account.platform == .deepseek ? .deepSeek : .commandCode, name: model.accountName(state.account), status: state.account.removalPending ? "移除未完成" : providerConnectionText(report.connection),
-                    summary: state.account.platform == .deepseek ? .balances(report.connection == .connected || report.connection == .stale ? report.balances : []) : .credits(report.usage?.windows.first { $0.kind == .fiveHour }), isCached: report.connection == .stale) {
-                        preferences.selectedTab = state.account.platform == .deepseek ? .deepSeek : .commandCode
-                    }
+                return .account(id: state.account.id,
+                                service: state.account.platform == .deepseek ? .deepSeek : .commandCode,
+                                name: model.accountName(state.account),
+                                status: state.account.removalPending ? "移除未完成" : providerConnectionText(report.connection),
+                                summary: state.account.platform == .deepseek
+                                    ? .balances(report.connection == .connected || report.connection == .stale ? report.balances : [])
+                                    : .credits(report.usage?.windows.first { $0.kind == .fiveHour }),
+                                isCached: report.connection == .stale) {
+                    preferences.selectedTab = state.account.platform == .deepseek ? .deepSeek : .commandCode
+                }
             }
         } else {
-        if preferences.showDeepSeek {
-            let report = report(for: .deepseek)
-            OverviewAccountRow(service: .deepSeek, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
-                status: providerConnectionText(report.connection),
-                summary: .balances(report.connection == .connected || report.connection == .stale ? report.balances : []),
-                isCached: report.connection == .stale) { preferences.selectedTab = .deepSeek }
+            if preferences.showDeepSeek {
+                let report = report(for: .deepseek)
+                rows.append(.account(id: DisplayNamePreferences.ServiceID.deepSeek, service: .deepSeek,
+                                     name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
+                                     status: providerConnectionText(report.connection),
+                                     summary: .balances(report.connection == .connected || report.connection == .stale ? report.balances : []),
+                                     isCached: report.connection == .stale) { preferences.selectedTab = .deepSeek })
+            }
+            if preferences.showCommandCode {
+                let report = report(for: .commandcode)
+                let window = report.usage?.windows.first { $0.kind == .fiveHour }
+                rows.append(.account(id: DisplayNamePreferences.ServiceID.commandCode, service: .commandCode,
+                                     name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
+                                     status: providerConnectionText(report.connection), summary: .credits(window),
+                                     isCached: report.connection == .stale) { preferences.selectedTab = .commandCode })
+            }
         }
-        if preferences.showCommandCode {
-            let report = report(for: .commandcode)
-            let window = report.usage?.windows.first { $0.kind == .fiveHour }
-            OverviewAccountRow(service: .commandCode, name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
-                status: providerConnectionText(report.connection), summary: .credits(window),
-                isCached: report.connection == .stale) { preferences.selectedTab = .commandCode }
+        return rows
+    }
+
+    /// The rows as drawn. While a drag is in flight the frozen order from its start is used,
+    /// so a refresh publishing new snapshots cannot shuffle rows under the cursor.
+    private var displayedOverviewRows: [OverviewRowItem] {
+        let rows = overviewBaseRows
+        let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let ids = dragActiveID != nil ? dragFrozenOrder : orderPreferences.resolvedOrder(currentIDs: rows.map(\.id))
+        var ordered = ids.compactMap { byID[$0] }
+        for row in rows where !ids.contains(row.id) { ordered.append(row) }
+        return ordered
+    }
+
+    @ViewBuilder
+    private func overviewCard(_ item: OverviewRowItem) -> some View {
+        switch item {
+        case .placeholder(_, let service, let name, let status, let onOpen):
+            OverviewAccountRow(service: service, name: name, status: status, summary: .gemini([])) { onOpen() }
+        case .account(let id, let service, let name, let status, let summary, let isCached, let onOpen):
+            OverviewAccountRow(service: service, name: name, status: status, summary: summary,
+                               isCached: isCached, isReorderable: true,
+                               onReorderDragChanged: { translation in
+                                   reorderChanged(id: id, translation: translation)
+                               },
+                               onReorderDragEnded: { commit in
+                                   reorderEnded(id: id, commit: commit)
+                               },
+                               onReorderStep: { up in
+                                   stepReordered(id: id, up: up)
+                               }) { onOpen() }
         }
+    }
+
+    /// Rows keep their resting place during a drag; the held row follows the pointer and the
+    /// rows it will displace slide by exactly one slot. Committing the frozen order happens on
+    /// drop, so no row ever has to be drawn at a position it was never laid out at.
+    private func reorderTransform(index: Int) -> (offset: CGFloat, isDragged: Bool) {
+        guard let active = dragActiveID, let origin = dragOriginIndex,
+              let current = displayedOverviewRows.firstIndex(where: { $0.id == active }) else { return (0, false) }
+        let offset = OverviewReorder.dragOffset(index: index, draggedIndex: current, originIndex: origin,
+                                                destinationIndex: dragDropIndex,
+                                                translation: dragTranslation,
+                                                pitch: OverviewAccountRow.pitch)
+        return (offset, index == current)
+    }
+
+    // MARK: Reorder
+
+    private func beginReorderDrag(id: String) {
+        guard dragActiveID != id else { return }
+        let rows = overviewBaseRows
+        let ids = orderPreferences.resolvedOrder(currentIDs: rows.map(\.id))
+        guard let origin = ids.firstIndex(of: id) else { return }
+        dragActiveID = id
+        dragOriginIndex = origin
+        dragDropIndex = origin
+        dragTranslation = 0
+        dragFrozenOrder = ids
+    }
+
+    /// The one spring curve every reorder animation uses, so a drop and the rows sliding out
+    /// of its way always settle together.
+    static let reorderAnimation: Animation = .spring(response: 0.28, dampingFraction: 0.9)
+
+    /// Starts the drag if this is the gesture's first movement, then follows the pointer.
+    ///
+    /// The pointer's own travel is applied without animation: the held row has to sit exactly
+    /// under the pointer. Only the rows that give way are animated, which is why the slot
+    /// change goes through `withAnimation` on its own and the translation is set with animation
+    /// explicitly disabled.
+    private func reorderChanged(id: String, translation: CGFloat) {
+        if dragActiveID != id { beginReorderDrag(id: id) }
+        guard dragActiveID == id, let origin = dragOriginIndex else { return }
+        withAnimation(nil) { dragTranslation = translation }
+        let destination = OverviewReorder.dropIndex(translation: translation,
+                                                    homeIndex: origin,
+                                                    pitch: OverviewAccountRow.pitch,
+                                                    count: dragFrozenOrder.count)
+        guard destination != dragDropIndex else { return }
+        withAnimation(Self.reorderAnimation) { dragDropIndex = destination }
+    }
+
+    /// Ends the drag. A committed drop and the cleared drag state share one transaction, so the
+    /// held row springs from where the pointer left it into the slot it was dropped on.
+    private func reorderEnded(id: String, commit: Bool) {
+        guard dragActiveID == id else { return }
+        let visible = overviewBaseRows.map(\.id)
+        let finalOrder = commit ? OverviewReorder.move(dragFrozenOrder, id: id, to: dragDropIndex) : dragFrozenOrder
+        withAnimation(Self.reorderAnimation) {
+            if commit, finalOrder != dragFrozenOrder {
+                orderPreferences.commit(finalOrder, visibleIDs: visible)
+            }
+            dragActiveID = nil
+            dragOriginIndex = nil
+            dragDropIndex = 0
+            dragFrozenOrder = []
+            dragTranslation = 0
+        }
+    }
+
+    private func stepReordered(id: String, up: Bool) {
+        let rows = overviewBaseRows
+        let ids = orderPreferences.resolvedOrder(currentIDs: rows.map(\.id))
+        guard let origin = ids.firstIndex(of: id) else { return }
+        let destination = up ? origin - 1 : origin + 1
+        guard destination >= 0, destination < ids.count else { return }
+        withAnimation(Self.reorderAnimation) {
+            orderPreferences.commit(OverviewReorder.move(ids, id: id, to: destination),
+                                    visibleIDs: rows.map(\.id))
         }
     }
 
