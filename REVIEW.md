@@ -8,3 +8,5 @@
 - [验收台账](docs/versions/1.6.4/ACCEPTANCE.md)
 
 上一版本 1.6.3 已公开发布，GitHub CI 测试与构建通过；其现场待验收项不因本版本改变，见 [1.6.3 发布记录](docs/versions/1.6.3/PUBLICATION.md) 与 [1.6.3 验收](docs/versions/1.6.3/ACCEPTANCE.md)。历史版本记录保持原样。
+
+本次 Codex 独立发布复核与完整回归已通过；公开进度见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。

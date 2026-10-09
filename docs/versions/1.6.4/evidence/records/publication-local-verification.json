@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-09",
+  "sourceCommit": "bd0bfb2695ffc631cb541dcbec3f25f90c14c702",
+  "tests": {
+    "executed": 679,
+    "passed": 674,
+    "skipped": 5,
+    "failed": 0
+  },
+  "originalManifestFilesVerified": 10,
+  "installedVersion": "1.6.4",
+  "installedStrictSignature": "passed",
+  "installedSHA256": {
+    "UsageMonitor": "57824c9262bb3b51b3c144fbe43692e83e1885bb57de5bd5f2d8f09bd0245d6d",
+    "MingetCLI": "8093ab54ba3902e26f8dee7bee1aea67b562478e7243cc9d7ef0014422ecfb3a"
+  },
+  "organizationChangedEntriesPreserved": 218,
+  "organizationMismatches": 0,
+  "pendingAcceptance": "See ACCEPTANCE.md; no status promoted"
+}
