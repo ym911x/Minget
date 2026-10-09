@@ -28,3 +28,5 @@
 ## Codex 发布复核（2026-10-09）
 
 Codex 已独立检查相对 `origin/main@73c3f9a` 的全部生产代码差异、18 项排序测试及示例渲染测试，复跑完整 679 项回归，674 通过、5 跳过、0 失败；原有证据 10 项哈希及正式 App 版本、严格签名、主程序/CLI 指纹均通过。没有发现阻止本次源码发布的问题。现场待核对项继续见 ACCEPTANCE.md，无障碍可调操作仅确认代码接线，未宣称键盘或 VoiceOver 现场通过。发布进度见 [PUBLICATION.md](PUBLICATION.md)。
+
+2026-10-09 发布核验：v1.6.4 已公开发布为 Latest，GitHub CI 679 项，624 通过、55 跳过、0 失败，Release 构建与严格签名通过。此补充不改变上述现场验收状态，详见 [PUBLICATION.md](PUBLICATION.md)。

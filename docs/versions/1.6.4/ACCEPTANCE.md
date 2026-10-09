@@ -45,3 +45,5 @@
 ## 发布任务补充（2026-10-09）
 
 用户授权文件完整即可发布 GitHub。Codex 独立复跑完整回归为 679 项，674 通过、5 项既有跳过、0 失败，并通过原证据哈希、正式 App 1.6.4 的 deep/strict 签名及固化指纹核验。上述现场待核对项保留原状态，发布不会将其改为通过。GitHub 结果单独记录于 [PUBLICATION.md](PUBLICATION.md)。
+
+2026-10-09 发布核验：v1.6.4 已公开发布为 Latest，GitHub CI 679 项，624 通过、55 跳过、0 失败，Release 构建与严格签名通过。此补充不改变上述现场验收状态，详见 [PUBLICATION.md](PUBLICATION.md)。

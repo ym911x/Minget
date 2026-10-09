@@ -13,7 +13,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 拖动概要页账号左侧 Logo 可跨平台调整顺序，行跟随指针，其余行滑让，松手自动落位，短按仍进入详情。顺序只在本机保存并只影响概要页；新增账号追加末尾。正式安装版已通过用户拖动复测，独立回归 679 项，674 通过、5 项既有环境跳过、0 失败。
 
-现场待验收项与短屏拖动限制见 [1.6.4 验收](docs/versions/1.6.4/ACCEPTANCE.md)，发布进度见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。公开分发继续使用源码。
+现场待验收项与短屏拖动限制见 [1.6.4 验收](docs/versions/1.6.4/ACCEPTANCE.md)，已公开发布 [v1.6.4](https://github.com/ym911x/Minget/releases/tag/v1.6.4)，GitHub CI 测试和应用构建通过；核验见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。公开分发继续使用源码。
 
 ## v1.6.3：账号添加与多账号管理
 

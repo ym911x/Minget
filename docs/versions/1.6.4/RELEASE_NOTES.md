@@ -9,3 +9,5 @@
 验证边界：刷新时拖动、真实重启恢复、键盘及 VoiceOver、服务切换与增删账号的现场复验仍待完成；短屏滚动容器中的拖动不支持边缘自动滚动，第二台 Mac 未实测。自动测试与示例截图不替代上述现场验收。
 
 本次继续通过 GitHub 分发源码，不附本机签名 App；完整验收记录见 [ACCEPTANCE.md](https://github.com/ym911x/Minget/blob/v1.6.4/docs/versions/1.6.4/ACCEPTANCE.md)。
+
+GitHub CI 对发布提交测试与构建通过：679 项，624 通过、55 项 CI 环境跳过、0 失败；[查看 CI](https://github.com/ym911x/Minget/actions/runs/37887900744)。

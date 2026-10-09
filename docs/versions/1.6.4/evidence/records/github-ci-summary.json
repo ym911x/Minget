@@ -1,0 +1,85 @@
+{
+  "runID": 37887900744,
+  "url": "https://github.com/ym911x/Minget/actions/runs/37887900744",
+  "headSha": "1f12d0bf160d89f0c21268c9bba1449cec33e791",
+  "status": "completed",
+  "conclusion": "success",
+  "tests": {
+    "executed": 679,
+    "passed": 624,
+    "skipped": 55,
+    "failed": 0
+  },
+  "jobs": [
+    {
+      "completedAt": "2026-10-09T05:20:19Z",
+      "conclusion": "success",
+      "databaseId": 113681922248,
+      "name": "test",
+      "startedAt": "2026-10-09T05:17:56Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-09T05:17:56Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-09T05:17:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:17:59Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v7",
+          "number": 2,
+          "startedAt": "2026-10-09T05:17:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:18:01Z",
+          "conclusion": "success",
+          "name": "Show Swift version",
+          "number": 3,
+          "startedAt": "2026-10-09T05:17:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:19:28Z",
+          "conclusion": "success",
+          "name": "Run tests",
+          "number": 4,
+          "startedAt": "2026-10-09T05:18:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:20:15Z",
+          "conclusion": "success",
+          "name": "Build application bundle",
+          "number": 5,
+          "startedAt": "2026-10-09T05:19:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:20:16Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v7",
+          "number": 10,
+          "startedAt": "2026-10-09T05:20:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-09T05:20:17Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "startedAt": "2026-10-09T05:20:16Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/ym911x/Minget/actions/runs/37887900744/job/113681922248"
+    }
+  ],
+  "applicationBuild": "passed",
+  "adHocStrictSignature": "passed",
+  "scope": "CI validates the release commit; later documentation-only commits are not claimed as new CI runs"
+}

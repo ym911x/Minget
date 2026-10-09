@@ -14,4 +14,14 @@
 
 ## 远端结果
 
-待发布后记录 Release、标签、main 和 GitHub CI 核验。
+- 发布时间：2026-10-09 13:20:55（Asia/Shanghai）。
+- Release：[v1.6.4](https://github.com/ym911x/Minget/releases/tag/v1.6.4)，Latest、非草稿、非预发布，无自定义附件，继续源码分发。
+- 发布提交：`1f12d0bf160d89f0c21268c9bba1449cec33e791`。Annotated tag 对象 `a04805a411441bdbf72c5cf231027f9225cfd7bf`，解引用到上述提交，远端标签同步核验。
+- [GitHub CI](https://github.com/ym911x/Minget/actions/runs/37887900744) 成功：679 项，624 通过、55 项 CI 环境跳过、0 失败；Release 应用构建及 ad-hoc 包严格校验通过。本机结果为 674 通过、5 跳过，环境差异分别保留。
+- 主目录 `main` 已快进到发布提交，后续仅回写文档与脱敏证据并使用 `[skip ci]`；源码、测试、脚本与 VERSION 相对标签不变。CI 结论只针对发布提交，不宣称后续文档提交另跑 CI。
+- 本机正式 App 保持用户测试通过的 1.6.4，发布期间没有替换 App、修改账号、点火计划或消耗重置额度。
+- 远端核验摘要见 `evidence/records/github-ci-summary.json`、`github-release-summary.json`。现场待验收项继续保留。
+
+## 本地目录整理工作的保留
+
+原分支 `codex/project-folder-organization` 与全部未提交变更保存在 `$HOME/.codex-minget-b/worktrees/minget-folder-organization-preserved/额度显示小组件`，218 个条目逐项 SHA-256 比对一致。恢复备份 stash 为 `0a523bab5d414a595e293a329d09e9d74081b492`，未删除。原主目录里的忽略历史资料仍留原处，未公开或删除；该维护分支尚未合入 `main`，后续维护需重新以本次发布基线核对。
