@@ -7,6 +7,8 @@
 - [代码与验证审核](docs/versions/1.6.5/REVIEW.md)
 - [验收台账](docs/versions/1.6.5/ACCEPTANCE.md)
 
-上一版本 1.6.4 已公开发布为 Latest，远端测试与应用构建通过，核验见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。其现场待验收项不因本版本改变；历史版本记录保持原样。
+上一版本 1.6.4 已公开发布，远端测试与应用构建通过，核验见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。其现场待验收项不因本版本改变；历史版本记录保持原样。
 
 2026-10-10 发布前独立核对：686 项回归（681 通过、5 跳过、0 失败），原证据清单 16 项、正式 App 签名与指纹均通过。公开资料补齐并脱敏，发布进度见 [1.6.5 发布记录](docs/versions/1.6.5/PUBLICATION.md)。
+
+1.6.5 已公开发布为 Latest，GitHub CI 的 686 项测试（631 通过、55 项环境跳过、0 失败）、Release 构建及严格签名校验全部通过。主目录 main、正式 App 和发布标签核对一致；见 [发布记录](docs/versions/1.6.5/PUBLICATION.md)。

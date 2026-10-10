@@ -13,7 +13,7 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 概览页 Command Code 同时显示 5H 与月额度，缺少月度剩余时退回周额度，再缺失时保留单列。四个品牌详情页新增只刷新本品牌的按钮。正式安装版已由用户复验；独立完整回归 686 项，681 通过、5 项既有跳过、0 失败。
 
-本次继续源码分发，公开进度见 [1.6.5 发布记录](docs/versions/1.6.5/PUBLICATION.md)。VoiceOver、Studio 同刻对账与第二台 Mac 的未验收状态见 [1.6.5 验收](docs/versions/1.6.5/ACCEPTANCE.md)。
+已公开发布 [v1.6.5](https://github.com/ym911x/Minget/releases/tag/v1.6.5)，GitHub CI 测试与应用构建通过。继续源码分发，核验见 [1.6.5 发布记录](docs/versions/1.6.5/PUBLICATION.md)。VoiceOver、Studio 同刻对账与第二台 Mac 的未验收状态见 [1.6.5 验收](docs/versions/1.6.5/ACCEPTANCE.md)。
 
 ## v1.6.4：概要页拖动排序
 

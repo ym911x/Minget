@@ -1,0 +1,12 @@
+test	Run tests	2026-10-10T05:56:27.6331050Z 	 Executed 686 tests, with 55 tests skipped and 0 failures (0 unexpected) in 46.303 (46.344) seconds
+test	Run tests	2026-10-10T05:56:27.6332340Z 	 Executed 686 tests, with 55 tests skipped and 0 failures (0 unexpected) in 46.303 (46.345) seconds
+test	Build application bundle	2026-10-10T05:56:28.2580560Z == signing: ad-hoc (MINGET_SIGN_IDENTITY=-) ==
+test	Build application bundle	2026-10-10T05:57:21.9379890Z == strict verification in staging ==
+test	Build application bundle	2026-10-10T05:57:21.9602130Z <runner-temp>//minget-staging/Minget.app: valid on disk
+test	Build application bundle	2026-10-10T05:57:21.9605680Z <runner-temp>//minget-staging/Minget.app: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T05:57:22.0467730Z <runner-home>/Applications/Minget.app: valid on disk
+test	Build application bundle	2026-10-10T05:57:22.0468530Z <runner-home>/Applications/Minget.app: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T05:57:22.0931520Z <runner-temp>//minget-archive/Minget.app: valid on disk
+test	Build application bundle	2026-10-10T05:57:22.0932510Z <runner-temp>//minget-archive/Minget.app: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T05:57:22.0935060Z built:   <runner-home>/Applications/Minget.app
+test	Build application bundle	2026-10-10T05:57:22.0935600Z archive: <runner-temp>//minget-archive/Minget.app

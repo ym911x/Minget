@@ -1,6 +1,6 @@
 # 后续版本路线图
 
-最新完成版本为 **1.6.5 Command Code 月额度与品牌单独刷新**，正式安装版用户复验通过。独立完整回归 686 项，681 通过、5 跳过、0 失败。现场边界见 [验收](docs/versions/1.6.5/ACCEPTANCE.md)，发布进度以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 与 [PUBLICATION.md](docs/versions/1.6.5/PUBLICATION.md) 为准。
+最新完成版本为 **1.6.5 Command Code 月额度与品牌单独刷新**，正式安装版用户复验通过。独立完整回归 686 项，681 通过、5 跳过、0 失败。现场边界见 [验收](docs/versions/1.6.5/ACCEPTANCE.md)，已发布为 Latest，GitHub CI 测试与构建通过，核验以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 与 [PUBLICATION.md](docs/versions/1.6.5/PUBLICATION.md) 为准。
 
 
 1.6.0 历史验收状态（2026-10-01）：本机 1.6.0 官方 CLI 双账号迭代已完成并安装。正式 A/B 登录、官方 `/usage`、真实卡片对账、退出重启、手动刷新及应用内官方下载校验均已通过。发布准备测试 621 项，620 通过、1 跳过、0 失败，Release 严格签名通过。第二台 Mac 验收按用户要求延期；自然令牌续期、撤销后的重新登录和真实睡眠唤醒仍待现场验证。已公开发布 v1.6.0，远端测试与构建 CI 通过；发布核验见发布记录。

@@ -12,6 +12,13 @@
 - 补齐发布说明，清理个人用量明细与日志中的本机路径。原开发提交仅本地保留，公开 main 使用整理后内容的 squash 提交，避免推送未脱敏开发历史。
 - 核对期间主目录出现外部 Git 分支切换，因此发布准备在独立临时 worktree `codex/publish-1-6-5` 完成；主目录同步前重新检查状态。
 
-## 远端状态
+## 远端结果
 
-发布准备中，尚未推送、打标签或创建 Release。远端 CI 与发布核验完成后回写。
+- 发布时间：2026-10-10 13:58:27（Asia/Singapore）。
+- Release：[v1.6.5](https://github.com/ym911x/Minget/releases/tag/v1.6.5)，Latest、非草稿、非预发布，无自定义附件，继续源码分发。
+- 发布提交：`61bf600956eb86bc2ecf09eb6bfdb6c2bc812892`。Annotated tag 对象 `9b669d80e612c2bb62655fe552ffb472801e1a27`，远端解引用到上述提交。
+- [GitHub CI](https://github.com/ym911x/Minget/actions/runs/38029112741) 成功：686 项，631 通过、55 项 CI 环境跳过、0 失败；Release 应用构建与 ad-hoc 包严格签名校验通过。本机为 681 通过、5 跳过，环境差异分别保留。
+- 主目录 main 已快进到发布提交，后续只回写文档与脱敏证据并使用 `[skip ci]`；源码、测试、构建脚本与 VERSION 相对标签不变。CI 结论针对发布提交。
+- 正式 App 保持用户复验通过的 1.6.5，deep/strict 签名及主程序指纹复核通过。发布期间没有重建或替换 App、改账号和点火计划、消耗重置额度。
+- 核验摘要见 `evidence/records/github-ci-summary.json`、`github-release-summary.json`，测试总数及签名日志节选见 `evidence/logs/github-ci-verification.log`。
+- VoiceOver、Studio 同刻对账、第二台 Mac 继续保留待验收，不因发布改记通过。

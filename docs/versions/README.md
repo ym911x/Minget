@@ -32,7 +32,7 @@
 
 | 1.6.4 | 已发布（保留现场待验收项） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
-| 1.6.5 | 用户复验通过，发布核对中 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+| 1.6.5 | 已发布，用户复验及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
 ## 各版本的额外资料
 

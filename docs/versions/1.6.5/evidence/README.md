@@ -24,3 +24,5 @@
 ## 发布前核对（2026-10-10，Asia/Singapore）
 
 原清单 16 项全部通过后，日志去除 ANSI、本机用户名与工作区路径，安装/回滚记录将主目录写为 `$HOME`。个人余额与用量明细从公开需求及验收移除，仅保留结构与结论；截图保持原合成图。品牌页截图的 v1.6.1 为无 bundle 元数据时的既有回退文字，正式版本从安装 App 的 Info.plist 核验。`logs/publication-swift-tests.log` 为发布前独立回归：686 项、681 通过、5 跳过、0 失败；既有编译警告保留。远端进度见 [PUBLICATION.md](../PUBLICATION.md)。
+
+远端发布核验：CI 摘要和 Release 元数据位于 `records/github-*-summary.json`；`logs/github-ci-verification.log` 留存 686 项测试总数及 Release 严格签名节选。v1.6.5 已公开为 Latest，详细发布提交与标签见 [PUBLICATION.md](../PUBLICATION.md)。
