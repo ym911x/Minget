@@ -13,7 +13,9 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 Gemini 详情卡不再折叠「其他额度组」：官方返回的另一组（`Claude and GPT models`）直接显示在主额度下方并保留组名，同时去掉「最近成功 hh:mm / 缓存数据」整行。该组用量条与「剩余 %」改用 Claude 品牌橙 `#D97757`，低于 20% 仍为红，重置时间条继续用蓝；主额度组、ChatGPT、概览与菜单栏配色不变。概览页 ChatGPT 与 Gemini 的额度图示由 164 pt 加宽到 224 pt，与 Command Code 的 5H + 月额度双列等长；名称列压缩到约 92 pt，名称保持 15 pt 并在过长时截断，状态小字先缩字号再截断。
 
-独立完整回归 689 项，684 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。真实界面复验状态见 [1.6.6 验收](docs/versions/1.6.6/ACCEPTANCE.md)，改动与渲染证据见 [1.6.6 实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)。
+独立完整回归 689 项，684 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。正式安装版的概览、Gemini 三账号卡片与只读刷新已由 Codex 现场检查；其余边界见 [1.6.6 验收](docs/versions/1.6.6/ACCEPTANCE.md)，改动与渲染证据见 [1.6.6 实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)。
+
+已公开发布 [v1.6.6](https://github.com/ym911x/Minget/releases/tag/v1.6.6) 为 Latest，GitHub CI 测试、Release 构建与严格签名通过。继续源码分发，核验见 [1.6.6 发布记录](docs/versions/1.6.6/PUBLICATION.md)。
 
 ## v1.6.5：Command Code 月额度与品牌单独刷新
 

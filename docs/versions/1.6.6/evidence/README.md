@@ -31,3 +31,5 @@
 - `records/publication-local-review.txt`：正式安装版指纹、签名、原证据校验和脱敏真实界面观察。
 - 发布独立回归日志保留首次失败、针对性复测与完整复测，结果与边界见发布记录。
 - 示例渲染的硬编码标题还可能显示 1.6.5；图片内容来自本轮源码，标题不作为安装版版本证明。
+
+- `records/github-ci-summary.json`、`github-release-summary.json` 与 `logs/github-ci-verification.log`：公开 Release 及发布提交 CI 的实际核验结果。v1.6.6 为 Latest，CI 689 项、55 项环境跳过、0 失败，Release 构建与严格签名通过。

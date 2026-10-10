@@ -25,3 +25,5 @@
 ## 发布前独立复核（2026-10-10）
 
 Codex 再次逐项检查工作区差异与关键视图路径，未发现阻断发布的代码问题。正式安装版、四个改动源码与 VERSION 的指纹均与安装记录相同，严格签名复核通过；原 14 项证据清单全通过。通过正式完整路径检查真实界面并执行 Gemini 品牌只读刷新，观察范围与未执行项见 `evidence/records/publication-local-review.txt`。用户已明确授权发布，远端及独立回归结果见 [PUBLICATION.md](PUBLICATION.md)。
+
+发布完成：v1.6.6 为 Latest，GitHub CI 首次执行成功，测试 689 项（55 项 CI 环境跳过、0 失败），Release 构建与严格签名通过；详见发布记录。

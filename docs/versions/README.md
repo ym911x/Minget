@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.6](1.6.6/IMPLEMENTATION_REPORT.md)，Gemini 详情卡直接显示其他额度组（`Claude and GPT models`）并把该组用量改为 Claude 橙，概览页 ChatGPT 与 Gemini 的额度图示加宽到与 Command Code 双列等长；本机完整回归 689 项通过，Release 严格签名装入正式路径，见 [验收](1.6.6/ACCEPTANCE.md)。上一发布版本 1.6.5 已公开发布为 Latest，GitHub 测试与应用构建通过，见 [发布记录](1.6.5/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前完成版本：[1.6.6](1.6.6/IMPLEMENTATION_REPORT.md)，Gemini 详情卡其他额度组直显与 Claude 橙、概览额度条等长；已公开发布为 Latest，本机独立完整复测 689 项通过，正式界面与 Gemini 只读刷新检查通过，GitHub CI 测试、Release 构建与严格签名通过，见 [发布记录](1.6.6/PUBLICATION.md)。现场边界见 [验收](1.6.6/ACCEPTANCE.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -34,7 +34,7 @@
 
 | 1.6.5 | 已发布，用户复验及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
-| 1.6.6 | 本机交付，未发布 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+| 1.6.6 | 已发布，Codex 正式界面检查及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
 ## 各版本的额外资料
 

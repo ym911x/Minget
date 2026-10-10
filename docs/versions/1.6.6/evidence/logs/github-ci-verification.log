@@ -1,0 +1,14 @@
+test	Run tests	2026-10-10T13:42:51.4247520Z Test Suite 'UsageMonitorPackageTests.xctest' passed at 2026-10-10 13:42:51.398.
+test	Run tests	2026-10-10T13:42:51.4248020Z 	 Executed 689 tests, with 55 tests skipped and 0 failures (0 unexpected) in 52.228 (52.261) seconds
+test	Run tests	2026-10-10T13:42:51.4248910Z 	 Executed 689 tests, with 55 tests skipped and 0 failures (0 unexpected) in 52.228 (52.263) seconds
+test	Build application bundle	2026-10-10T13:42:51.5438160Z == signing: ad-hoc (MINGET_SIGN_IDENTITY=-) ==
+test	Build application bundle	2026-10-10T13:43:36.3418690Z == strict verification in staging ==
+test	Build application bundle	2026-10-10T13:43:36.3591540Z <runner-temp-path>: valid on disk
+test	Build application bundle	2026-10-10T13:43:36.3592570Z <runner-temp-path>: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T13:43:36.3978900Z <runner-temp-path>: OK
+test	Build application bundle	2026-10-10T13:43:36.4615010Z <runner-home>/Applications/Minget.app: valid on disk
+test	Build application bundle	2026-10-10T13:43:36.4685900Z <runner-home>/Applications/Minget.app: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T13:43:36.5111970Z <runner-temp-path>: valid on disk
+test	Build application bundle	2026-10-10T13:43:36.5112660Z built:   <runner-home>/Applications/Minget.app
+test	Build application bundle	2026-10-10T13:43:36.5130040Z <runner-temp-path>: satisfies its Designated Requirement
+test	Build application bundle	2026-10-10T13:43:36.5131140Z archive: <runner-temp-path>

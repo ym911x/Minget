@@ -41,3 +41,5 @@
 ## 与发布的关系
 
 用户于 2026-10-10 明确授权审核并发布。Codex 的真实界面观察记录见 `evidence/records/publication-local-review.txt`，用户体验、VoiceOver、第二台 Mac 等未完成项保留，不因发布改记通过。发布与 CI 核验见 [PUBLICATION.md](PUBLICATION.md)。回滚方式与备份路径见 [ROLLBACK.md](ROLLBACK.md)。
+
+公开发布结果：v1.6.6 已为 Latest，发布提交 `78c57ba` 的 CI 689 项、55 跳过、0 失败，Release 构建与严格签名校验通过。上述未执行项状态保持。

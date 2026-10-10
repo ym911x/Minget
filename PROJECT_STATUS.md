@@ -6,9 +6,9 @@
 | --- | --- |
 | 当前本机版本 | 1.6.6：Gemini 详情卡直接显示其他额度组（`Claude and GPT models`，Claude 橙 #D97757，低于 20% 红）并删除「最近成功 hh:mm / 缓存数据」与折叠标题；概览页 ChatGPT 与 Gemini 的额度图示加宽到与 Command Code 双列等长。689 项完整回归（5 项既有跳过、0 失败）通过，Release 严格签名并装入正式路径；Codex 已检查正式界面并通过 Gemini 三账号只读刷新；用户体验与现场边界见验收台账（2026-10-10） |
 | 上一本机版本 | 1.6.5：概览 Command Code 行改为 5H + 月额度两列，四个品牌页新增只刷新本品牌的按钮；已公开发布 |
-| 公开版本 | 1.6.5 已公开发布为 Latest；标签 v1.6.5 对应 `61bf600`，GitHub CI 测试、Release 构建与严格签名通过；见 [1.6.5 PUBLICATION.md](docs/versions/1.6.5/PUBLICATION.md) |
-| 主目录 main | 已快进到 1.6.5 发布提交 `61bf600`，随后回写发布台账至 `14004e5`；源码、测试、构建脚本与发布标签一致 |
-| 当前开发分支 | `codex/minget-1-6-6`（起点 `main@14004e5`）；1.6.6 的代码与文档已完成独立发布审核，准备提交并发布 |
+| 公开版本 | 1.6.6 已公开发布为 Latest；标签 v1.6.6 对应 `78c57ba`，GitHub CI 测试、Release 构建与严格签名通过；见 [1.6.6 PUBLICATION.md](docs/versions/1.6.6/PUBLICATION.md) |
+| 主目录 main | 已快进到 1.6.6 发布提交 `78c57ba`，随后回写发布台账；源码、测试、构建脚本与 VERSION 相对发布标签一致 |
+| 当前开发分支 | 无活动开发任务；主目录使用 main。`codex/minget-1-6-6` 保留为本地实施历史 |
 | 正式安装应用 | `/Applications/Minget.app` 为严格签名 1.6.6（安装前后可执行文件哈希一致，`0cb0e841…`），发布审核的正式界面检查通过；1.6.5 备份见 [1.6.6 ROLLBACK.md](docs/versions/1.6.6/ROLLBACK.md) |
 | 旧工作区 | 1.5.0 / Google 1.6.0 已合入发布基线，仅保留历史，不继续开发 |
 | 当前代码图谱 | 无；旧图谱已隔离，不用于解释本轮实现 |
