@@ -1,0 +1,19 @@
+# 1.6.6 发布前本机审核
+
+日期：2026-10-10，Asia/Singapore。
+对象：/Applications/Minget.app，版本 1.6.6，CFBundleExecutable UsageMonitor。
+
+- bundle deep/strict 与 UsageMonitor、MingetCLI 的 strict 签名均通过。
+- 主程序 SHA-256 0cb0e84180279d6ba2d3e4ab30d9b81210445ad716efbec2c48e6218e3cadddd。
+- 诊断程序 SHA-256 ad053311e3be266a92860174adcf6daf3bc326d70007dd56ccc4842928a63f19。
+- 四个改动源码、新增测试文件及 VERSION 指纹全部与 local-install.txt 相同。
+- 原 evidence/manifests/SHA256SUMS 中 14 项全部验证通过。
+- 通过 cua_repl 选择正式完整路径；页头显示 v1.6.6。
+- 概览 ChatGPT、Gemini、Command Code 两列轨道起止位置一致，短名称与状态无重叠。
+- Gemini 三个真实账号均直接显示第二组组名与两行额度；无折叠标题或最近成功行。
+- 正式界面其他组用量为橙色、时间为蓝色；主组与 ChatGPT 卡片保持绿/橙分级。
+- Gemini 品牌只读刷新后三个账号回到额度已更新，滚动可达最后账号全部额度与添加入口。
+- 切换 ChatGPT 和概览时窗口未移动；没有点火或消费重置额度。
+- 本记录不保存真实账号名称、邮箱、具体额度或截图。
+- 真实低额度红档、VoiceOver、第二台 Mac、拖动排序现场复验均未在本轮执行。
+- 用户指令是审核并发布；不能据此推定用户已完成体验复验。

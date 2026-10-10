@@ -1,0 +1,33 @@
+# 1.6.6 本机安装记录
+
+时间：2026-10-10 20:52:56 +08
+分支：codex/minget-1-6-6（起点 main@14004e5）
+
+## 正式路径
+
+- /Applications/Minget.app：CFBundleShortVersionString = 1.6.6
+- 可执行文件 SHA-256：0cb0e84180279d6ba2d3e4ab30d9b81210445ad716efbec2c48e6218e3cadddd
+- 内嵌诊断工具 MingetCLI SHA-256：ad053311e3be266a92860174adcf6daf3bc326d70007dd56ccc4842928a63f19（本轮未改动该目标，与 1.6.5 一致）
+- 签名：Minget Local Signing；codesign --verify --strict 通过（bundle 与两个内嵌可执行文件）
+- 个人目录兼容链接 `$HOME/Applications/Minget.app` 仍指向正式路径，未被替换成第二份实例
+
+## 构建
+
+- 命令：scripts/build.sh（Release，暂存/归档均在本机临时目录，安装后再次严格校验）
+- 安装前后可执行文件哈希一致（staged == installed，均为 0cb0e841…）
+- 安装后重新启动 1.6.6（PID 记录于当次会话），供真实界面复验
+
+## 替换前的 1.6.5 备份
+
+- 路径：$HOME/Applications/Minget Backups/1.6.5-before-1.6.6-20261010-205126/Minget.app
+- 可执行文件 SHA-256：dea70668cd3101d1d7207435f693547ebba887d17b0daf1e932dd27924b554a8（与替换前的正式路径一致）
+- 替换前旧版已正常退出，安装后重新启动 1.6.6
+
+## 源码指纹（本轮改动）
+
+- Sources/UsageMonitorApp/Views/AntigravityViews.swift  13bffcafa0b5d2a9922561b5170748cafe83828dac1237191bc2693de441c62f
+- Sources/UsageMonitorApp/Views/SharedQuotaViews.swift  c39c0229e9a824d5a7da0e61e40026277ee3d5dd894160b6ebdf70738195a393
+- Sources/UsageMonitorApp/Views/UsagePanelView.swift  bf8d09acd970fcb7f03c03d7ac90af35ae79a3ffb12cc8f7b11c928d3b81b337
+- Sources/UsageMonitorApp/ViewModels/DetailPreferences.swift  1a8339db8eadc88db7a6e7cb9c870ab428e439481939b019266b8832b90945e2
+- Tests/UsageMonitorAppTests/OverviewPresentationTests.swift  c777937602acdf2e1417abc7fd177b5d49b03b5d49bc0cbdd36cc0058ec2e61e
+- VERSION  d52e4574c4613fcfd19475fd0115fb7dfdcd907c05a6f760a3f7c6ab80e13ff8

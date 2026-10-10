@@ -48,7 +48,7 @@ final class AntigravityModelTests: XCTestCase {
             }.padding(12).frame(width: 416).background(dark ? Color.black : Color.white)
                 .environment(\.colorScheme, dark ? .dark : .light)
             let hosting = NSHostingView(rootView: view)
-            hosting.frame.size = NSSize(width: 416, height: 310)
+            hosting.frame.size = NSSize(width: 416, height: 380)
             hosting.layoutSubtreeIfNeeded()
             let rep = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
             hosting.cacheDisplay(in: hosting.bounds, to: rep)

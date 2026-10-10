@@ -2,6 +2,34 @@ import AppKit
 import SwiftUI
 import UsageMonitorCore
 
+/// How one quota row paints its usage bar and its "剩余" percentage.
+///
+/// `levels` is the traffic light every card has used since 1.0: green above 50 %, orange
+/// from 20 %, red below. `claudeModels` belongs to the Antigravity shared pool that covers
+/// Claude and GPT models: that usage is drawn in Claude's own brand orange, and the only
+/// band that survives is the critical one.
+enum QuotaUsageTint: Equatable {
+    case levels
+    case claudeModels
+
+    /// Claude brand orange (#D97757).
+    static let claudeOrange = Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255)
+
+    func color(_ percent: Double?) -> Color {
+        guard let percent, percent.isFinite, (0...100).contains(percent) else { return .secondary }
+        switch self {
+        case .levels:
+            switch UsageFormatting.usageLevel(remainingPercent: percent) {
+            case .normal: return .green
+            case .warning: return .orange
+            case .critical: return .red
+            }
+        case .claudeModels:
+            return UsageFormatting.usageLevel(remainingPercent: percent) == .critical ? .red : Self.claudeOrange
+        }
+    }
+}
+
 enum QuotaPresentation {
     static func percentage(_ percent: Double?) -> String {
         guard let percent, percent.isFinite, (0...100).contains(percent) else { return "—" }
@@ -21,14 +49,7 @@ enum QuotaPresentation {
         return formatter.string(from: date)
     }
 
-    static func color(_ percent: Double?) -> Color {
-        guard let percent, fraction(percent) != nil else { return .secondary }
-        switch UsageFormatting.usageLevel(remainingPercent: percent) {
-        case .normal: return .green
-        case .warning: return .orange
-        case .critical: return .red
-        }
-    }
+    static func color(_ percent: Double?) -> Color { QuotaUsageTint.levels.color(percent) }
 
     static func timeProgress(kind: RateLimitWindow.Kind, window: RateLimitWindow?,
                              resetDate: Date? = nil, now: Date) -> ProviderTimeProgress {
@@ -43,6 +64,17 @@ enum QuotaPresentation {
     static func primaryGroup(_ groups: [AntigravityQuotaGroup]) -> AntigravityQuotaGroup? {
         groups.first { $0.label == "Gemini Models" || $0.id == "gemini" }
     }
+
+    /// The groups drawn after the primary one, in the order the service reported them.
+    static func otherGroups(_ groups: [AntigravityQuotaGroup]) -> [AntigravityQuotaGroup] {
+        groups.filter { $0.id != primaryGroup(groups)?.id }
+    }
+
+    /// The shared pool that covers Claude and GPT models carries Claude's own colour; the
+    /// primary group keeps the level colours every other card uses.
+    static func tint(for group: AntigravityQuotaGroup) -> QuotaUsageTint {
+        group.id == primaryGroup([group])?.id ? .levels : .claudeModels
+    }
 }
 
 struct QuotaWindowBlock: View {
@@ -52,20 +84,22 @@ struct QuotaWindowBlock: View {
     var isCached = false
     var resetDate: Date? = nil
     var now = Date()
+    var tint: QuotaUsageTint = .levels
 
     var body: some View {
         let date = resetDate ?? window?.resetsAt
         let progress = QuotaPresentation.timeProgress(kind: kind, window: window, resetDate: date, now: now)
+        let usageColor = tint.color(window?.remainingPercent)
         VStack(spacing: 4) {
             HStack(spacing: 6) {
                 Text(label).font(.system(size: 13, weight: .semibold))
                     .frame(width: 50, alignment: .leading)
                 ProviderTrackBar(fraction: QuotaPresentation.fraction(window?.remainingPercent),
-                                 tint: QuotaPresentation.color(window?.remainingPercent), height: 6,
+                                 tint: usageColor, height: 6,
                                  isCached: isCached)
                 Text("剩余 " + QuotaPresentation.percentage(window?.remainingPercent))
                     .font(.system(size: 13, weight: .semibold)).monospacedDigit()
-                    .foregroundStyle(QuotaPresentation.color(window?.remainingPercent))
+                    .foregroundStyle(usageColor)
                     .frame(width: 122, alignment: .trailing)
             }
             HStack(spacing: 6) {
@@ -259,11 +293,15 @@ enum OverviewUsageSummary {
                         second: weekly.map { OverviewCreditWindow(kind: .weekly, window: $0) })
     }
 
-    /// Fixed width of the row's quota graphic: two credit columns need room for two
-    /// `$remaining / $limit` strings, every other row keeps the 1.6.2 width.
+    /// Fixed width of the row's quota graphic. Two columns always take the 224 pt the
+    /// two-credit Command Code row uses, so every two-column row draws bars of the same
+    /// length; a row with a single column keeps the 1.6.2 width.
     var graphicWidth: CGFloat {
-        guard case .credits(_, let second) = self, second != nil else { return 164 }
-        return 224
+        switch self {
+        case .quotas: return 224
+        case .credits(_, let second): return second == nil ? 164 : 224
+        case .balances: return 164
+        }
     }
 
     func description(now: Date) -> String {
@@ -397,7 +435,10 @@ struct OverviewAccountRow: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name).font(.system(size: 15, weight: .semibold)).lineLimit(1).help(name)
-                    Text(status).font(.system(size: 11)).lineLimit(1)
+                    // The quota graphic takes 224 pt of the 408 pt row, which leaves this
+                    // column about 92 pt: the name keeps its size and truncates, and the
+                    // small status line gives way first by shrinking, then by truncating.
+                    Text(status).font(.system(size: 11)).lineLimit(1).minimumScaleFactor(0.8)
                         .foregroundStyle(isCached ? Color.orange : Color.secondary).help(status)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                     .layoutPriority(-1)

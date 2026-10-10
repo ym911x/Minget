@@ -9,6 +9,12 @@
 
 Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatGPT (Codex)、Google / Antigravity 账号，以及多个 DeepSeek、Command Code 连接的额度、余额和使用状态。
 
+## v1.6.6：Gemini 其他额度组直显、概览条与 Command Code 等长
+
+Gemini 详情卡不再折叠「其他额度组」：官方返回的另一组（`Claude and GPT models`）直接显示在主额度下方并保留组名，同时去掉「最近成功 hh:mm / 缓存数据」整行。该组用量条与「剩余 %」改用 Claude 品牌橙 `#D97757`，低于 20% 仍为红，重置时间条继续用蓝；主额度组、ChatGPT、概览与菜单栏配色不变。概览页 ChatGPT 与 Gemini 的额度图示由 164 pt 加宽到 224 pt，与 Command Code 的 5H + 月额度双列等长；名称列压缩到约 92 pt，名称保持 15 pt 并在过长时截断，状态小字先缩字号再截断。
+
+独立完整回归 689 项，684 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。真实界面复验状态见 [1.6.6 验收](docs/versions/1.6.6/ACCEPTANCE.md)，改动与渲染证据见 [1.6.6 实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)。
+
 ## v1.6.5：Command Code 月额度与品牌单独刷新
 
 概览页 Command Code 同时显示 5H 与月额度，缺少月度剩余时退回周额度，再缺失时保留单列。四个品牌详情页新增只刷新本品牌的按钮。正式安装版已由用户复验；独立完整回归 686 项，681 通过、5 项既有跳过、0 失败。
@@ -196,11 +202,11 @@ Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/u
 
 ## 当前版本
 
-- 当前版本：`1.6.3`，发布状态见 [发布记录](docs/versions/1.6.3/PUBLICATION.md)；安装和验收见 [当前状态](PROJECT_STATUS.md)。
-- 公开发布核验以 [当前发布记录](docs/versions/1.6.3/PUBLICATION.md) 为准。
+- 当前版本：`1.6.6`，发布状态见 [发布记录](docs/versions/1.6.6/PUBLICATION.md)；安装和验收见 [当前状态](PROJECT_STATUS.md)。
+- 公开发布核验以 [当前发布记录](docs/versions/1.6.6/PUBLICATION.md) 为准。
 - 平台：macOS 13 及以上，Apple Silicon；Google 接入固定官方 CLI 1.2.13。
 - 分发：源码；本机签名包仅用于本地验收，不作为公开 Release 附件。
-- [发布说明](docs/versions/1.6.0/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.0/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)
+- [发布说明](docs/versions/1.6.6/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.6/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)
 
 ## 已实现功能
 

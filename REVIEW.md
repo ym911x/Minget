@@ -1,14 +1,12 @@
 # 当前审核状态
 
-当前对象为 **1.6.5 概览 Command Code 月额度与各品牌单独刷新**。概览行改为 5H + 月额度两列（月度剩余不可读时退回周额度，两者都没有时保持单列），四个品牌页新增只刷新本品牌的按钮。构建与 686 项完整回归（5 项既有跳过、0 失败）通过，Release 严格签名后装入正式路径；用户已复验概览双列与四个品牌页的刷新范围，均无问题（2026-10-10）。VoiceOver 现场朗读与 Command Code Studio 同刻对账仍未执行，见 [验收台账](docs/versions/1.6.5/ACCEPTANCE.md)。
+当前对象为 **1.6.6 Gemini 其他额度组直显与概览条等长**。Gemini 详情卡把 `Claude and GPT models` 一组直接显示在主额度下方并改用 Claude 橙 `#D97757`（低于 20% 仍为红），删去「最近成功 hh:mm / 缓存数据」行与「其他额度组」折叠控件；概览页 ChatGPT 与 Gemini 的额度图示由 164 pt 加宽到 224 pt，与 Command Code 双列等长，名称列压到约 92 pt 后名称截断、状态小字先缩字号再截断。构建与 689 项完整回归（5 项既有跳过、0 失败）通过，Release 严格签名后装入正式路径；Codex 正式界面检查与 Gemini 只读刷新通过，用户体验及未执行项保留，见 [验收台账](docs/versions/1.6.6/ACCEPTANCE.md)。
 
 - [当前项目状态](PROJECT_STATUS.md)
-- [实施记录](docs/versions/1.6.5/IMPLEMENTATION_REPORT.md)
-- [代码与验证审核](docs/versions/1.6.5/REVIEW.md)
-- [验收台账](docs/versions/1.6.5/ACCEPTANCE.md)
+- [实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)
+- [代码与验证审核](docs/versions/1.6.6/REVIEW.md)
+- [验收台账](docs/versions/1.6.6/ACCEPTANCE.md)
 
-上一版本 1.6.4 已公开发布，远端测试与应用构建通过，核验见 [1.6.4 发布记录](docs/versions/1.6.4/PUBLICATION.md)。其现场待验收项不因本版本改变；历史版本记录保持原样。
+上一发布版本 1.6.5 已公开发布为 Latest，远端测试与应用构建通过，核验见 [1.6.5 发布记录](docs/versions/1.6.5/PUBLICATION.md)。其现场待验收项不因本版本改变；历史版本记录保持原样。
 
-2026-10-10 发布前独立核对：686 项回归（681 通过、5 跳过、0 失败），原证据清单 16 项、正式 App 签名与指纹均通过。公开资料补齐并脱敏，发布进度见 [1.6.5 发布记录](docs/versions/1.6.5/PUBLICATION.md)。
-
-1.6.5 已公开发布为 Latest，GitHub CI 的 686 项测试（631 通过、55 项环境跳过、0 失败）、Release 构建及严格签名校验全部通过。主目录 main、正式 App 和发布标签核对一致；见 [发布记录](docs/versions/1.6.5/PUBLICATION.md)。
+用户已明确授权发布，独立回归复测 689 项通过；远端结果见 [1.6.6 发布记录](docs/versions/1.6.6/PUBLICATION.md)。回滚路径与备份见 [1.6.6 回滚](docs/versions/1.6.6/ROLLBACK.md)。

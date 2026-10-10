@@ -168,10 +168,7 @@ struct UsagePanelView: View {
                     }.padding(12).frame(height: AntigravityOverviewCard.height)
                 }
                 ForEach(model.google.accounts) { state in
-                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account),
-                        expanded: Binding(get: { preferences.expandedGoogleAccounts.contains(state.id) },
-                                          set: { if $0 { preferences.expandedGoogleAccounts.insert(state.id) }
-                                                 else { preferences.expandedGoogleAccounts.remove(state.id) } }))
+                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account))
                 }
             }
             if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {

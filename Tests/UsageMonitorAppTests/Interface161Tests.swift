@@ -19,10 +19,6 @@ final class Interface161Tests: XCTestCase {
         let second = DetailPreferences(defaults: defaults)
         XCTAssertEqual(second.selectedTab, .google)
         XCTAssertEqual(defaults.string(forKey: "menubar.source.v1"), "chatgpt-b")
-        first.expandedGoogleAccounts = ["a@example.com"]
-        first.selectedTab = .chatGPT
-        first.selectedTab = .google
-        XCTAssertEqual(first.expandedGoogleAccounts, ["a@example.com"])
     }
 
     func testPrimaryQuotaSelectionDoesNotSubstituteSharedGroupOrDependOnOrder() throws {

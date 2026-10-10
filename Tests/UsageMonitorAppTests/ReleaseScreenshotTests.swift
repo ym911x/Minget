@@ -45,7 +45,7 @@ final class ReleaseScreenshotTests: XCTestCase {
                 ForEach(model.accounts) { state in
                     AntigravityOverviewCard(state: state, displayName: state.account.label)
                 }
-            }, dark: dark, size: NSSize(width: 460, height: 646),
+            }, dark: dark, size: NSSize(width: 460, height: 780),
                to: output.appendingPathComponent(dark ? "google-dual-dark.png" : "google-dual-light.png"))
         }
         try export(VStack(alignment: .leading, spacing: 12) {

@@ -63,12 +63,12 @@ struct AntigravityConnectionView: View {
 }
 
 struct AntigravityOverviewCard: View {
-    static let height: CGFloat = 264
+    /// The card with both reported pools on screen: 16 pt padding twice, the 50 pt header,
+    /// the primary pool's two 40 pt rows, the second pool's label and its two rows, and one
+    /// 12 pt gap between each of those blocks.
+    static let height: CGFloat = 318
     let state: AntigravityAccountState
     let displayName: String
-    var expanded: Binding<Bool>? = nil
-    @State private var localExpanded = false
-    private var expansion: Binding<Bool> { expanded ?? $localExpanded }
     private var groups: [AntigravityQuotaGroup] { state.snapshot?.groups ?? [] }
     private var primary: AntigravityQuotaGroup? { QuotaPresentation.primaryGroup(groups) }
 
@@ -78,13 +78,7 @@ struct AntigravityOverviewCard: View {
                               identity: state.account.email ?? "账号暂不可用", status: state.statusText,
                               isCached: state.hasCachedData)
                 .frame(height: 50)
-            quotaRows(primary)
-            HStack {
-                Text(state.snapshot.map { "最近成功 " + $0.fetchedAt.formatted(date: .omitted, time: .shortened) } ?? "尚未成功读取")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-                Spacer()
-                if state.hasCachedData { Text("缓存数据").font(.system(size: 11)).foregroundStyle(.orange) }
-            }
+            quotaRows(primary, tint: .levels)
             if let failure = state.failure {
                 HStack {
                     Text(failure.displayText).foregroundStyle(.orange)
@@ -95,34 +89,30 @@ struct AntigravityOverviewCard: View {
                     }
                 }.font(.system(size: 11))
             }
-            let other = groups.filter { $0.id != primary?.id }
-            if !other.isEmpty {
-                DisclosureGroup("其他额度组", isExpanded: expansion) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(other) { group in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(group.label).font(.system(size: 13, weight: .semibold))
-                                quotaRows(group)
-                                if !group.models.isEmpty {
-                                    Text(group.models.joined(separator: " · "))
-                                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }.padding(.top, 12)
-                }.font(.system(size: 12))
+            // Every other reported pool is drawn in place, directly under the primary one.
+            ForEach(QuotaPresentation.otherGroups(groups)) { group in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(group.label).font(.system(size: 13, weight: .semibold))
+                    quotaRows(group, tint: QuotaPresentation.tint(for: group))
+                    if !group.models.isEmpty {
+                        Text(group.models.joined(separator: " · "))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                }
             }
         }.quotaCardSurface().frame(minHeight: DetailPageLayout.codexCardHeight)
             .accessibilityElement(children: .contain)
     }
 
-    @ViewBuilder private func quotaRows(_ group: AntigravityQuotaGroup?) -> some View {
+    @ViewBuilder private func quotaRows(_ group: AntigravityQuotaGroup?, tint: QuotaUsageTint) -> some View {
         QuotaWindowBlock(label: "5 小时", kind: .fiveHour,
                          window: group?.buckets.first { $0.kind == .fiveHour }?.rateLimitWindow,
-                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .fiveHour }?.resetsAt)
+                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .fiveHour }?.resetsAt,
+                         tint: tint)
         QuotaWindowBlock(label: "周额度", kind: .weekly,
                          window: group?.buckets.first { $0.kind == .weekly }?.rateLimitWindow,
-                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .weekly }?.resetsAt)
+                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .weekly }?.resetsAt,
+                         tint: tint)
         ForEach(group?.buckets.filter { $0.kind == .unknown } ?? []) { bucket in
             HStack {
                 Text(bucket.label)

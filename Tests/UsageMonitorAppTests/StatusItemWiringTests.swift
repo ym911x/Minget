@@ -264,17 +264,15 @@ final class StatusItemWiringTests: XCTestCase {
         XCTAssertEqual(visibleSettingsWindows().count, 1, "reopening must not add another instance")
     }
 
-    func testVisiblePopoverKeepsHostAndFrameAcrossNavigationAndDisclosure() async throws {
+    func testVisiblePopoverKeepsHostAndFrameAcrossNavigation() async throws {
         let preferences = DetailPreferences.shared
         let selected = preferences.selectedTab
         let googleVisible = preferences.showGoogle
-        let expanded = preferences.expandedGoogleAccounts
         let controller = StatusItemController()
         defer {
             controller.uninstall()
             preferences.showGoogle = googleVisible
             preferences.selectedTab = selected
-            preferences.expandedGoogleAccounts = expanded
         }
         let defaults = Self.isolatedDefaults()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("MingetPopoverRegression-" + UUID().uuidString)
@@ -305,10 +303,9 @@ final class StatusItemWiringTests: XCTestCase {
         preferences.showGoogle = true
         for tab in [DetailPreferences.ProviderTab.google, .chatGPT, .commandCode, .all] {
             preferences.selectedTab = tab
-            for state in google.accounts { preferences.expandedGoogleAccounts.insert(state.id) }
             try await Task.sleep(nanoseconds: 100_000_000)
             XCTAssertEqual(controller.panelHostIdentity, originalHost, "state changes must not replace a visible host")
-            XCTAssertEqual(controller.visiblePanelFrame, originalFrame, "service/disclosure changes must not move the popover")
+            XCTAssertEqual(controller.visiblePanelFrame, originalFrame, "service changes must not move the popover")
         }
     }
 

@@ -1,0 +1,40 @@
+Building for debugging...
+[1 / 4] UsageMonitorApp
+Build complete! (0.21秒)
+Test Suite 'Selected tests' started at 2026-10-10 21:37:56.410.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-10 21:37:56.411.
+Test Suite 'CodexLaunchTests' started at 2026-10-10 21:37:56.411.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testBrokenCandidateFallsBackButOverrideDoesNot]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testBrokenCandidateFallsBackButOverrideDoesNot]' passed (0.589 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testFireUsesLaunchPrefixAndSeparateProfileEnvironments]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testFireUsesLaunchPrefixAndSeparateProfileEnvironments]' passed (0.302 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingCLIDoesNotConsultHostInstallations]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingCLIDoesNotConsultHostInstallations]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingNodeRecoversThroughManualRefreshWithSameService]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testMissingNodeRecoversThroughManualRefreshWithSameService]' passed (0.259 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNativeStartsWithFinderEnvironmentAndPreservesProfile]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNativeStartsWithFinderEnvironmentAndPreservesProfile]' passed (0.027 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNewResolutionSeesReplacedInstallation]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNewResolutionSeesReplacedInstallation]' passed (0.235 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeMissingHasSpecificCategory]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeMissingHasSpecificCategory]' passed (0.002 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeWrapperUsesAbsoluteNodeAndResolvedEntry]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testNodeWrapperUsesAbsoluteNodeAndResolvedEntry]' passed (0.121 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testOfficialLayoutsAndNativePriority]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testOfficialLayoutsAndNativePriority]' passed (0.001 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutAlsoKillsWrapperDescendant]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutAlsoKillsWrapperDescendant]' passed (1.077 seconds).
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutReapsOwnedProcess]' started.
+Test Case '-[UsageMonitorCoreTests.CodexLaunchTests testProbeTimeoutReapsOwnedProcess]' passed (1.011 seconds).
+Test Suite 'CodexLaunchTests' passed at 2026-10-10 21:38:00.037.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 3.625 (3.626) seconds
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-10 21:38:00.037.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 3.625 (3.626) seconds
+Test Suite 'Selected tests' passed at 2026-10-10 21:38:00.037.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 3.625 (3.627) seconds
+Test Suite 'Selected tests' started at 2026-10-10 21:38:00.123.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-10 21:38:00.124.
+Test Suite 'UsageMonitorAppTests.xctest' passed at 2026-10-10 21:38:00.124.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-10 21:38:00.124.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds

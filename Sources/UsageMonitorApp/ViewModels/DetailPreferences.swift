@@ -47,8 +47,6 @@ final class DetailPreferences: ObservableObject {
         didSet { defaults.set(selectedTab.rawValue, forKey: Key.selectedTab) }
     }
 
-    @Published var expandedGoogleAccounts: Set<String> = []
-
     var effectiveTab: ProviderTab {
         switch selectedTab {
         case .google where !showGoogle, .deepSeek where !showDeepSeek, .commandCode where !showCommandCode: return .all

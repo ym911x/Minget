@@ -62,6 +62,48 @@ final class OverviewPresentationTests: XCTestCase {
         }
     }
 
+    /// 1.6.6: the Antigravity pool that covers Claude and GPT models is drawn in Claude's
+    /// brand orange, and the critical band is the only alert that survives there. Every
+    /// other row keeps the level colours.
+    func testClaudeModelPoolUsesClaudeOrangeAndOnlyTheCriticalBand() {
+        for percent in [100.0, 50.01, 50, 20] {
+            XCTAssertEqual(QuotaUsageTint.claudeModels.color(percent), QuotaUsageTint.claudeOrange)
+        }
+        for percent in [19.99, 0] {
+            XCTAssertEqual(QuotaUsageTint.claudeModels.color(percent), .red)
+        }
+        for percent in [Double.nan, .infinity, -1, 101] {
+            XCTAssertEqual(QuotaUsageTint.claudeModels.color(percent), .secondary)
+        }
+        XCTAssertEqual(QuotaUsageTint.levels.color(50.01), .green, "the primary pool keeps the level colours")
+        XCTAssertEqual(QuotaUsageTint.levels.color(50), .orange)
+        XCTAssertEqual(QuotaUsageTint.levels.color(19.99), .red)
+    }
+
+    /// 1.6.6: two quota columns take the same 224 pt the two-credit row takes, so the
+    /// ChatGPT and Gemini bars are exactly as long as the Command Code ones. A single
+    /// column still keeps the 1.6.2 width.
+    func testTwoColumnQuotaGraphicMatchesTheTwoCreditWidth() {
+        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, percent: 98, reset: nil),
+                                     weekly: window(.weekly, percent: 53, reset: nil),
+                                     fetchedAt: now, source: .codexAppServer)
+        XCTAssertEqual(OverviewUsageSummary.codex(snapshot).graphicWidth, 224)
+        XCTAssertEqual(OverviewUsageSummary.gemini([]).graphicWidth, 224)
+    }
+
+    /// 1.6.6: every reported pool is drawn in place. The primary pool is never repeated
+    /// among the others, the service's order is kept, and only the shared pool that covers
+    /// Claude and GPT models takes Claude's colour.
+    func testOtherGroupsExcludeThePrimaryPoolAndKeepTheReportedOrder() {
+        let primary = AntigravityQuotaGroup(id: "Gemini Models", label: "Gemini Models", models: [], buckets: [])
+        let shared = AntigravityQuotaGroup(id: "shared", label: "Claude and GPT models", models: [], buckets: [])
+        XCTAssertEqual(QuotaPresentation.otherGroups([primary, shared]).map(\.id), [shared.id])
+        XCTAssertEqual(QuotaPresentation.otherGroups([shared, primary]).map(\.id), [shared.id])
+        XCTAssertTrue(QuotaPresentation.otherGroups([primary]).isEmpty)
+        XCTAssertEqual(QuotaPresentation.tint(for: primary), .levels)
+        XCTAssertEqual(QuotaPresentation.tint(for: shared), .claudeModels)
+    }
+
     func testBalancesRetainCurrenciesAndCreditAmountDoesNotInventLimit() {
         let cny = ProviderBalance(currency: "CNY", total: 100, available: Decimal(string: "89.67"))
         let usd = ProviderBalance(currency: "USD", total: 2)
