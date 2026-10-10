@@ -1,0 +1,30 @@
+# 1.6.5 本机安装记录
+
+时间：2026-10-10 01:48:04 +08
+分支：codex/minget-1-6-5（起点 main@97e6bc3e37b732f443f9849961609be330524727）
+
+## 正式路径
+
+- /Applications/Minget.app：CFBundleShortVersionString = 1.6.5
+- 可执行文件 SHA-256：dea70668cd3101d1d7207435f693547ebba887d17b0daf1e932dd27924b554a8
+- 签名：Minget Local Signing；codesign --verify --strict 通过（bundle 与两个内嵌可执行文件）
+
+## 构建
+
+- 命令：scripts/build.sh（Release，暂存/归档均在本机临时目录，安装后再次严格校验）
+- 安装前后可执行文件哈希一致（staged == installed）
+
+## 替换前的 1.6.4 备份
+
+- 路径：$HOME/Applications/Minget Backups/1.6.4-before-1.6.5-20261010-014726/Minget.app
+- 可执行文件 SHA-256：57824c9262bb3b51b3c144fbe43692e83e1885bb57de5bd5f2d8f09bd0245d6d
+- 备份严格校验通过；替换前旧版已正常退出，安装后重新启动 1.6.5
+
+## 源码指纹（本轮改动）
+
+- Sources/UsageMonitorApp/Views/SharedQuotaViews.swift  90fb3a450b324bc9cb862777c609c2c025ff3698bde5af0ed9be16e63a02fbf9
+- Sources/UsageMonitorApp/Views/UsagePanelView.swift  fb8c65dbbd5602eba599461ce4aff0ad0b6e83642370090e47a33cb48d9e9c4f
+- Sources/UsageMonitorApp/ViewModels/UsageViewModel.swift  ad1dbe082aa39e72d68743d6c9ad57b0ae156889823353252fdd80af837aa26a
+- Tests/UsageMonitorAppTests/OverviewPresentationTests.swift  1f045d7936b16b30af8fbe3e6244ce942bdbf010c4fb8a0f2c9f13f4631ee2ca
+- Tests/UsageMonitorAppTests/BrandRefreshTests.swift  da6edc85fdc86d190ac8036320b8ca1c4c03361ac7f8ec49adcb5e93dab2a4e9
+- VERSION  8317adf0a074d2b6cc6c4fdf29adaf2f7469be6561f211d09a033b784260262e

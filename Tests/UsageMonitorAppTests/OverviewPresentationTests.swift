@@ -69,9 +69,88 @@ final class OverviewPresentationTests: XCTestCase {
         XCTAssertTrue(description.contains("可用余额 ¥89.67"))
         XCTAssertTrue(description.contains("余额 2.00 USD"))
         XCTAssertEqual(OverviewUsageSummary.balances([]).description(now: now), "余额暂不可用")
+
+        // A five-hour window with only a remainder keeps that remainder and invents no limit,
+        // and a row with nothing else to show stays single-column at the 1.6.2 width.
         let credit = ProviderUsageWindow(kind: .fiveHour, used: nil, limit: nil, remaining: 3, resetsAt: now)
         XCTAssertNil(credit.remainingFraction)
-        XCTAssertEqual(OverviewUsageSummary.credits(credit).description(now: now), "5 小时 $3.00 / —，重置 等待刷新")
+        let summary = OverviewUsageSummary.commandCode(ProviderUsage(windows: [credit], summary: nil))
+        XCTAssertEqual(summary.description(now: now), "5 小时 $3.00 / —，重置时间 等待刷新")
+        XCTAssertEqual(summary.graphicWidth, 164)
+        guard case .credits(_, let second) = summary else { return XCTFail() }
+        XCTAssertNil(second)
+    }
+
+    /// The Command Code row draws the widest window that really arrived: the monthly credit
+    /// balance when the service reported one, the weekly window only as the fallback, and
+    /// nothing when neither is usable (REQUIREMENTS.md §5.2).
+    func testCommandCodeOverviewPrefersMonthlyThenWeeklyAndNeverInventsOne() {
+        let five = ProviderUsageWindow(kind: .fiveHour, used: dec("0.05"), limit: dec("3"), remaining: nil,
+                                       resetsAt: now.addingTimeInterval(7200))
+        let week = ProviderUsageWindow(kind: .weekly, used: dec("1.57"), limit: dec("6"), remaining: nil,
+                                       resetsAt: now.addingTimeInterval(4 * 86400))
+        let month = ProviderUsageWindow(kind: .billingPeriod, used: dec("6.5"), limit: dec("10"),
+                                        remaining: dec("3.5"), resetsAt: nil)
+        let full = ProviderUsage(windows: [five, week, month], summary: nil,
+                                 billingPeriodEnd: now.addingTimeInterval(11 * 86400),
+                                 billingPeriodStart: now.addingTimeInterval(-19 * 86400))
+
+        let summary = OverviewUsageSummary.commandCode(full)
+        guard case .credits(let first, let monthly) = summary else { return XCTFail() }
+        XCTAssertEqual(first.label, "5H")
+        XCTAssertEqual(first.amountText, "$2.95 / $3.00")
+        XCTAssertEqual(monthly?.label, "月")
+        XCTAssertEqual(monthly?.fullLabel, "本月")
+        XCTAssertEqual(monthly?.amountText, "$3.50 / $10.00")
+        XCTAssertEqual(monthly?.fraction ?? 0, 0.35, accuracy: 0.0001)
+        XCTAssertEqual(monthly?.isCached, false)
+        XCTAssertEqual(monthly?.resetsAt, now.addingTimeInterval(11 * 86400))
+        guard case .continuous(let fill)? = monthly?.progress(now: now) else {
+            return XCTFail("the monthly rail must be continuous")
+        }
+        XCTAssertEqual(fill, 11.0 / 30.0, accuracy: 0.0001)
+        XCTAssertEqual(summary.graphicWidth, 224, "two money columns need the wider graphic")
+        let text = summary.description(now: now)
+        XCTAssertTrue(text.contains("5 小时 $2.95 / $3.00"))
+        XCTAssertTrue(text.contains("本月 $3.50 / $10.00"))
+
+        // The weekly fallback: no monthly window at all, or a monthly row whose remainder
+        // could not be read. Neither may be dressed up as an empty monthly box.
+        let usedOnlyMonth = ProviderUsageWindow(kind: .billingPeriod, used: dec("6.5"), limit: nil,
+                                                remaining: nil, resetsAt: nil)
+        for windows in [[five, week], [five, week, usedOnlyMonth]] {
+            let fallback = OverviewUsageSummary.commandCode(ProviderUsage(windows: windows, summary: nil))
+            guard case .credits(_, let second) = fallback else { return XCTFail() }
+            XCTAssertEqual(second?.label, "周", "the weekly window is the fallback")
+            XCTAssertEqual(second?.amountText, "$4.43 / $6.00")
+            XCTAssertEqual(second?.resetsAt, now.addingTimeInterval(4 * 86400))
+            XCTAssertEqual(second?.progress(now: now).segmentCount, 7)
+        }
+
+        // Only the five-hour window: one column, and the width stays at the 1.6.2 value.
+        let fiveOnly = OverviewUsageSummary.commandCode(ProviderUsage(windows: [five], summary: nil))
+        guard case .credits(_, let absent) = fiveOnly else { return XCTFail() }
+        XCTAssertNil(absent)
+        XCTAssertEqual(fiveOnly.graphicWidth, 164)
+
+        // A monthly column built from cached auxiliary payloads is marked as cached, while
+        // the live five-hour column beside it is not.
+        let cachedMonthly = ProviderUsage(windows: [five, month], summary: nil,
+                                          billingPeriodEnd: now.addingTimeInterval(11 * 86400),
+                                          billingPeriodStart: now.addingTimeInterval(-19 * 86400),
+                                          summaryFreshness: ProviderUsageComponentFreshness(lastSuccessfulAt: now.addingTimeInterval(-600), isLive: false))
+        guard case .credits(let live, let cached) = OverviewUsageSummary.commandCode(cachedMonthly) else { return XCTFail() }
+        XCTAssertFalse(live.isCached)
+        XCTAssertEqual(cached?.isCached, true)
+
+        // Nothing at all: the row keeps its placeholders and never fabricates a window.
+        guard case .credits(_, let empty) = OverviewUsageSummary.commandCode(nil) else { return XCTFail() }
+        XCTAssertNil(empty)
+        XCTAssertEqual(OverviewUsageSummary.commandCode(nil).description(now: now), "5 小时 —，重置时间 时间未知")
+    }
+
+    private func dec(_ raw: String) -> Decimal {
+        Decimal(string: raw, locale: Locale(identifier: "en_US_POSIX"))!
     }
 
     /// Explicit opt-in export of production components with synthetic data only.
@@ -93,7 +172,7 @@ final class OverviewPresentationTests: XCTestCase {
                 OverviewAccountRow(service: .gemini, name: "示例 Gemini A", status: "额度已更新", summary: .codex(snapshot), referenceDate: now) {}
                 OverviewAccountRow(service: .gemini, name: "示例 Gemini B", status: "额度已更新", summary: .codex(snapshot), referenceDate: now) {}
                 OverviewAccountRow(service: .deepSeek, name: "API 账号", status: "已连接", summary: .balances([ProviderBalance(currency: "CNY", total: Decimal(string: "89.67"))]), referenceDate: now) {}
-                OverviewAccountRow(service: .commandCode, name: "GO $1", status: "已连接", summary: .credits(ProviderUsageWindow(kind: .fiveHour, used: 0, limit: 3, remaining: 3, resetsAt: now.addingTimeInterval(7200))), referenceDate: now) {}
+                OverviewAccountRow(service: .commandCode, name: "GO $1", status: "已连接", summary: .commandCode(commandCodeUsage), referenceDate: now) {}
             }
             try export(rows, dark: dark, to: output.appendingPathComponent("overview-\(dark ? "dark" : "light").png"))
             let edges = VStack(spacing: 12) {
@@ -102,16 +181,32 @@ final class OverviewPresentationTests: XCTestCase {
                 OverviewAccountRow(service: .gemini, name: "额度缺失时间已知", status: "缓存 · 暂时无法读取额度，请稍后重试", summary: .gemini([knownTime]), isCached: true, referenceDate: now) {}
                 OverviewAccountRow(service: .gemini, name: "未连接", status: "未连接", summary: .gemini([]), referenceDate: now) {}
                 OverviewAccountRow(service: .deepSeek, name: "余额暂不可用", status: "需要重新连接", summary: .balances([]), referenceDate: now) {}
-                OverviewAccountRow(service: .commandCode, name: "部分金额", status: "缓存数据", summary: .credits(ProviderUsageWindow(kind: .fiveHour, used: nil, limit: nil, remaining: 3, resetsAt: now)), isCached: true, referenceDate: now) {}
+                OverviewAccountRow(service: .commandCode, name: "部分金额", status: "缓存数据", summary: .commandCode(ProviderUsage(windows: [ProviderUsageWindow(kind: .fiveHour, used: nil, limit: nil, remaining: 3, resetsAt: now)], summary: nil)), isCached: true, referenceDate: now) {}
+                OverviewAccountRow(service: .commandCode, name: "只有周额度", status: "已连接", summary: .commandCode(ProviderUsage(windows: [ProviderUsageWindow(kind: .fiveHour, used: nil, limit: 3, remaining: nil, resetsAt: now.addingTimeInterval(7200)), ProviderUsageWindow(kind: .weekly, used: nil, limit: 6, remaining: 4.43, resetsAt: now.addingTimeInterval(4 * 86400))], summary: nil)), referenceDate: now) {}
             }
-            try export(edges, dark: dark, to: output.appendingPathComponent("overview-edge-\(dark ? "dark" : "light").png"))
+            try export(edges, dark: dark, height: 612, to: output.appendingPathComponent("overview-edge-\(dark ? "dark" : "light").png"))
         }
     }
 
-    private func export<V: View>(_ rows: V, dark: Bool, to url: URL) throws {
-        let size = NSSize(width: 440, height: 536)
+    /// Synthetic Command Code usage for the example export: the same three-window shape the
+    /// service returns, so the two-column overview row is exercised end to end.
+    private var commandCodeUsage: ProviderUsage {
+        ProviderUsage(windows: [
+            ProviderUsageWindow(kind: .fiveHour, used: dec("0.05"), limit: dec("3"), remaining: dec("2.95"),
+                                resetsAt: now.addingTimeInterval(7200)),
+            ProviderUsageWindow(kind: .weekly, used: dec("1.57"), limit: dec("6"), remaining: dec("4.43"),
+                                resetsAt: now.addingTimeInterval(4 * 86400)),
+            ProviderUsageWindow(kind: .billingPeriod, used: dec("6.5"), limit: dec("10"), remaining: dec("3.5"),
+                                resetsAt: nil)
+        ], summary: nil,
+        billingPeriodEnd: now.addingTimeInterval(11 * 86400),
+        billingPeriodStart: now.addingTimeInterval(-19 * 86400))
+    }
+
+    private func export<V: View>(_ rows: V, dark: Bool, height: CGFloat = 536, to url: URL) throws {
+        let size = NSSize(width: 440, height: height)
         let view = VStack(alignment: .leading, spacing: 12) {
-            Text("明明有数 1.6.2 · 展示副本").font(.system(size: 17, weight: .semibold))
+            Text("明明有数 1.6.5 · 展示副本").font(.system(size: 17, weight: .semibold))
             Text("示例账号与数据 · 生产概览组件").font(.system(size: 11)).foregroundStyle(.secondary)
             rows
         }.padding(16).frame(width: size.width, height: size.height, alignment: .topLeading)

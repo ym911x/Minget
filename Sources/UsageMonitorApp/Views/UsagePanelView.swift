@@ -270,10 +270,48 @@ struct UsagePanelView: View {
                 .accessibilityValue(preferences.effectiveTab == tab ? "已选中" : "未选中")
             }
             Spacer(minLength: 0)
+            if canRefreshBrand {
+                brandRefreshButton(preferences.effectiveTab)
+            }
         }.frame(height: DetailPageLayout.tabHeight)
             .onChange(of: preferences.showDeepSeek) { _ in normalizeTab() }
             .onChange(of: preferences.showCommandCode) { _ in normalizeTab() }
             .onChange(of: preferences.showGoogle) { _ in normalizeTab() }
+    }
+
+    /// Whether the active brand page owns a refresh action of its own. The overview keeps the
+    /// header's global button, and a brand with no account at all shows no dead control.
+    private var canRefreshBrand: Bool {
+        let tab = preferences.effectiveTab
+        return tab != .all && model.hasRefreshableAccounts(brand: tab)
+    }
+
+    /// The brand page's own manual read: one bordered button in the tab row, the same control
+    /// shape as the fire buttons inside the cards, so the scope of the tap is visible before
+    /// it runs. It disables itself while that brand is already reading.
+    @ViewBuilder
+    private func brandRefreshButton(_ tab: DetailPreferences.ProviderTab) -> some View {
+        let refreshing = model.isRefreshing(brand: tab)
+        let title = tabTitle(tab)
+        Button { model.refreshBrand(tab) } label: {
+            HStack(spacing: 5) {
+                if refreshing {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 11, weight: .medium))
+                }
+                Text(refreshing ? "刷新中" : "刷新").font(.system(size: 11))
+                    .lineLimit(1)
+            }
+            .frame(height: 24)
+            .padding(.horizontal, 2)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(refreshing)
+        .help("刷新\(title)额度，不影响其他品牌")
+        .accessibilityLabel("刷新\(title)额度")
+        .accessibilityValue(refreshing ? "正在刷新" : "空闲")
     }
 
     @ViewBuilder private func tabMark(_ tab: DetailPreferences.ProviderTab) -> some View {
@@ -348,7 +386,7 @@ struct UsagePanelView: View {
                                 status: state.account.removalPending ? "移除未完成" : providerConnectionText(report.connection),
                                 summary: state.account.platform == .deepseek
                                     ? .balances(report.connection == .connected || report.connection == .stale ? report.balances : [])
-                                    : .credits(report.usage?.windows.first { $0.kind == .fiveHour }),
+                                    : .commandCode(report.usage),
                                 isCached: report.connection == .stale) {
                     preferences.selectedTab = state.account.platform == .deepseek ? .deepSeek : .commandCode
                 }
@@ -364,10 +402,9 @@ struct UsagePanelView: View {
             }
             if preferences.showCommandCode {
                 let report = report(for: .commandcode)
-                let window = report.usage?.windows.first { $0.kind == .fiveHour }
                 rows.append(.account(id: DisplayNamePreferences.ServiceID.commandCode, service: .commandCode,
                                      name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
-                                     status: providerConnectionText(report.connection), summary: .credits(window),
+                                     status: providerConnectionText(report.connection), summary: .commandCode(report.usage),
                                      isCached: report.connection == .stale) { preferences.selectedTab = .commandCode })
             }
         }
@@ -564,10 +601,6 @@ struct UsagePanelView: View {
         return preferred.hasPrefix("en") ? "Minget" : "明明有数"
     }
 
-    private var isAnyRefreshInFlight: Bool {
-        model.isRefreshing || model.isProviderRefreshing || model.isDeepSeekStatusRefreshing || model.google.isRefreshing
-    }
-
     /// The global line aggregates every visible source: both ChatGPT profiles and every
     /// displayed provider card. Reporting only account A would hide a stalled account B.
     ///
@@ -576,7 +609,7 @@ struct UsagePanelView: View {
     /// card's fresh date (1.4.2 §5).
     private var updateStatusText: String {
         _ = model.tick
-        if isAnyRefreshInFlight { return "刷新中…" }
+        if model.isAnyRefreshInFlight { return "刷新中…" }
 
         let hasCodexProblem = model.profileStates.contains { state in
             if state.isRefreshing { return false }
@@ -1410,6 +1443,15 @@ enum CommandCodeCardPresentation {
                          usage: ProviderUsage?,
                          outcome: ProviderTimeModel.Outcome,
                          now: Date) -> String {
+        timeText(kind: kind, window: window, billingPeriodEnd: usage?.billingPeriodEnd, outcome: outcome)
+    }
+
+    /// The same wording for callers that hold the billing period directly instead of a whole
+    /// `ProviderUsage`, which is what the overview's compact credit columns have.
+    static func timeText(kind: ProviderUsageWindow.Kind,
+                         window: ProviderUsageWindow?,
+                         billingPeriodEnd: Date?,
+                         outcome: ProviderTimeModel.Outcome) -> String {
         switch outcome.progress {
         case .unavailable:
             return "时间未知"
@@ -1418,7 +1460,7 @@ enum CommandCodeCardPresentation {
         case .segments, .continuous:
             if kind == .billingPeriod {
                 let remainingText = ProviderTimeFormatting.dayText(outcome.remainingSeconds)
-                guard let absolute = usage?.billingPeriodEnd.map(UsageFormatting.shortDate) else {
+                guard let absolute = billingPeriodEnd.map(UsageFormatting.shortDate) else {
                     return remainingText
                 }
                 return "\(remainingText) · \(absolute)"

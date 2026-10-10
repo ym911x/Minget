@@ -886,6 +886,88 @@ public final class UsageViewModel: ObservableObject {
         refreshDeepSeekStatus(force: true)
     }
 
+    /// Manual refresh scoped to the brand page the user is looking at: only that brand's
+    /// accounts are read, so nothing else on the panel changes state or timestamp.
+    ///
+    /// Every branch takes the same manual path as `refreshNow()`, so throttles, panel-open
+    /// ages and the provider failure budget never silently swallow an explicit tap.
+    func refreshBrand(_ tab: DetailPreferences.ProviderTab) {
+        guard !isStopped else { return }
+        switch tab {
+        case .all:
+            refreshNow()
+        case .chatGPT:
+            refresh(resetFailureBudget: true)
+        case .google:
+            google.refresh(force: true)
+        case .deepSeek:
+            refreshBrandPlatform(.deepseek)
+        case .commandCode:
+            refreshBrandPlatform(.commandcode)
+        }
+    }
+
+    /// True while any source is in flight: the header's status line and the brand refresh
+    /// button read this same value so they can never disagree about whether work is running.
+    public var isAnyRefreshInFlight: Bool {
+        isRefreshing || isProviderRefreshing || isDeepSeekStatusRefreshing || google.isRefreshing
+    }
+
+    /// Whether that brand's own page already has its read in flight.
+    func isRefreshing(brand tab: DetailPreferences.ProviderTab) -> Bool {
+        switch tab {
+        case .all: return isAnyRefreshInFlight
+        case .chatGPT: return isRefreshing
+        case .google: return google.isRefreshing
+        case .deepSeek: return isPlatformRefreshing(.deepseek) || isDeepSeekStatusRefreshing
+        case .commandCode: return isPlatformRefreshing(.commandcode)
+        }
+    }
+
+    /// Whether a brand page has at least one account to read. The overview always answers
+    /// false: it keeps the header's global refresh instead of a brand-scoped one, and a brand
+    /// with no account at all must not offer a dead control.
+    func hasRefreshableAccounts(brand tab: DetailPreferences.ProviderTab) -> Bool {
+        switch tab {
+        case .all: return false
+        case .chatGPT: return !profileStates.isEmpty
+        case .google: return !google.accounts.isEmpty
+        case .deepSeek: return hasAccounts(.deepseek)
+        case .commandCode: return hasAccounts(.commandcode)
+        }
+    }
+
+    private func hasAccounts(_ platform: ProviderPlatform) -> Bool {
+        if accountRegistry != nil {
+            return managedAccounts.contains { $0.platform.apiPlatform == platform && !$0.removalPending }
+        }
+        // Legacy single-connection mode: the engine's own reader answers from memory whether
+        // there is a credential worth reading, and a confirmed-absent one offers no button.
+        guard let reader = providerEngine.reading(for: platform) else { return false }
+        return reader.credentialState != .missing
+    }
+
+    /// One API platform only. Managed accounts are read through their own runtime, so the
+    /// other connections of the same registry are never touched; the DeepSeek page also
+    /// owns the public status line, which a manual refresh re-reads for the same reason.
+    private func refreshBrandPlatform(_ platform: ProviderPlatform) {
+        if accountRegistry != nil {
+            for row in managedAccounts where row.platform.apiPlatform == platform && !row.removalPending {
+                refreshManagedAPI(id: row.id, force: true)
+            }
+        } else {
+            refreshProvider(platform, force: true)
+        }
+        if platform == .deepseek { refreshDeepSeekStatus(force: true) }
+    }
+
+    private func isPlatformRefreshing(_ platform: ProviderPlatform) -> Bool {
+        if accountRegistry != nil {
+            return apiRuntimes.values.contains { $0.platform == platform && $0.engine.isFetching(platform) }
+        }
+        return providerEngine.isFetching(platform)
+    }
+
     /// Refreshes every profile in parallel inside one cycle. No request is stacked: a slow
     /// profile simply finishes later than the other.
     ///

@@ -160,10 +160,68 @@ struct OverviewQuotaWindow {
     }
 }
 
+/// One Command Code credit column in the overview row.
+///
+/// That provider is credit-based, so its columns carry money instead of a percentage: the
+/// same `$remaining / $limit` wording the detail card uses, with the monthly cycle taking its
+/// reset point and its time rail from the reported billing period rather than from the window
+/// itself (which carries no reset of its own).
+struct OverviewCreditWindow {
+    let kind: ProviderUsageWindow.Kind
+    let window: ProviderUsageWindow?
+    var billingPeriodStart: Date? = nil
+    var billingPeriodEnd: Date? = nil
+    /// True when the numbers behind this column came from a cached auxiliary payload.
+    var isCached = false
+
+    /// Short label for the overview's compact two-column layout.
+    var label: String {
+        switch kind {
+        case .fiveHour: return "5H"
+        case .weekly: return "周"
+        case .billingPeriod: return "月"
+        }
+    }
+
+    /// Full name for hover and assistive text, matching the detail card's row labels.
+    var fullLabel: String {
+        switch kind {
+        case .fiveHour: return "5 小时"
+        case .weekly: return "周额度"
+        case .billingPeriod: return "本月"
+        }
+    }
+
+    var amountText: String { CommandCodeCardPresentation.quotaText(window) }
+    var fraction: Double? { window?.remainingFraction }
+    var resetsAt: Date? { kind == .billingPeriod ? billingPeriodEnd : window?.resetsAt }
+
+    func progress(now: Date) -> ProviderTimeProgress {
+        ProviderTimeModel.progress(kind: kind, window: window,
+                                   billingPeriodStart: billingPeriodStart,
+                                   billingPeriodEnd: billingPeriodEnd,
+                                   now: now).progress
+    }
+
+    func description(now: Date) -> String {
+        let outcome = ProviderTimeModel.progress(kind: kind, window: window,
+                                                 billingPeriodStart: billingPeriodStart,
+                                                 billingPeriodEnd: billingPeriodEnd,
+                                                 now: now)
+        let time = CommandCodeCardPresentation.timeText(kind: kind, window: window,
+                                                        billingPeriodEnd: billingPeriodEnd,
+                                                        outcome: outcome)
+        return "\(fullLabel) \(amountText)，重置时间 \(time)"
+    }
+}
+
 enum OverviewUsageSummary {
     case quotas(fiveHour: OverviewQuotaWindow, weekly: OverviewQuotaWindow)
     case balances([ProviderBalance])
-    case credits(ProviderUsageWindow?)
+    /// Command Code: the five-hour column is always drawn. The second column is the monthly
+    /// credit window when the service reported one, the weekly window as the fallback, and
+    /// nothing when neither is usable — a missing window never becomes an empty box.
+    case credits(fiveHour: OverviewCreditWindow, second: OverviewCreditWindow?)
 
     static func codex(_ snapshot: UsageSnapshot?) -> Self {
         .quotas(fiveHour: OverviewQuotaWindow(kind: .fiveHour, window: snapshot?.fiveHour),
@@ -178,6 +236,36 @@ enum OverviewUsageSummary {
                        weekly: OverviewQuotaWindow(kind: .weekly, window: week?.rateLimitWindow, resetDate: week?.resetsAt))
     }
 
+    /// The monthly remaining credit is the number that decides the month's budget, and it
+    /// arrives on the required credits read; the weekly window is a coarser view of the same
+    /// allowance, so it is only the fallback. A monthly window without a real remainder is
+    /// not shown as an invented number (REQUIREMENTS.md §5.2).
+    static func commandCode(_ usage: ProviderUsage?) -> Self {
+        let fiveHour = OverviewCreditWindow(kind: .fiveHour,
+                                            window: usage?.windows.first { $0.kind == .fiveHour })
+        let monthly = usage?.windows.first { $0.kind == .billingPeriod }
+        if let monthly, monthly.effectiveRemaining != nil {
+            let monthlyIsCached = usage?.summaryFreshness?.isCached == true
+                || usage?.subscriptionFreshness?.isCached == true
+            return .credits(fiveHour: fiveHour,
+                            second: OverviewCreditWindow(kind: .billingPeriod,
+                                                         window: monthly,
+                                                         billingPeriodStart: usage?.billingPeriodStart,
+                                                         billingPeriodEnd: usage?.billingPeriodEnd,
+                                                         isCached: monthlyIsCached))
+        }
+        let weekly = usage?.windows.first { $0.kind == .weekly }
+        return .credits(fiveHour: fiveHour,
+                        second: weekly.map { OverviewCreditWindow(kind: .weekly, window: $0) })
+    }
+
+    /// Fixed width of the row's quota graphic: two credit columns need room for two
+    /// `$remaining / $limit` strings, every other row keeps the 1.6.2 width.
+    var graphicWidth: CGFloat {
+        guard case .credits(_, let second) = self, second != nil else { return 164 }
+        return 224
+    }
+
     func description(now: Date) -> String {
         switch self {
         case .quotas(let five, let week):
@@ -185,9 +273,9 @@ enum OverviewUsageSummary {
         case .balances(let balances):
             guard !balances.isEmpty else { return "余额暂不可用" }
             return balances.map { DecimalFormatting.overviewBalanceLabel($0) + " " + DecimalFormatting.overviewBalanceText($0) }.joined(separator: "；")
-        case .credits(let window):
-            return "5 小时 " + CommandCodeCardPresentation.quotaText(window)
-                + "，重置 " + QuotaPresentation.reset(window?.resetsAt, now: now)
+        case .credits(let five, let second):
+            let columns = [five, second].compactMap { $0 }
+            return columns.map { $0.description(now: now) }.joined(separator: "；")
         }
     }
 }
@@ -211,6 +299,30 @@ private struct OverviewQuotaGraphic: View {
     }
 }
 
+private struct OverviewCreditGraphic: View {
+    let credit: OverviewCreditWindow
+    let isCached: Bool
+    let now: Date
+
+    /// The row's cache state and the column's own auxiliary cache state both fade the track
+    /// and turn the amount orange, exactly like the detail card's monthly row.
+    private var showsCached: Bool { isCached || credit.isCached }
+
+    var body: some View {
+        VStack(spacing: 5) {
+            HStack(spacing: 4) {
+                Text(credit.label).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text(credit.amountText).monospacedDigit()
+                    .foregroundStyle(showsCached ? Color.orange : Color.secondary)
+            }.font(.system(size: 11))
+                .lineLimit(1).fixedSize(horizontal: false, vertical: true)
+            ProviderTrackBar(fraction: credit.fraction, tint: .purple, height: 4, isCached: showsCached)
+            ProviderTimeBar(progress: credit.progress(now: now), isCached: showsCached)
+        }.help(credit.description(now: now))
+    }
+}
+
 private struct OverviewUsageGraphic: View {
     let summary: OverviewUsageSummary
     let isCached: Bool
@@ -229,20 +341,15 @@ private struct OverviewUsageGraphic: View {
                     .font(.system(size: 13, weight: .medium)).monospacedDigit()
                     .foregroundStyle(isCached ? Color.orange : Color.primary)
                     .lineLimit(2).frame(maxWidth: .infinity, alignment: .trailing)
-            case .credits(let window):
-                VStack(spacing: 5) {
-                    HStack(spacing: 4) {
-                        Text("5H").foregroundStyle(.secondary)
-                        Spacer(minLength: 0)
-                        Text(CommandCodeCardPresentation.quotaText(window)).monospacedDigit()
-                            .foregroundStyle(isCached ? Color.orange : Color.secondary)
-                    }.font(.system(size: 11)).lineLimit(1)
-                    ProviderTrackBar(fraction: window?.remainingFraction, tint: .purple, height: 4, isCached: isCached)
-                    ProviderTimeBar(progress: ProviderTimeModel.progress(kind: .fiveHour, window: window,
-                        billingPeriodStart: nil, billingPeriodEnd: nil, now: now).progress, isCached: isCached)
+            case .credits(let five, let second):
+                HStack(spacing: 12) {
+                    OverviewCreditGraphic(credit: five, isCached: isCached, now: now)
+                    if let second {
+                        OverviewCreditGraphic(credit: second, isCached: isCached, now: now)
+                    }
                 }
             }
-        }.frame(width: 164).help(summary.description(now: now))
+        }.frame(width: summary.graphicWidth).help(summary.description(now: now))
     }
 }
 
