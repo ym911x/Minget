@@ -15,20 +15,14 @@ struct ManagedAccountManagementView: View {
         self.model = model; self.google = model.google; self.firstRun = firstRun; self.onDone = onDone
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(firstRun ? "连接你的第一个账号" : "管理你的账号").font(.headline)
-                        Text("每个账号独立保存连接和额度，可随时添加更多账号。")
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button { model.addingPlatform = nil; model.showAddAccount = true } label: { Label("添加账号", systemImage: "plus") }
+        Form {
+            if firstRun {
+                Section {
+                    Text("连接你的第一个账号").font(.system(size: 13, weight: .semibold))
+                    Text("选择一个服务开始，其他账号以后仍可在这里连接。")
+                        .font(.system(size: SettingsStyle.noteSize)).foregroundStyle(.secondary)
                 }
-                if !model.accountMessage.isEmpty { Text(model.accountMessage).font(.system(size: 12)).foregroundStyle(.secondary) }
-            }.padding(.horizontal, 24).padding(.bottom, 12)
-            Form {
+            }
             ForEach(AccountPlatform.allCases, id: \.self) { platform in
                 Section {
                     let rows = model.managedAccounts.filter { $0.platform == platform }
@@ -38,8 +32,8 @@ struct ManagedAccountManagementView: View {
                 } header: { Text(platform.title) }
             }
             if firstRun { Section { Button(model.managedAccounts.isEmpty ? "稍后再说" : "完成并查看额度", action: onDone) } }
-            }.formStyle(.grouped)
         }
+        .formStyle(.grouped)
         .sheet(isPresented: $model.showAddAccount) { AddManagedAccountSheet(model: model, platform: model.addingPlatform) }
         .sheet(item: $editingAPI) { row in AddManagedAccountSheet(model: model, platform: row.platform, existing: row) }
         .sheet(item: $editingName) { row in

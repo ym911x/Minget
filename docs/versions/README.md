@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前完成版本：[1.6.6](1.6.6/IMPLEMENTATION_REPORT.md)，Gemini 详情卡其他额度组直显与 Claude 橙、概览额度条等长；已公开发布为 Latest，本机独立完整复测 689 项通过，正式界面与 Gemini 只读刷新检查通过，GitHub CI 测试、Release 构建与严格签名通过，见 [发布记录](1.6.6/PUBLICATION.md)。现场边界见 [验收](1.6.6/ACCEPTANCE.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前迭代：[1.6.7](1.6.7/IMPLEMENTATION_REPORT.md)，设置窗口视觉统一（系统设置观感：唯一标题层级、分组脚注、对齐的标签与控件两列、彩色侧栏图标）；本机完整回归 694 项通过，Release 严格签名装入正式路径，见 [验收](1.6.7/ACCEPTANCE.md)。上一版本 1.6.6 已公开发布为 Latest，GitHub 测试、Release 构建与严格签名通过，见 [发布记录](1.6.6/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -35,6 +35,8 @@
 | 1.6.5 | 已发布，用户复验及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
 | 1.6.6 | 已发布，Codex 正式界面检查及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+
+| 1.6.7 | 本机交付，未发布 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
 ## 各版本的额外资料
 

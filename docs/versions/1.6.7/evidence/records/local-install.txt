@@ -1,0 +1,33 @@
+# 1.6.7 本机安装记录
+
+时间：2026-10-13 08:12:07 +08
+分支：codex/minget-1-6-7（起点 main@1592f46）
+
+## 正式路径
+
+- /Applications/Minget.app：CFBundleShortVersionString = 1.6.7
+- 可执行文件 SHA-256：a17b561023b3000b492ebd19b2d31d082c2d0d9deb2864f0de4120ebaed53672
+- 签名：Minget Local Signing；codesign --verify --strict 通过（bundle 与两个内嵌可执行文件）
+- 个人目录兼容链接 `$HOME/Applications/Minget.app` 仍指向正式路径，未被替换成第二份实例
+
+## 构建
+
+- 命令：scripts/build.sh（Release，暂存/归档均在本机临时目录，安装后再次严格校验）
+- 安装前后可执行文件哈希一致（staged == installed，均为 a17b5610…）
+- 安装后重新启动 1.6.7（PID 48330），供真实界面复验
+
+## 替换前的 1.6.6 备份
+
+- 路径：$HOME/Applications/Minget Backups/1.6.6-before-1.6.7-20261013-081207/Minget.app
+- 可执行文件 SHA-256：0cb0e84180279d6ba2d3e4ab30d9b81210445ad716efbec2c48e6218e3cadddd（与替换前的正式路径一致）
+- 替换前旧版已正常退出，安装后重新启动 1.6.7
+
+## 源码指纹（本轮改动）
+
+- Sources/UsageMonitorApp/Views/MingetSettingsView.swift  670f14f411c7afdeb4a5b9c580fc2c06eb5df29622e5da377c0a64fdc0711838
+- Sources/UsageMonitorApp/Views/ManagedAccountManagementView.swift  af9c2722f05190212e8d76806fee2b41de1ea10d23a33b0460af8622c4d9038c
+- Sources/UsageMonitorApp/Views/AccountManagementView.swift  8e7a8c2c07e07e0e8cb81599462c665ae94610e00e3c53eb4fe1e68a37c74a5d
+- Sources/UsageMonitorApp/Views/UsagePanelView.swift  4fc963931609b952ab2fe1f8f23d59f9d9f2e812950475f3f33c379af3e87206
+- Tests/UsageMonitorAppTests/SettingsAppearanceTests.swift  1ab1621f18e1cd9909e4dd156ac255084571bf0380a9c41ec475abbc985257ed
+- Tests/UsageMonitorAppTests/DetailEvidenceRenderTests.swift  8760dac83f2120c99345ec26874589119d1961958d58da9d1f4cc4d430cf48f3
+- VERSION  440031e799a6323ba88b40d71261399d1c65380c5b283810bdaf995b703fb499

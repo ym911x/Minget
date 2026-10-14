@@ -1,8 +1,8 @@
 # 后续版本路线图
 
-最新完成版本为 **1.6.6 Gemini 其他额度组直显与概览条等长**：Gemini 详情卡把 `Claude and GPT models` 一组直接显示在主额度下方并改用 Claude 橙，概览页 ChatGPT 与 Gemini 的额度图示加宽到与 Command Code 双列等长。独立完整回归 689 项，684 通过、5 跳过、0 失败；Release 严格签名并装入正式路径，真实界面复验见 [验收](docs/versions/1.6.6/ACCEPTANCE.md)，实施与证据见 [实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)。已公开发布为 Latest，GitHub CI 测试、Release 构建与严格签名通过，核验见 [发布记录](docs/versions/1.6.6/PUBLICATION.md)。当前状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
+最新完成版本为 **1.6.7 设置窗口视觉统一**：设置窗口按 macOS 系统设置的观感重排（唯一标题层级、分组脚注说明、对齐的标签与控件两列、彩色圆角方块侧栏图标），账号页标题与主操作上移到页头，账户行统一为分组内的整行；功能与持久化口径未变。独立完整回归 694 项，689 通过、5 跳过、0 失败；Release 严格签名并装入正式路径，真实界面复验见 [验收](docs/versions/1.6.7/ACCEPTANCE.md)，实施与证据见 [实施记录](docs/versions/1.6.7/IMPLEMENTATION_REPORT.md)。本机交付未发布，当前状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
 
-上一发布版本为 **1.6.5 Command Code 月额度与品牌单独刷新**，已公开发布，GitHub CI 测试与构建通过，核验见 [PUBLICATION.md](docs/versions/1.6.5/PUBLICATION.md)。
+上一发布版本为 **1.6.6 Gemini 其他额度组直显与概览条等长**，已公开发布为 Latest，GitHub CI 测试、Release 构建与严格签名通过，核验见 [发布记录](docs/versions/1.6.6/PUBLICATION.md)。
 
 
 1.6.0 历史验收状态（2026-10-01）：本机 1.6.0 官方 CLI 双账号迭代已完成并安装。正式 A/B 登录、官方 `/usage`、真实卡片对账、退出重启、手动刷新及应用内官方下载校验均已通过。发布准备测试 621 项，620 通过、1 跳过、0 失败，Release 严格签名通过。第二台 Mac 验收按用户要求延期；自然令牌续期、撤销后的重新登录和真实睡眠唤醒仍待现场验证。已公开发布 v1.6.0，远端测试与构建 CI 通过；发布核验见发布记录。

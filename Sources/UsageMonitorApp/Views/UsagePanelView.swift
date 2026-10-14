@@ -574,7 +574,9 @@ struct UsagePanelView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Text(Self.productName()).font(.system(size: 18, weight: .semibold))
-            Text("v\(appVersion)").font(.system(size: 11)).foregroundStyle(.secondary)
+            if let version = Self.appVersion() {
+                Text("v\(version)").font(.system(size: 11)).foregroundStyle(.secondary)
+            }
             Spacer(minLength: 8)
             Text(updateStatusText)
                 .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -588,9 +590,13 @@ struct UsagePanelView: View {
         }.frame(height: DetailPageLayout.headerHeight)
     }
 
-    private var appVersion: String {
-        guard Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "Minget" else { return "1.6.1" }
-        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.1"
+    /// The bundle's own version, or nil when the host carries no app metadata: a test host or
+    /// a preview then shows no version chip rather than a stale hard-coded number.
+    static func appVersion(bundle: Bundle = .main) -> String? {
+        guard bundle.object(forInfoDictionaryKey: "CFBundleName") as? String == "Minget",
+              let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+              !version.isEmpty else { return nil }
+        return version
     }
 
     static func productName(preferredLanguages: [String] = Locale.preferredLanguages) -> String {

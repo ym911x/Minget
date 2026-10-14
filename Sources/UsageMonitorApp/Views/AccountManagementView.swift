@@ -76,9 +76,9 @@ struct AccountManagementView: View {
         Form {
             if firstRun {
                 Section {
-                    Text("连接你的第一个账号").font(.headline)
+                    Text("连接你的第一个账号").font(.system(size: 13, weight: .semibold))
                     Text("选择一个服务开始，其他账号以后仍可在这里连接。")
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: SettingsStyle.noteSize)).foregroundStyle(.secondary)
                 }
             }
             Section("ChatGPT") {

@@ -146,7 +146,8 @@ final class DetailEvidenceRenderTests: XCTestCase {
         let engine = await makeProviderEngine(defaults: defaults)
         let model = UsageViewModel(coordinator: coordinator,
                                    providerEngine: engine,
-                                   menuBarPreferences: MenuBarPreferences(defaults: defaults))
+                                   menuBarPreferences: MenuBarPreferences(defaults: defaults),
+                                   fireSchedules: FireSchedulePreferences(defaults: defaults))
         return (model, DetailPreferences(defaults: defaults))
     }
 
@@ -490,6 +491,48 @@ final class DetailEvidenceRenderTests: XCTestCase {
         try write(try render(settings, size: MingetSettingsView.pageSize,
                              background: .dark, scale: 2),
                   named: "12-settings-fire-schedules-dark.png")
+    }
+
+    /// Every settings pane, light and dark, from the production view. Explicit local export
+    /// used for the settings appearance review: the sidebar marks, the single title level,
+    /// the section footers and the aligned control columns.
+    func testRenderSettingsPanesLightAndDark() async throws {
+        let (model, detailPreferences) = await makeModel("settings-panes")
+        let schedules = model.fireSchedules
+        for (target, minute) in [(FireScheduleTarget.chatGPTA, 8 * 60),
+                                 (.chatGPTB, 9 * 60 + 30),
+                                 (.commandCode, 7 * 60 + 45)] {
+            schedules.setEnabled(true, for: schedules.add(target: target, preferredMinute: minute))
+        }
+        let defaults = makeDefaults("settings-navigation")
+        for section in SettingsSection.allCases {
+            let navigation = SettingsNavigation(defaults: defaults)
+            navigation.section = section
+            let settings = MingetSettingsView(model: model,
+                                              preferences: detailPreferences,
+                                              menuBarPreferences: model.menuBarPreferences,
+                                              onQuit: {},
+                                              navigation: navigation)
+            for dark in [false, true] {
+                try write(try render(settings, size: MingetSettingsView.pageSize,
+                                     background: dark ? .dark : .light, scale: 2),
+                          named: "settings-\(section.rawValue)-\(dark ? "dark" : "light").png")
+            }
+        }
+        // A hosted window and an offscreen host both fail to lay out the split view's
+        // sidebar rows, so the marks are rendered on their own. They are the same rows the
+        // window's sidebar list builds.
+        let marks = VStack(alignment: .leading, spacing: 4) {
+            ForEach(SettingsSection.allCases) { section in
+                SettingsSectionRow(section: section).padding(.vertical, 3)
+            }
+        }
+        .padding(12)
+        .frame(width: 180, alignment: .leading)
+        for dark in [false, true] {
+            try write(try render(marks, size: nil, background: dark ? .dark : .light, scale: 2),
+                      named: "settings-sidebar-marks-\(dark ? "dark" : "light").png")
+        }
     }
 
     // MARK: Rendering helpers
