@@ -1,0 +1,14 @@
+{
+  "url": "https://github.com/ym911x/Minget/archive/refs/tags/v1.6.8.zip",
+  "sha256": "08cc17cd1a109f1ce8f72da2b222eea74176d2be6dec4a4a54d85a988026966d",
+  "bytes": 27765700,
+  "zip_crc": "passed",
+  "archive_entries": 707,
+  "tracked_files_verified": 605,
+  "tracked_files_match_tag": true,
+  "version": "1.6.8",
+  "tag_commit": "983bb8ecaa65095b54bd9efdcf73249aa556be22",
+  "screenshot_http_status": 200,
+  "screenshot_content_type": "image/png",
+  "initial_download": "45 second timeout; separate full download retried successfully"
+}

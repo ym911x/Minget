@@ -15,6 +15,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 独立完整回归 693 项，688 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。真实界面复验状态见 [1.6.8 验收](docs/versions/1.6.8/ACCEPTANCE.md)，改动与渲染证据见 [1.6.8 实施记录](docs/versions/1.6.8/IMPLEMENTATION_REPORT.md)。
 
+已公开发布 [v1.6.8](https://github.com/ym911x/Minget/releases/tag/v1.6.8) 为 Latest，包含下述 1.6.7 设置窗口改进；GitHub CI 测试与 Release 构建通过，继续源码分发，见 [发布记录](docs/versions/1.6.8/PUBLICATION.md)。
+
 ## v1.6.7：设置窗口视觉统一
 
 设置窗口按 macOS 系统设置的观感重排：每个页面只有一处标题配一行说明，说明文字放进所属分组的脚注，成对的标签与控件对齐成两列（阈值读数在前、步进器在后）。左侧导航五个条目改为彩色圆角方块图标（蓝=账号、靛蓝=菜单栏、青=详情显示、橙=刷新与点火、灰=关于与诊断）。账号页把标题与「添加账号」上移到页头，账户行统一为分组内的整行，不再出现卡片套卡片。功能、开关与持久化口径完全未改。
@@ -27,7 +29,7 @@ Gemini 详情卡不再折叠「其他额度组」：官方返回的另一组（`
 
 独立完整回归 689 项，684 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。正式安装版的概览、Gemini 三账号卡片与只读刷新已由 Codex 现场检查；其余边界见 [1.6.6 验收](docs/versions/1.6.6/ACCEPTANCE.md)，改动与渲染证据见 [1.6.6 实施记录](docs/versions/1.6.6/IMPLEMENTATION_REPORT.md)。
 
-已公开发布 [v1.6.6](https://github.com/ym911x/Minget/releases/tag/v1.6.6) 为 Latest，GitHub CI 测试、Release 构建与严格签名通过。继续源码分发，核验见 [1.6.6 发布记录](docs/versions/1.6.6/PUBLICATION.md)。
+已公开发布 [v1.6.6](https://github.com/ym911x/Minget/releases/tag/v1.6.6)，GitHub CI 测试、Release 构建与严格签名通过。继续源码分发，核验见 [1.6.6 发布记录](docs/versions/1.6.6/PUBLICATION.md)。
 
 ## v1.6.5：Command Code 月额度与品牌单独刷新
 

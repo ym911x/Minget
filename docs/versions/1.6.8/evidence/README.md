@@ -24,3 +24,7 @@
 - `screenshots/`：示例渲染图片。
 - `records/`：脱敏验证与安装记录。
 - `manifests/`：校验清单。`SHA256SUMS` 内路径相对于版本目录，执行方式：`cd docs/versions/1.6.8 && shasum -a 256 -c evidence/manifests/SHA256SUMS`。
+
+## 发布复核（2026-10-16）
+
+以上为编码交付时证据，现已完成 v1.6.8 发布。`logs/publication-swift-tests.log` 保存本机独立完整回归；`logs/github-ci-verification.log` 与 `records/github-ci-summary.json` 保存发布提交 CI 测试与严格签名结果；`records/github-release-summary.json` 保存 Latest、草稿、预发布与附件状态；`records/public-source-verification.json` 保存公开源码 ZIP 及关键源码核验。正式安装 App 本轮未替换，所有现场边界按验收台账保留。

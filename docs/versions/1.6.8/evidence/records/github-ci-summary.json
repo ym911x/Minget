@@ -1,0 +1,13 @@
+{
+  "url": "https://github.com/ym911x/Minget/actions/runs/38911824149",
+  "headSha": "983bb8ecaa65095b54bd9efdcf73249aa556be22",
+  "status": "completed",
+  "conclusion": "success",
+  "tests": 693,
+  "passed": 639,
+  "skipped": 54,
+  "failures": 0,
+  "release_build": "passed",
+  "strict_signing": "passed",
+  "signing_type": "ad-hoc"
+}

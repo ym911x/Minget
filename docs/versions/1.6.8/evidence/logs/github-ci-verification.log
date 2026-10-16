@@ -1,0 +1,12 @@
+test	Show Swift version	2026-10-16T13:57:11.4321780Z Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+test	Run tests	2026-10-16T13:58:34.8494090Z 	 Executed 693 tests, with 54 tests skipped and 0 failures (0 unexpected) in 47.884 (47.928) seconds
+test	Run tests	2026-10-16T13:58:34.8495370Z 	 Executed 693 tests, with 54 tests skipped and 0 failures (0 unexpected) in 47.884 (47.930) seconds
+test	Build application bundle	2026-10-16T13:58:34.9984150Z == signing: ad-hoc (MINGET_SIGN_IDENTITY=-) ==
+test	Build application bundle	2026-10-16T13:59:22.2069790Z == strict verification in staging ==
+test	Build application bundle	2026-10-16T13:59:22.2260920Z <temporary-bundle>: valid on disk
+test	Build application bundle	2026-10-16T13:59:22.2262950Z <temporary-bundle>: satisfies its Designated Requirement
+test	Build application bundle	2026-10-16T13:59:22.2535500Z <temporary-bundle>: OK
+test	Build application bundle	2026-10-16T13:59:22.2964090Z <runner-home>/Applications/Minget.app: valid on disk
+test	Build application bundle	2026-10-16T13:59:22.2965340Z <runner-home>/Applications/Minget.app: satisfies its Designated Requirement
+test	Build application bundle	2026-10-16T13:59:22.3350930Z <temporary-bundle>: valid on disk
+test	Build application bundle	2026-10-16T13:59:22.3351860Z <temporary-bundle>: satisfies its Designated Requirement
