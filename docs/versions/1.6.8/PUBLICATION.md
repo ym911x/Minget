@@ -11,3 +11,12 @@
 - 修正当前版本文档中的分支起点名称和时区；证据中的原测试、构建结果保持不变。
 - 发布前完整回归通过：Core 458 项 + App 235 项，共 693 项，688 通过、5 项既有跳过、0 失败，退出码 0。命令 `swift test --scratch-path /tmp/minget-swiftpm-build --disable-sandbox`，日志 `evidence/logs/publication-swift-tests.log`。远端 CI 与公开 Release 结果待核验。
 - 沿用源码分发，不上传本机签名包。刘海机型、VoiceOver、第二台 Mac 与其它历史待验收项继续保留，发布不改变验收结论。
+
+## 本轮执行与未完成项
+
+- 发布准备提交：`1d9d6bc`。主目录已切回 `main`，从 `1592f46` 快进到该提交，保留两轮完整提交历史。
+- `git push origin main` 两次返回 `LibreSSL SSL_connect: SSL_ERROR_SYSCALL`；`gh api` 返回 `EOF`。读取系统现有代理后，以命令级 `http.proxy=http://127.0.0.1:7892` / `HTTPS_PROXY` 复核仍失败；没有修改系统代理、Git 全局设置或凭证。
+- 初始 `git ls-remote` / `gh release list` 成功时，远端 main 为 `1592f46`，Latest 为 v1.6.6；失败推送未报告成功。远端最终状态待连接恢复后重查。
+- 尚未推送本轮提交，未触发本轮远端 CI，未创建 v1.6.8 标签和 Release。**本轮不能记为发布完成。**
+- 恢复连接后的顺序：重新核对远端 main → 推送本机 main → 等待该提交 CI 测试及 Release 构建成功 → 创建 annotated tag v1.6.8 → 创建非草稿、非预发布的 Latest Release（本目录 RELEASE_NOTES.md）→ 核验远端标签解引用、Release 元数据及源码归档 → 回写台账并同步 main。
+- 三份既有 releases 文档删除保持在工作区，不纳入任何本轮提交。
