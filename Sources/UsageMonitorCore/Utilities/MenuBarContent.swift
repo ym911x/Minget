@@ -23,16 +23,18 @@ public enum MenuBarAttention: String, Equatable, Sendable {
     }
 }
 
-/// Everything the status item needs for one frame of one mode, fully resolved.
+/// Everything the status item needs for one frame, fully resolved.
 ///
 /// The view is a pure function of this value, which is what lets the layout, the two time
 /// rows and the warning be tested without a window server.
+///
+/// Since 1.6.8 the item has a single fixed width, so the content carries no mode: the
+/// quota text, the warning marker and the two time rows are the same for every source.
 public struct MenuBarContent: Equatable, Sendable {
-    public let mode: MenuBarSpaceMode
-    /// The quota text only. Never contains a marker, in any mode.
+    /// The quota text only. Never contains a marker, in any state.
     public let text: String
     public let attention: MenuBarAttention
-    /// Both production modes show both rows.
+    /// Both quota sources show both rows; the balance source shows none.
     public let showsTimeBars: Bool
     public let fiveHour: ResetTimeProgress
     public let weekly: ResetTimeProgress
@@ -40,14 +42,12 @@ public struct MenuBarContent: Equatable, Sendable {
     public let isCached: Bool
     public var quotaDescription: String? = nil
 
-    public init(mode: MenuBarSpaceMode,
-                text: String,
+    public init(text: String,
                 attention: MenuBarAttention,
                 showsTimeBars: Bool,
                 fiveHour: ResetTimeProgress,
                 weekly: ResetTimeProgress,
                 isCached: Bool) {
-        self.mode = mode
         self.text = text
         self.attention = attention
         self.showsTimeBars = showsTimeBars
@@ -56,11 +56,11 @@ public struct MenuBarContent: Equatable, Sendable {
         self.isCached = isCached
     }
 
-    /// Identity of everything that can change the item's width: the mode, the quota text and
-    /// the warning marker. Time is deliberately excluded, so the once-a-second countdown
-    /// redraws without re-measuring the status item (v1.0.2 §4.4).
+    /// Identity of everything that can change what the item draws: the quota text and the
+    /// warning marker. The width is constant since 1.6.8 and time is deliberately excluded,
+    /// so the once-a-second countdown redraws without any status-item work (v1.0.2 §4.4).
     public var sizeSignature: String {
-        "\(mode.rawValue)#\(text)#\(attention.rawValue)"
+        "\(text)#\(attention.rawValue)"
     }
 
     /// Spoken description. It names each row's state, so an unknown or expired row is never
@@ -81,13 +81,15 @@ public struct MenuBarContent: Equatable, Sendable {
 /// The DeepSeek half of the menu bar, already reduced to what the item draws.
 ///
 /// `amount` is the resolved single balance; `nil` means nothing attributable is on display,
-/// which the item reports as `DS —` with a warning rather than as a zero balance.
+/// which the item reports as `DS1 —` with a warning rather than as a zero balance.
 public struct MenuBarDeepSeekContent: Equatable, Sendable {
+    public let code: String
     public let currency: String?
     public let amount: Decimal?
     public let isCached: Bool
 
-    public init(currency: String?, amount: Decimal?, isCached: Bool) {
+    public init(code: String, currency: String?, amount: Decimal?, isCached: Bool) {
+        self.code = code
         self.currency = currency
         self.amount = amount
         self.isCached = isCached
@@ -98,48 +100,49 @@ public struct MenuBarDeepSeekContent: Equatable, Sendable {
 
 /// Exactly one source feeds the menu bar at a time (REQUIREMENTS.md §6.1).
 ///
-/// A ChatGPT source carries its short label so the item always names the account it shows;
-/// the DeepSeek source carries no time rows at all, because the balance endpoint has no
+/// Every source carries the account code it is shown under (`O1`, `G1`, `DS1`), so the
+/// item always names the account it shows and the settings list can show the same code.
+/// The DeepSeek source carries no time rows at all, because the balance endpoint has no
 /// window to draw.
 public enum MenuBarSource: Equatable, Sendable {
     case unavailable(String)
-    case chatGPT(shortLabel: String,
+    case chatGPT(code: String,
                  display: UsageDisplay,
                  connectionState: UsageService.ConnectionState)
     case deepSeek(MenuBarDeepSeekContent)
-    case antigravity(shortLabel: String, group: AntigravityQuotaGroup?, isCached: Bool, missingGroup: Bool = false)
+    case antigravity(code: String, group: AntigravityQuotaGroup?, isCached: Bool, missingGroup: Bool = false)
 }
 
 /// The only place the menu bar's text, warning marker and time rows are decided.
 public enum MenuBarContentBuilder {
 
     /// - Parameters:
-    ///   - source: the already-resolved menu bar source (one ChatGPT profile, or DeepSeek).
+    ///   - source: the already-resolved menu bar source (one account, or DeepSeek).
     ///   - now: the single clock reading shared by both rows.
-    ///   - mode: which of the two production width modes is being drawn.
     public static func make(source: MenuBarSource,
-                            now: Date,
-                            mode: MenuBarSpaceMode) -> MenuBarContent {
+                            now: Date) -> MenuBarContent {
         switch source {
         case .unavailable(let message):
-            return MenuBarContent(mode: mode, text: message, attention: .warning, showsTimeBars: false,
+            return MenuBarContent(text: message, attention: .warning, showsTimeBars: false,
                 fiveHour: .init(state: .invalid, fills: []), weekly: .init(state: .invalid, fills: []), isCached: false)
-        case .chatGPT(let shortLabel, let display, let connectionState):
+        case .chatGPT(let code, let display, let connectionState):
             let snapshot = display.snapshot
             let rows = ResetTimeModel.rows(snapshot: snapshot, now: now)
-            return MenuBarContent(mode: mode,
-                                  text: text(for: mode, shortLabel: shortLabel, snapshot: snapshot),
+            return MenuBarContent(text: UsageFormatting.menuBarQuotaTitle(code: code,
+                                                                                 fiveHour: snapshot?.fiveHour,
+                                                                                 weekly: snapshot?.weekly),
                                   attention: attention(for: display, connectionState: connectionState),
                                   showsTimeBars: true,
                                   fiveHour: rows.fiveHour,
                                   weekly: rows.weekly,
                                   isCached: display.isStale)
 
-        case .antigravity(let label, let group, let cached, let missingGroup):
-            return googleContent(label: label, group: group, cached: cached, missingGroup: missingGroup, now: now, mode: mode)
+        case .antigravity(let code, let group, let cached, let missingGroup):
+            return googleContent(code: code, group: group, cached: cached, missingGroup: missingGroup, now: now)
         case .deepSeek(let content):
-            return MenuBarContent(mode: mode,
-                                  text: text(for: mode, content: content),
+            return MenuBarContent(text: UsageFormatting.deepSeekMenuBarTitle(code: content.code,
+                                                                                    currency: content.currency,
+                                                                                    amount: content.amount),
                                   attention: deepSeekAttention(for: content),
                                   // The balance endpoint reports no window, so the two
                                   // reset-time rows are absent rather than drawn empty.
@@ -150,9 +153,12 @@ public enum MenuBarContentBuilder {
         }
     }
 
-
-    private static func googleContent(label: String, group: AntigravityQuotaGroup?, cached: Bool,
-                                      missingGroup: Bool, now: Date, mode: MenuBarSpaceMode) -> MenuBarContent {
+    /// `G1 80% 90%`: the account code, then one percentage per quota bucket the selected
+    /// group reports. A group with a single bucket shows a single percentage, and a group
+    /// that has not been chosen (or cannot be read) is reported by that state instead of a
+    /// number. The group's own name stays in the settings list, where there is room for it.
+    private static func googleContent(code: String, group: AntigravityQuotaGroup?, cached: Bool,
+                                      missingGroup: Bool, now: Date) -> MenuBarContent {
         let empty = ResetTimeProgress(state: .invalid, fills: [])
         let five = group?.buckets.first { $0.kind == .fiveHour }
         let week = group?.buckets.first { $0.kind == .weekly }
@@ -160,48 +166,20 @@ public enum MenuBarContentBuilder {
             if let five, let week { return [five, week] }
             return group?.buckets.prefix(1).map { $0 } ?? []
         }()
-        let name = group.map { String($0.label.prefix(12)) } ?? (missingGroup ? "额度组不可用" : "请选择额度组")
-        let values = buckets.map { bucket in
-            let window = bucket.kind == .fiveHour ? "5H" : bucket.kind == .weekly ? "W" : bucket.label
-            let value = bucket.remainingFraction.map { String(format: "%.0f%%", $0 * 100) } ?? "?"
-            return mode == .full && bucket.kind != .unknown ? window + " " + value : value
-        }.joined(separator: " | ")
-        let text = label + " " + name + (values.isEmpty ? "" : " " + values)
+        var percentages = buckets.map { bucket in
+            bucket.remainingFraction.map { String(format: "%.0f%%", $0 * 100) } ?? "?"
+        }
+        if percentages.isEmpty, group != nil { percentages = [UsageFormatting.menuBarPlaceholder] }
+        let stateText = group == nil ? (missingGroup ? "额度组不可用" : "请选择额度组") : nil
+        let text = ([code] + percentages + (stateText.map { [$0] } ?? [])).joined(separator: " ")
         let fiveProgress = buckets.first { $0.kind == .fiveHour }.map { ResetTimeModel.progress(expected: .fiveHour, window: $0.rateLimitWindow, now: now) } ?? empty
         let weekProgress = buckets.first { $0.kind == .weekly }.map { ResetTimeModel.progress(expected: .weekly, window: $0.rateLimitWindow, now: now) } ?? empty
-        var content = MenuBarContent(mode: mode, text: text,
+        var content = MenuBarContent(text: text,
             attention: cached || group == nil || buckets.contains(where: { $0.remainingFraction == nil }) ? .warning : .none,
             showsTimeBars: !buckets.isEmpty && buckets.allSatisfy { $0.kind != .unknown },
             fiveHour: fiveProgress, weekly: weekProgress, isCached: cached)
         content.quotaDescription = group?.buckets.map { $0.label + " " + $0.percentageText + "，" + $0.resetText(now: now) }.joined(separator: "；")
         return content
-    }
-
-    /// `A 5H 78% | W 42%` (full) or `A 78% 42%` (compact).
-    public static func text(for mode: MenuBarSpaceMode,
-                            shortLabel: String,
-                            snapshot: UsageSnapshot?) -> String {
-        switch mode {
-        case .full:
-            return UsageFormatting.labeledMenuBarTitle(shortLabel: shortLabel,
-                                                       fiveHour: snapshot?.fiveHour,
-                                                       weekly: snapshot?.weekly)
-        case .compact:
-            return UsageFormatting.labeledCompactMenuBarTitle(shortLabel: shortLabel,
-                                                              fiveHour: snapshot?.fiveHour,
-                                                              weekly: snapshot?.weekly)
-        }
-    }
-
-    /// `DS CNY 123.45` in both semantic modes; the full and compact views use different
-    /// typography and spacing. With no balance both modes show `DS —`.
-    public static func text(for mode: MenuBarSpaceMode, content: MenuBarDeepSeekContent) -> String {
-        switch mode {
-        case .full:
-            return UsageFormatting.deepSeekMenuBarTitle(currency: content.currency, amount: content.amount)
-        case .compact:
-            return UsageFormatting.compactDeepSeekMenuBarTitle(currency: content.currency, amount: content.amount)
-        }
     }
 
     /// Cached data and a definitely failed read warn; a first load that has not produced a

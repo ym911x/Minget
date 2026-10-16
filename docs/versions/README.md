@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.7](1.6.7/IMPLEMENTATION_REPORT.md)，设置窗口视觉统一（系统设置观感：唯一标题层级、分组脚注、对齐的标签与控件两列、彩色侧栏图标）；本机完整回归 694 项通过，Release 严格签名装入正式路径，见 [验收](1.6.7/ACCEPTANCE.md)。上一版本 1.6.6 已公开发布为 Latest，GitHub 测试、Release 构建与严格签名通过，见 [发布记录](1.6.6/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+当前迭代：[1.6.8](1.6.8/IMPLEMENTATION_REPORT.md)，菜单栏项目长度固定、上排改为「代号 + 百分比」、代号规范为 `O1`/`G1`/`DS1` 并与设置列表对应；本机完整回归 693 项通过，Release 严格签名装入正式路径，见 [验收](1.6.8/ACCEPTANCE.md)。上一版本 1.6.7（设置窗口视觉统一）为本机交付，用户已复验通过。公开发布仍为 1.6.6（Latest），见 [发布记录](1.6.6/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -36,7 +36,9 @@
 
 | 1.6.6 | 已发布，Codex 正式界面检查及 CI 通过；现场边界保留 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
-| 1.6.7 | 本机交付，未发布 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+| 1.6.7 | 本机交付，用户复验通过（未发布） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
+
+| 1.6.8 | 本机交付，用户复验通过（未发布） | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
 ## 各版本的额外资料
 

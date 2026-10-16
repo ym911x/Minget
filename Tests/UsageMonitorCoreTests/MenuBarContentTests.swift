@@ -1,11 +1,11 @@
 import XCTest
 @testable import UsageMonitorCore
 
-/// Menu bar content across the three 1.3.0 sources (UI_SPEC.md §8, REQUIREMENTS.md §6.2/§6.3).
-///
-/// One decision point still produces the text, the single warning and the time rows together;
-/// what changed is that it now takes an already-resolved *source* instead of a lone Codex
-/// display, so the DeepSeek balance and the ChatGPT profiles share exactly one code path.
+/// Menu bar content across the 1.3.0 sources (UI_SPEC.md §8,
+/// REQUIREMENTS.md §6.2/§6.3), with the 1.6.8 presentation: one
+/// fixed-width label whose text is `CODE 78% 42%` — the account code
+/// in front, then both remaining percentages, with no per-mode
+/// variants because there is only one width.
 final class MenuBarContentTests: XCTestCase {
 
     let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -35,21 +35,21 @@ final class MenuBarContentTests: XCTestCase {
     }
 
     private func content(_ display: UsageDisplay,
-                         label: String = "A",
-                         connection: UsageService.ConnectionState = .connected,
-                         mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .chatGPT(shortLabel: label, display: display,
+                         code: String = "O1",
+                         connection: UsageService.ConnectionState = .connected) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .chatGPT(code: code, display: display,
                                                     connectionState: connection),
-                                   now: now, mode: mode)
+                                   now: now)
     }
 
     private func deepSeek(currency: String?, amount: Decimal?,
                           cached: Bool = false,
-                          mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(currency: currency,
+                          code: String = "DS1") -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(code: code,
+                                                                            currency: currency,
                                                                             amount: amount,
                                                                             isCached: cached)),
-                                   now: now, mode: mode)
+                                   now: now)
     }
 
     // MARK: Warning: zero or exactly one
@@ -67,13 +67,13 @@ final class MenuBarContentTests: XCTestCase {
         XCTAssertEqual(result.attention.symbolName, "exclamationmark.triangle.fill")
         XCTAssertFalse(result.text.contains("⚠"))
         XCTAssertFalse(result.text.contains("!"))
-        XCTAssertTrue(result.text.hasPrefix("A 5H"))
+        XCTAssertTrue(result.text.hasPrefix("O1 "))
     }
 
     func testDefiniteReadFailureWithoutCacheWarnsOnce() {
         let result = content(.unavailable(.codexNotSignedIn), connection: .disconnected)
         XCTAssertEqual(result.attention, .warning)
-        XCTAssertEqual(result.text, "A 5H — | W —")
+        XCTAssertEqual(result.text, "O1 — —")
     }
 
     func testNotYetLoadedDoesNotClaimAFailure() {
@@ -99,49 +99,38 @@ final class MenuBarContentTests: XCTestCase {
         XCTAssertEqual(result.attention, .none)
         XCTAssertEqual(result.fiveHour.state, .unknown)
         XCTAssertEqual(result.weekly.state, .active)
-        XCTAssertEqual(result.text, "A 5H — | W 42%")
+        XCTAssertEqual(result.text, "O1 — 42%")
     }
 
-    // MARK: ChatGPT text per account and mode
+    // MARK: ChatGPT text per account
 
-    func testFullModeTextCarriesTheAccountLabelAndBothNumbers() {
-        let result = content(.live(liveSnapshot()), label: "A", mode: .full)
-        XCTAssertEqual(result.text, "A 5H 78% | W 42%")
+    func testTextCarriesTheAccountCodeAndBothNumbers() {
+        let result = content(.live(liveSnapshot()), code: "O1")
+        XCTAssertEqual(result.text, "O1 78% 42%")
         XCTAssertTrue(result.showsTimeBars)
         XCTAssertEqual(result.fiveHour.segmentCount, 5)
         XCTAssertEqual(result.weekly.segmentCount, 7)
     }
 
-    func testAccountBIsDistinguishableFromAccountA() {
-        let a = content(.live(liveSnapshot()), label: "A", mode: .full)
-        let b = content(.live(liveSnapshot()), label: "B", mode: .full)
-        XCTAssertEqual(b.text, "B 5H 78% | W 42%")
-        XCTAssertNotEqual(a.text, b.text)
-        XCTAssertNotEqual(a.sizeSignature, b.sizeSignature, "the two accounts must not share a width signature")
+    func testAccountTwoIsDistinguishableFromAccountOne() {
+        let one = content(.live(liveSnapshot()), code: "O1")
+        let two = content(.live(liveSnapshot()), code: "O2")
+        XCTAssertEqual(two.text, "O2 78% 42%")
+        XCTAssertNotEqual(one.text, two.text)
+        XCTAssertNotEqual(one.sizeSignature, two.sizeSignature, "the two accounts must not share a width signature")
     }
 
-    func testCompactModeUsesTheFixedLabelFormatAndKeepsBothRows() {
-        let result = content(.live(liveSnapshot()), label: "B", mode: .compact)
-        XCTAssertEqual(result.text, "B 78% 42%")
-        XCTAssertFalse(result.text.contains("|"))
-        XCTAssertFalse(result.text.contains("5H"))
-        XCTAssertTrue(result.showsTimeBars, "compact must still show both rows")
+    func testChatGPTWithNoDataUsesTheFixedPlaceholder() {
+        let result = content(.unavailable(.rpcFailed(.other)), connection: .disconnected)
+        XCTAssertEqual(result.text, "O1 — —")
+        XCTAssertEqual(result.attention, .warning)
+        XCTAssertTrue(result.showsTimeBars, "the time rows stay, dim")
     }
 
-    func testChatGPTWithNoDataUsesTheFixedPlaceholderPerMode() {
-        let full = content(.unavailable(.rpcFailed(.other)), connection: .disconnected, mode: .full)
-        XCTAssertEqual(full.text, "A 5H — | W —")
-        XCTAssertEqual(full.attention, .warning)
-
-        let compact = content(.unavailable(.rpcFailed(.other)), connection: .disconnected, mode: .compact)
-        XCTAssertEqual(compact.text, "A — —")
-        XCTAssertEqual(compact.attention, .warning)
-    }
-
-    /// The account must never be swapped silently: even with no data the label stays.
+    /// The account must never be swapped silently: even with no data the code stays.
     func testNoDataNeverSilentlySwitchesAccount() {
-        let b = content(.unavailable(.codexNotSignedIn), label: "B", connection: .disconnected)
-        XCTAssertTrue(b.text.hasPrefix("B "), b.text)
+        let two = content(.unavailable(.codexNotSignedIn), code: "O2", connection: .disconnected)
+        XCTAssertTrue(two.text.hasPrefix("O2 "), two.text)
     }
 
     func testCachedFlagDrivesTheDimmerRows() {
@@ -151,45 +140,42 @@ final class MenuBarContentTests: XCTestCase {
 
     // MARK: DeepSeek text and semantics
 
-    func testDeepSeekFullModeUsesTheFixedFormatAndNoTimeBars() {
-        let result = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)
-        XCTAssertEqual(result.text, "DS CNY 123.45")
+    func testDeepSeekUsesTheFixedFormatAndNoTimeBars() {
+        let result = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"))
+        XCTAssertEqual(result.text, "DS1 CNY 123.45")
         XCTAssertFalse(result.showsTimeBars, "the balance endpoint has no window to draw")
         XCTAssertEqual(result.attention, .none)
     }
 
-    func testDeepSeekCompactModeUsesTheFixedFormat() {
-        let result = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)
-        XCTAssertEqual(result.text, "DS CNY 123.45")
-        XCTAssertFalse(result.showsTimeBars)
-    }
-
     func testDeepSeekAmountIsAlwaysShownWithTwoDecimals() {
-        let result = deepSeek(currency: "USD", amount: Decimal(string: "7.5"), mode: .compact)
-        XCTAssertEqual(result.text, "DS USD 7.50")
+        let result = deepSeek(currency: "USD", amount: Decimal(string: "7.5"))
+        XCTAssertEqual(result.text, "DS1 USD 7.50")
     }
 
     func testDeepSeekWithoutACurrencyKeepsThePositionUnnamed() {
-        let full = deepSeek(currency: nil, amount: Decimal(string: "123.45"), mode: .full)
-        XCTAssertEqual(full.text, "DS — 123.45")
-        let compact = deepSeek(currency: nil, amount: Decimal(string: "123.45"), mode: .compact)
-        XCTAssertEqual(compact.text, "DS — 123.45")
+        let result = deepSeek(currency: nil, amount: Decimal(string: "123.45"))
+        XCTAssertEqual(result.text, "DS1 — 123.45")
     }
 
     func testDeepSeekWithoutAnyBalanceShowsThePlaceholderAndWarns() {
-        let full = deepSeek(currency: nil, amount: nil, mode: .full)
-        XCTAssertEqual(full.text, "DS —")
-        XCTAssertEqual(full.attention, .warning)
-        XCTAssertFalse(full.text.contains("0"), "a missing balance is never rendered as zero")
+        let result = deepSeek(currency: nil, amount: nil)
+        XCTAssertEqual(result.text, "DS1 —")
+        XCTAssertEqual(result.attention, .warning)
+        XCTAssertFalse(result.text.contains("0"), "a missing balance is never rendered as zero")
 
-        let compact = deepSeek(currency: "CNY", amount: nil, mode: .compact)
-        XCTAssertEqual(compact.text, "DS —")
-        XCTAssertEqual(compact.attention, .warning)
+        let withCurrency = deepSeek(currency: "CNY", amount: nil)
+        XCTAssertEqual(withCurrency.text, "DS1 —")
+        XCTAssertEqual(withCurrency.attention, .warning)
+    }
+
+    func testDeepSeekCarriesItsOwnCode() {
+        let second = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), code: "DS2")
+        XCTAssertEqual(second.text, "DS2 CNY 123.45")
     }
 
     func testCachedDeepSeekKeepsItsAmountAndAddsTheWarning() {
         let result = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), cached: true)
-        XCTAssertEqual(result.text, "DS CNY 123.45", "a cached amount keeps its text")
+        XCTAssertEqual(result.text, "DS1 CNY 123.45", "a cached amount keeps its text")
         XCTAssertEqual(result.attention, .warning)
         XCTAssertTrue(result.isCached)
     }
@@ -270,41 +256,38 @@ final class MenuBarContentTests: XCTestCase {
     func testDeepSeekSizeSignatureFollowsTheAmountAndTheCode() {
         let first = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"))
         let second = deepSeek(currency: "CNY", amount: Decimal(string: "9.00"))
-        XCTAssertNotEqual(first.sizeSignature, second.sizeSignature, "a different amount is a different width")
+        XCTAssertNotEqual(first.sizeSignature, second.sizeSignature, "a different amount is different text")
 
         let cached = deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), cached: true)
-        XCTAssertNotEqual(first.sizeSignature, cached.sizeSignature, "the warning changes the width")
+        XCTAssertNotEqual(first.sizeSignature, cached.sizeSignature, "the warning changes the text")
     }
 
     // MARK: Size signature excludes time
 
     func testSizeSignatureIgnoresTheCountdown() {
         let display = UsageDisplay.live(liveSnapshot())
-        let first = MenuBarContentBuilder.make(source: .chatGPT(shortLabel: "A", display: display,
+        let first = MenuBarContentBuilder.make(source: .chatGPT(code: "O1", display: display,
                                                                 connectionState: .connected),
-                                               now: now, mode: .full)
-        let later = MenuBarContentBuilder.make(source: .chatGPT(shortLabel: "A", display: display,
+                                               now: now)
+        let later = MenuBarContentBuilder.make(source: .chatGPT(code: "O1", display: display,
                                                                 connectionState: .connected),
-                                               now: now.addingTimeInterval(600), mode: .full)
+                                               now: now.addingTimeInterval(600))
         XCTAssertNotEqual(first.fiveHour.fills, later.fiveHour.fills, "the countdown did move")
         XCTAssertEqual(first.sizeSignature, later.sizeSignature,
-                       "the width signature must not change once a second")
+                       "the width is fixed, so the signature must not change once a second")
     }
 
     func testSizeSignatureChangesWhenTheTextOrWarningChanges() {
-        let base = content(.live(liveSnapshot()), mode: .full)
-        let cached = content(.stale(liveSnapshot(), .rpcFailed(.other)), mode: .full)
+        let base = content(.live(liveSnapshot()))
+        let cached = content(.stale(liveSnapshot(), .rpcFailed(.other)))
         XCTAssertNotEqual(base.sizeSignature, cached.sizeSignature)
 
         let differentPercent = snapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600),
-                                       weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
-                                                               usedPercent: 0, remainingPercent: 100,
-                                                               resetsAt: now.addingTimeInterval(3 * 86400)))
-        let full = content(.live(differentPercent), mode: .full)
-        XCTAssertNotEqual(base.sizeSignature, full.sizeSignature, "100% is wider than 42%")
-
-        let compact = content(.live(liveSnapshot()), mode: .compact)
-        XCTAssertNotEqual(base.sizeSignature, compact.sizeSignature)
+                                        weekly: RateLimitWindow(kind: .weekly, windowDurationMinutes: 10_080,
+                                                                usedPercent: 0, remainingPercent: 100,
+                                                                resetsAt: now.addingTimeInterval(3 * 86400)))
+        let full = content(.live(differentPercent))
+        XCTAssertNotEqual(base.sizeSignature, full.sizeSignature, "100% is different text from 42%")
     }
 
     // MARK: Rows react to the right input
@@ -346,7 +329,7 @@ final class MenuBarContentTests: XCTestCase {
     func testAccessibilityTextNamesEachRowState() {
         let active = content(.live(liveSnapshot()))
         XCTAssertTrue(active.accessibilityText.contains("明明有数"))
-        XCTAssertTrue(active.accessibilityText.contains("A 5H 78% | W 42%"))
+        XCTAssertTrue(active.accessibilityText.contains("O1 78% 42%"))
 
         let arrived = content(.live(snapshot(fiveHour: window(.fiveHour, remaining: -5),
                                              weekly: window(.weekly, remaining: -5))))
@@ -361,7 +344,7 @@ final class MenuBarContentTests: XCTestCase {
 
     func testDeepSeekAccessibilityTextCarriesNoWindowRows() {
         let text = deepSeek(currency: "CNY", amount: Decimal(string: "123.45")).accessibilityText
-        XCTAssertTrue(text.contains("DS CNY 123.45"))
+        XCTAssertTrue(text.contains("DS1 CNY 123.45"))
         XCTAssertFalse(text.contains("5 小时"))
         XCTAssertFalse(text.contains("周额度"))
     }
@@ -370,7 +353,7 @@ final class MenuBarContentTests: XCTestCase {
 
     func testNoSnapshotLeavesQuotaAsPlaceholderAndBothRowsUnknown() {
         let result = content(.unavailable(.rpcFailed(.other)), connection: .disconnected)
-        XCTAssertEqual(result.text, "A 5H — | W —")
+        XCTAssertEqual(result.text, "O1 — —")
         XCTAssertEqual(result.fiveHour.state, .unknown)
         XCTAssertEqual(result.weekly.state, .unknown)
         XCTAssertEqual(result.fiveHour.fills, [0, 0, 0, 0, 0])

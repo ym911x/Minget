@@ -54,21 +54,21 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
     }
 
     private func content(_ display: UsageDisplay,
-                         label: String = "A",
-                         connection: UsageService.ConnectionState = .connected,
-                         mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .chatGPT(shortLabel: label, display: display,
+                         code: String = "O1",
+                         connection: UsageService.ConnectionState = .connected) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .chatGPT(code: code, display: display,
                                                     connectionState: connection),
-                                   now: Self.anchor, mode: mode)
+                                   now: Self.anchor)
     }
 
     private func deepSeek(currency: String?, amount: Decimal?,
                           cached: Bool = false,
-                          mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(currency: currency,
+                          code: String = "DS1") -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(code: code,
+                                                                            currency: currency,
                                                                             amount: amount,
                                                                             isCached: cached)),
-                                   now: Self.anchor, mode: mode)
+                                   now: Self.anchor)
     }
 
     // MARK: Evidence
@@ -95,15 +95,16 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
             ("§5.2.3 首次加载中（无警告）", content(.unavailable(.rpcFailed(.other)), connection: .connecting)),
             ("UI-08 100% / 100%（最宽文字）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400,
                                                         fiveHourPercent: 100, weeklyPercent: 100))),
-            ("UI-09 紧凑模式（双额度、双时间条）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400),
-                                                 mode: .compact)),
+            ("UI-08 9% / 9%（最窄文字，宽度不变）", content(live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400,
+                                                          fiveHourPercent: 9, weeklyPercent: 9))),
         ]
 
         try write(try renderImage(rows, background: .light), named: "01-menubar-states-light.png")
         try write(try renderImage(rows, background: .dark), named: "02-menubar-states-dark.png")
     }
 
-    /// 1.3.0 UI_SPEC.md §10 item 6: the three menu bar sources in both modes.
+    /// UI_SPEC.md §10 item 6: every menu bar source, all under the one fixed
+    /// width (1.6.8), so the images show the account codes and the constant length.
     func testRenderThreeSources() throws {
         let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600, remainingPercent: 78),
                                      weekly: window(.weekly, remaining: 3 * 86400, remainingPercent: 42),
@@ -113,18 +114,16 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
                                            fetchedAt: Self.anchor, source: .cached)
 
         let rows: [(String, MenuBarContent)] = [
-            ("ChatGPT A 完整 A 5H 78% | W 42%", content(.live(snapshot), label: "A", mode: .full)),
-            ("ChatGPT A 紧凑 A 78% 42%", content(.live(snapshot), label: "A", mode: .compact)),
-            ("ChatGPT B 完整 B 5H 78% | W 42%", content(.live(snapshot), label: "B", mode: .full)),
-            ("ChatGPT B 紧凑 B 78% 42%", content(.live(snapshot), label: "B", mode: .compact)),
-            ("ChatGPT A 无数据 完整", content(.unavailable(.rpcFailed(.other)), label: "A", connection: .disconnected, mode: .full)),
-            ("ChatGPT A 无数据 紧凑", content(.unavailable(.rpcFailed(.other)), label: "A", connection: .disconnected, mode: .compact)),
-            ("ChatGPT A 缓存（前置警告）", content(.stale(cachedSnapshot, .rpcFailed(.other)), label: "A", mode: .full)),
-            ("DeepSeek 完整 DS CNY 123.45", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)),
-            ("DeepSeek 紧凑 DS CNY 123.45", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)),
-            ("DeepSeek 币种缺失 DS — 123.45", deepSeek(currency: nil, amount: Decimal(string: "123.45"), mode: .full)),
-            ("DeepSeek 缓存（同一金额 + 警告）", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), cached: true, mode: .full)),
-            ("DeepSeek 无余额 DS —（警告）", deepSeek(currency: nil, amount: nil, mode: .full)),
+            ("ChatGPT O1 78% 42%", content(.live(snapshot), code: "O1")),
+            ("ChatGPT O2 78% 42%（同宽度）", content(.live(snapshot), code: "O2")),
+            ("ChatGPT O1 无数据（O1 — —）", content(.unavailable(.rpcFailed(.other)), code: "O1", connection: .disconnected)),
+            ("ChatGPT O1 缓存（前置警告，宽度不变）", content(.stale(cachedSnapshot, .rpcFailed(.other)), code: "O1")),
+            ("DeepSeek DS1 CNY 123.45", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"))),
+            ("DeepSeek DS1 — 123.45（币种缺失）", deepSeek(currency: nil, amount: Decimal(string: "123.45"))),
+            ("DeepSeek DS1 缓存（同一金额 + 警告）", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), cached: true)),
+            ("DeepSeek DS1 —（无余额，警告）", deepSeek(currency: nil, amount: nil)),
+            ("DeepSeek DS2（第二个账号）", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"), code: "DS2")),
+            ("不可用：请重新选择", MenuBarContentBuilder.make(source: .unavailable("请重新选择"), now: Self.anchor)),
         ]
         try write(try renderImage(rows, background: .light), named: "09-three-sources-light.png")
         try write(try renderImage(rows, background: .dark), named: "10-three-sources-dark.png")
@@ -146,6 +145,49 @@ final class MenuBarEvidenceRenderTests: XCTestCase {
             ("周剩余 0（已到）", content(live(fiveHourRemaining: 5 * 3600, weeklyRemaining: 0))),
         ]
         try write(try renderBarsDetail(weeklyRows, background: .light), named: "04-weekly-direction-light.png")
+    }
+
+    /// The rows above are drawn at their natural size. This one draws the same states
+    /// inside the frame the status item really hosts the label in (`itemWidth - padding`
+    /// by the menu bar thickness), which is where a squeezed layout would silently drop
+    /// the two time rows.
+    func testRenderInsideTheRealHostFrame() throws {
+        let live = live(fiveHourRemaining: 4 * 3600, weeklyRemaining: 3 * 86400)
+        let cached = UsageDisplay.stale(
+            UsageSnapshot(fiveHour: window(.fiveHour, remaining: 4 * 3600, remainingPercent: 78),
+                          weekly: window(.weekly, remaining: 3 * 86400, remainingPercent: 42),
+                          fetchedAt: Self.anchor, source: .cached),
+            .rpcFailed(.timedOut(method: "account/rateLimits/read")))
+
+        let rows: [(String, MenuBarContent)] = [
+            ("宿主尺寸 正常", content(live)),
+            ("宿主尺寸 缓存（前置警告）", content(cached)),
+            ("宿主尺寸 DeepSeek", deepSeek(currency: "CNY", amount: Decimal(string: "123.45"))),
+        ]
+
+        let hostWidth = MenuBarLabelMetrics.itemWidth - MenuBarLabelMetrics.horizontalPadding
+        let hostHeight = NSStatusBar.system.thickness
+        for dark in [false, true] {
+            let background: Background = dark ? .dark : .light
+            let panel = VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 10) {
+                        Text(row.0)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 150, alignment: .leading)
+                        MenuBarLabelContent(content: row.1)
+                            .frame(width: hostWidth, height: hostHeight, alignment: .leading)
+                            .background(background.color, in: RoundedRectangle(cornerRadius: 3))
+                    }
+                }
+            }
+            .padding(14)
+            .background(background.color)
+            .environment(\.colorScheme, dark ? .dark : .light)
+            let data = try rasterise(panel, appearance: background.appearance, scale: 6)
+            try write(data, named: "11-host-frame-\(dark ? "dark" : "light").png")
+        }
     }
 
     // MARK: Rendering

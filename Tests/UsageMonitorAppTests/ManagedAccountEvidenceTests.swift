@@ -32,6 +32,13 @@ final class ManagedAccountEvidenceTests: XCTestCase {
             try render(AddManagedAccountSheet(model: model, platform: .deepseek), size: CGSize(width: 508, height: 350), dark: dark)
                 .write(to: root.appendingPathComponent(dark ? "add-api-dark.png" : "add-api-light.png"))
         }
+        // The menu bar source list carries the same account codes the menu bar shows
+        // (1.6.8), including one code per Google account.
+        navigation.section = .menuBar
+        for dark in [false, true] {
+            try render(MingetSettingsView(model: model, menuBarPreferences: model.menuBarPreferences, onQuit: {}, navigation: navigation), size: CGSize(width: 780, height: 640), dark: dark)
+                .write(to: root.appendingPathComponent(dark ? "menubar-sources-dark.png" : "menubar-sources-light.png"))
+        }
         XCTAssertEqual(model.managedAccounts.count, 12)
         XCTAssertEqual(model.scheduleTargets.count, 6)
     }

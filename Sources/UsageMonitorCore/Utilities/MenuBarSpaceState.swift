@@ -1,47 +1,33 @@
 import Foundation
 import CoreGraphics
 
-/// How much of the two-quota title the menu bar can currently show.
-/// The production progression is full → compact. Both modes retain both quota values and
-/// both reset-time rows; the old plain-`5H` fallback is intentionally unavailable.
+/// The menu bar label has exactly one presentation: a fixed-width item
+/// whose length never changes with its content.
+///
+/// Earlier versions stepped the label down full → compact when the menu
+/// bar ran out of room. Since 1.6.8 the item's width is constant, so
+/// there is nothing left to step down to: when macOS cannot render the
+/// item at all — hidden, over the sensor housing, off the visible area,
+/// or clipped — the app opens the detail window instead of showing a
+/// partial label.
 public enum MenuBarSpaceMode: String, CaseIterable, Codable, Sendable {
-    /// `5H 78% | W 42%`, with both time rows.
-    case full
-    /// `5H 78% W 42%`, with both time rows.
-    case compact
-    public var nextSmaller: MenuBarSpaceMode? {
-        switch self {
-        case .full: return .compact
-        case .compact: return nil
-        }
-    }
-
-    public var nextLarger: MenuBarSpaceMode? {
-        switch self {
-        case .compact: return .full
-        case .full: return nil
-        }
-    }
+    case fixed
 
     /// Fixed display hint used by tests and diagnostics.
-    public var description: String {
-        switch self {
-        case .full: return "full"
-        case .compact: return "compact"
-        }
-    }
+    public var description: String { "fixed" }
 }
 
-/// Everything the decision needs, expressed as plain values so the whole state machine is
-/// testable without AppKit.
+/// Everything the decision needs, expressed as plain values so the
+/// whole state machine is testable without AppKit.
 ///
-/// The values come from `NSStatusItem.button.window?.frame`, the hosting `NSScreen`'s
-/// `frame`, `safeAreaInsets`, `auxiliaryTopLeftArea` and `auxiliaryTopRightArea`. No
-/// private API is involved and no system-wide menu bar setting is touched.
+/// The values come from `NSStatusItem.button.window?.frame`, the
+/// hosting `NSScreen`'s `frame`, `safeAreaInsets`,
+/// `auxiliaryTopLeftArea` and `auxiliaryTopRightArea`. No private API
+/// is involved and no system-wide menu bar setting is touched.
 public struct MenuBarSpaceFacts: Equatable, Sendable {
 
-    /// The status item's real frame, or nil when it has no window at all (macOS has hidden
-    /// it because there is no room).
+    /// The status item's real frame, or nil when it has no window at
+    /// all (macOS has hidden it because there is no room).
     public var itemFrame: CGRect?
     /// Frame of the screen hosting the item; nil when it cannot be determined.
     public var screenFrame: CGRect?
@@ -51,7 +37,8 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
     public var auxiliaryTopLeftArea: CGRect
     /// `auxiliaryTopRightArea`: menu bar area right of the notch.
     public var auxiliaryTopRightArea: CGRect
-    /// Width the app asked the status item to have, for the mode currently applied.
+    /// Width the app asked the status item to have, so macOS clipping
+    /// the item below that width is detectable.
     public var requestedWidth: CGFloat
 
     public init(itemFrame: CGRect?,
@@ -71,8 +58,8 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
     /// A display has a notch when its top safe-area inset is non-zero.
     public var isNotchedDisplay: Bool { safeAreaTop > 0 }
 
-    /// Horizontal span covered by the sensor housing, derived from the two auxiliary areas.
-    /// nil on a display without a notch.
+    /// Horizontal span covered by the sensor housing, derived from the
+    /// two auxiliary areas. nil on a display without a notch.
     public var notchSpan: ClosedRange<CGFloat>? {
         guard isNotchedDisplay,
               auxiliaryTopLeftArea.width > 0,
@@ -89,8 +76,9 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
         return frame.width > 1 && frame.height > 1
     }
 
-    /// Height of the menu bar band, taken from the safe-area inset and the auxiliary areas.
-    /// Falls back to the standard 24 pt when the screen reports none of them.
+    /// Height of the menu bar band, taken from the safe-area inset and
+    /// the auxiliary areas. Falls back to the standard 24 pt when the
+    /// screen reports none of them.
     public var menuBarBandHeight: CGFloat {
         let candidate = max(safeAreaTop, auxiliaryTopLeftArea.height, auxiliaryTopRightArea.height)
         return candidate > 0 ? candidate : 24
@@ -102,8 +90,9 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
         return frame.maxX > span.lowerBound && frame.minX < span.upperBound
     }
 
-    /// The item is outside the visible menu bar band of its screen: pushed off either edge,
-    /// above the bar, below it, or simply not laid out.
+    /// The item is outside the visible menu bar band of its screen:
+    /// pushed off either edge, above the bar, below it, or simply not
+    /// laid out.
     public var isOutsideVisibleArea: Bool {
         guard let frame = itemFrame, let screen = screenFrame else { return true }
         let tolerance: CGFloat = 0.5
@@ -114,7 +103,8 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
         return false
     }
 
-    /// macOS clamped the item to less room than was requested, so the content is cut off.
+    /// macOS clamped the item to less room than was requested, so the
+    /// content is cut off.
     public var isTruncated: Bool {
         guard let frame = itemFrame, requestedWidth > 0 else { return false }
         return frame.width < requestedWidth - 1
@@ -134,116 +124,25 @@ public struct MenuBarSpaceFacts: Equatable, Sendable {
 
 /// Menu bar space state machine.
 ///
-/// Two rules keep the display from flapping between modes:
-/// - **Shrink immediately.** The moment the item is not rendered (hidden by macOS, over the
-///   notch, off the visible area, or truncated), the state steps down one level per
-///   observation, stopping at compact so both quota values remain visible.
-/// - **Grow cautiously.** Growth is one step, only after `growConfirmations` consecutive
-///   observations where the item rendered cleanly. One failed growth attempt blocks further
-///   growth until a space event happens (screen change, wake, or the item's own frame
-///   moving), so a tight menu bar cannot produce a grow/shrink loop.
+/// The label's width is constant (1.6.8), so one geometry observation
+/// can only answer whether macOS can currently render the item at
+/// all. When it cannot, the caller opens the detail window; the
+/// caller owns the timing guards — a settle delay after its own
+/// resize, and opening the window only once — which keeps a transient
+/// layout pass from popping a window.
 public final class MenuBarSpaceStateMachine {
 
-    public struct Config: Equatable, Sendable {
-        /// Consecutive clean observations required before growing one step.
-        public var growConfirmations: Int
-        public init(growConfirmations: Int = 3) {
-            self.growConfirmations = max(1, growConfirmations)
-        }
-        public static let standard = Config(growConfirmations: 3)
-    }
-
     public enum Decision: Equatable, Sendable {
-        case keep(MenuBarSpaceMode)
-        case change(to: MenuBarSpaceMode, reason: Reason)
+        case keep
+        case openDetailWindow
     }
 
-    public enum Reason: String, Sendable {
-        case hiddenOrOccluded
-        case truncated
-        case confirmedRoomToGrow
-    }
+    public init() {}
 
-    public let config: Config
-    public private(set) var mode: MenuBarSpaceMode = .full
-
-    private var renderedStreak = 0
-    private var growthBlocked = false
-    private var lastDecision: Decision?
-
-    public init(config: Config = .standard, initialMode: MenuBarSpaceMode = .full) {
-        self.config = config
-        self.mode = initialMode
-    }
-
-    /// Feeds one observation and returns the decision. Pure with respect to the caller:
-    /// nothing here touches AppKit.
+    /// Feeds one observation and returns the decision. Pure with
+    /// respect to the caller: nothing here touches AppKit.
     @discardableResult
     public func apply(_ facts: MenuBarSpaceFacts) -> Decision {
-        // Truncation means macOS gave the item less room than asked: step down instead of
-        // showing cut-off content. Checked before the generic not-rendered path so the
-        // decision names the truncation, which is the actionable reason.
-        if facts.isTruncated, let smaller = mode.nextSmaller {
-            renderedStreak = 0
-            growthBlocked = true
-            return commit(.change(to: smaller, reason: .truncated))
-        }
-
-        guard facts.isRendered else {
-            renderedStreak = 0
-            growthBlocked = true
-            guard let smaller = mode.nextSmaller else {
-                let decision = Decision.keep(mode)
-                lastDecision = decision
-                return decision
-            }
-            return commit(.change(to: smaller, reason: .hiddenOrOccluded))
-        }
-
-        renderedStreak += 1
-
-        if growthBlocked || renderedStreak < config.growConfirmations {
-            let decision = Decision.keep(mode)
-            lastDecision = decision
-            return decision
-        }
-        guard let larger = mode.nextLarger else {
-            let decision = Decision.keep(mode)
-            lastDecision = decision
-            return decision
-        }
-        // Optimistically try the larger mode; if macOS then hides the item, the next
-        // observation shrinks it back and blocks growth until a space event.
-        return commit(.change(to: larger, reason: .confirmedRoomToGrow))
-    }
-
-    /// Re-enables growth after a space event: the screen set changed, the display woke, or
-    /// the status item moved. This is the only way out of a growth block, which is what
-    /// stops the mode from flapping on a permanently tight menu bar.
-    public func noteSpaceEvent() {
-        growthBlocked = false
-        renderedStreak = 0
-    }
-
-    /// Forces a mode, e.g. when the user picks a fixed display in settings.
-    public func force(_ newMode: MenuBarSpaceMode) {
-        mode = newMode
-        renderedStreak = 0
-        lastDecision = .keep(newMode)
-    }
-
-    private func commit(_ decision: Decision) -> Decision {
-        if case .change(let newMode, _) = decision { mode = newMode }
-        lastDecision = decision
-        return decision
-    }
-
-    /// Reason of the last decision, for diagnostics.
-    public var lastDecisionDescription: String {
-        switch lastDecision {
-        case .keep(let mode): return "keep(\(mode.description))"
-        case .change(let mode, let reason)?: return "change(\(mode.description), \(reason.rawValue))"
-        case nil: return "none"
-        }
+        facts.isRendered ? .keep : .openDetailWindow
     }
 }

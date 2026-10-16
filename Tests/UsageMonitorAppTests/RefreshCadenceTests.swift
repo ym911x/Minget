@@ -372,18 +372,6 @@ final class RefreshCadenceTests: XCTestCase {
     private func waitForPreferencePropagation() {
         RunLoop.main.run(until: Date().addingTimeInterval(0.05))
     }
-
-    // MARK: Width remeasure rule
-
-    func testShouldRemeasureOnlyOnSignatureChange() {
-        XCTAssertTrue(StatusItemController.shouldRemeasure(cachedSignature: nil, newSignature: "full#A 5H 78% | W 42%#none"))
-        XCTAssertFalse(StatusItemController.shouldRemeasure(cachedSignature: "full#A 5H 78% | W 42%#none",
-                                                            newSignature: "full#A 5H 78% | W 42%#none"))
-        XCTAssertTrue(StatusItemController.shouldRemeasure(cachedSignature: "full#A 5H 78% | W 42%#none",
-                                                           newSignature: "full#A 5H 79% | W 42%#none"))
-        XCTAssertTrue(StatusItemController.shouldRemeasure(cachedSignature: "full#A 5H 78% | W 42%#none",
-                                                           newSignature: "full#A 5H 78% | W 42%#warning"))
-    }
 }
 
 private final class WakeClient: CodexAppServerProviding {

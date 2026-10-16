@@ -41,24 +41,17 @@ public enum UsageFormatting {
         return "\(Int(window.remainingPercent.rounded()))%"
     }
 
-    /// Full ChatGPT menu bar text: `A 5H 78% | W 42%` (UI_SPEC.md §8).
+    /// The menu bar quota text since 1.6.8: `O1 78% 42%` — the account code in front,
+    /// then both remaining percentages. A window with no data keeps its placeholder, so
+    /// the item always names the account it is showing.
     ///
-    /// A window with no data shows `A 5H — | W —`; the account's short label is always
-    /// present, so the user can tell which account the item is showing.
-    public static func labeledMenuBarTitle(shortLabel: String,
-                                           fiveHour: RateLimitWindow?,
-                                           weekly: RateLimitWindow?) -> String {
-        let prefix = shortLabel.isEmpty ? "" : "\(shortLabel) "
-        return "\(prefix)5H \(menuBarPercentText(fiveHour)) | W \(menuBarPercentText(weekly))"
-    }
-
-    /// Compact ChatGPT menu bar text: `A 78% 42%`. Both quota values survive; only the
-    /// separator and the `5H`/`W` words are dropped.
-    public static func labeledCompactMenuBarTitle(shortLabel: String,
-                                                  fiveHour: RateLimitWindow?,
-                                                  weekly: RateLimitWindow?) -> String {
-        let prefix = shortLabel.isEmpty ? "" : "\(shortLabel) "
-        return "\(prefix)\(menuBarPercentText(fiveHour)) \(menuBarPercentText(weekly))"
+    /// v1.0.2 requirement 4: the quota text carries no marker at all. The single
+    /// abnormal marker is decided by `MenuBarContentBuilder` and drawn in front of this
+    /// text, so a cached snapshot can never produce a trailing `⚠` on top of a leading one.
+    public static func menuBarQuotaTitle(code: String,
+                                            fiveHour: RateLimitWindow?,
+                                            weekly: RateLimitWindow?) -> String {
+        "\(code) \(menuBarPercentText(fiveHour)) \(menuBarPercentText(weekly))"
     }
 
     /// Fixed two decimals with no grouping, as UI_SPEC.md §8 requires for the DeepSeek menu
@@ -74,21 +67,16 @@ public enum UsageFormatting {
         return formatter.string(from: NSDecimalNumber(decimal: value)) ?? menuBarPlaceholder
     }
 
-    /// Full DeepSeek menu bar text: `DS CNY 123.45`. With no currency reported the
-    /// position is kept but explicitly unnamed: `DS — 123.45`. No code is ever guessed.
-    public static func deepSeekMenuBarTitle(currency: String?, amount: Decimal?) -> String {
-        guard let amount else { return "DS \(menuBarPlaceholder)" }
+    /// DeepSeek menu bar text: `DS1 CNY 123.45`. With no currency reported the
+    /// position is kept but explicitly unnamed: `DS1 — 123.45`. No code is ever
+    /// guessed. A missing balance shows `DS1 —`.
+    public static func deepSeekMenuBarTitle(code: String,
+                                               currency: String?,
+                                               amount: Decimal?) -> String {
+        guard let amount else { return "\(code) \(menuBarPlaceholder)" }
         let text = menuBarAmount(amount)
-        guard let currency, !currency.isEmpty else { return "DS \(menuBarPlaceholder) \(text)" }
-        return "DS \(currency) \(text)"
-    }
-
-    /// Compact DeepSeek menu bar text: `DS CNY 123.45`.
-    public static func compactDeepSeekMenuBarTitle(currency: String?, amount: Decimal?) -> String {
-        guard let amount else { return "DS \(menuBarPlaceholder)" }
-        let text = menuBarAmount(amount)
-        guard let currency, !currency.isEmpty else { return "DS \(menuBarPlaceholder) \(text)" }
-        return "DS \(currency) \(text)"
+        guard let currency, !currency.isEmpty else { return "\(code) \(menuBarPlaceholder) \(text)" }
+        return "\(code) \(currency) \(text)"
     }
 
     // MARK: Panel

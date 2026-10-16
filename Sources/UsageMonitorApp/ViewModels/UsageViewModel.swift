@@ -249,14 +249,17 @@ public final class UsageViewModel: ObservableObject {
     ///
     /// `now` is read per frame rather than accumulated, so sleep, a delayed main thread or a
     /// system clock change can never leave the rows drifting away from the real time.
-    public func menuBarContent(for mode: MenuBarSpaceMode, now: Date = Date()) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: menuBarSource(), now: now, mode: mode)
+    public func menuBarContent(now: Date = Date()) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: menuBarSource(), now: now)
     }
 
     /// The single resolved source the menu bar currently shows.
     ///
     /// The selection is validated when it is loaded, so a stale or hand-edited preference
     /// falls back to account A rather than to "no source".
+    ///
+    /// The unavailable messages are deliberately short: since 1.6.8 the item has one
+    /// fixed width, so every renderable text must fit the same budget.
     public func menuBarSource() -> MenuBarSource {
         if accountRegistry != nil {
             if managedAccounts.isEmpty { return .unavailable("请添加账号") }
@@ -268,42 +271,63 @@ public final class UsageViewModel: ObservableObject {
             }
             if !exists {
                 let removed = accountDefaults.stringArray(forKey: AccountRegistry.removedSelectionsKey) ?? []
-                return .unavailable(removed.contains(menuBarPreferences.selection.storageValue) ? "账号已移除，请重新选择" : "请选择菜单栏账号")
+                return .unavailable(removed.contains(menuBarPreferences.selection.storageValue) ? "请重新选择" : "请选择账号")
             }
         }
         switch menuBarPreferences.selection {
         case .apiAccount(let id):
-            return .deepSeek(deepSeekMenuBarContent(report: managedAPIStates.first { $0.id == id }?.report))
+            return .deepSeek(deepSeekMenuBarContent(code: menuBarCode(for: .apiAccount(id)),
+                                                       report: managedAPIStates.first { $0.id == id }?.report))
         case .profile(let id):
             if let state = profileStates.first(where: { $0.profile.id == id }) {
-                return .chatGPT(shortLabel: state.profile.shortLabel,
-                                display: state.display,
-                                connectionState: state.connectionState)
+                return .chatGPT(code: menuBarCode(for: .profile(id)),
+                                 display: state.display,
+                                 connectionState: state.connectionState)
             }
             let fallback = profileStates.first
-            return .chatGPT(shortLabel: fallback?.profile.shortLabel ?? "",
-                            display: fallback?.display ?? .unavailable(.rpcFailed(.other)),
-                            connectionState: fallback?.connectionState ?? .idle)
+            return .chatGPT(code: menuBarCode(for: .profile(fallback?.profile.id ?? id)),
+                             display: fallback?.display ?? .unavailable(.rpcFailed(.other)),
+                             connectionState: fallback?.connectionState ?? .idle)
         case .google(let id):
             let state = google.accounts.first { $0.id == id }
             let groupID = menuBarPreferences.googleGroupIDs[id]
             let group = state?.snapshot?.groups.first { $0.id == groupID }
-            let position = google.accounts.firstIndex { $0.id == id }.map { $0 + 1 }
-            return .antigravity(shortLabel: position.map { "G\($0)" } ?? "G",
-                                group: group, isCached: state?.isCached ?? true, missingGroup: groupID != nil && group == nil)
+            return .antigravity(code: menuBarCode(for: .google(id)),
+                                 group: group, isCached: state?.isCached ?? true,
+                                 missingGroup: groupID != nil && group == nil)
         case .deepSeek:
-            return .deepSeek(deepSeekMenuBarContent())
+            return .deepSeek(deepSeekMenuBarContent(code: menuBarCode(for: .deepSeek)))
         }
     }
 
-    /// Identity of everything that can change the status item's width, across all modes. The
-    /// countdown is deliberately absent: the item is re-measured only when its content or its
-    /// warning changes, not once a second.
-    public var menuBarSizeSignature: String {
-        let now = Date()
-        return MenuBarSpaceMode.allCases
-            .map { menuBarContent(for: $0, now: now).sizeSignature }
-            .joined(separator: "|")
+    /// The code every surface shows for one menu bar selection: `O1` for a
+    /// ChatGPT account, `G1` for a Gemini account, `DS1` for DeepSeek.
+    ///
+    /// The number comes from the account's stored ordinal when the registry is
+    /// available, so a code survives renames and does not reshuffle when another
+    /// account is removed. Without a registry the position in the current list
+    /// stands in, which is the only order the legacy mode has. The menu bar and
+    /// the settings list resolve the code through this one method, so the two
+    /// can never disagree.
+    public func menuBarCode(for selection: MenuBarPreferences.Selection) -> String {
+        switch selection {
+        case .profile(let id):
+            return "O" + String(ordinal(forAccount: id) ?? (coordinator.profileIDs.firstIndex(of: id).map { $0 + 1 } ?? 1))
+        case .google(let email):
+            return "G" + String(ordinal(forGoogleAccount: email) ?? (google.accounts.firstIndex { $0.id == email }.map { $0 + 1 } ?? 1))
+        case .deepSeek:
+            return "DS" + String(ordinal(forAccount: "deepseek") ?? 1)
+        case .apiAccount(let id):
+            return "DS" + String(ordinal(forAccount: id) ?? 1)
+        }
+    }
+
+    private func ordinal(forAccount id: String) -> Int? {
+        managedAccounts.first { $0.id == id }?.ordinal
+    }
+
+    private func ordinal(forGoogleAccount email: String) -> Int? {
+        managedAccounts.first { $0.googleEmail == email }?.ordinal
     }
 
     /// Current adaptive decision for the source shown in the menu bar. A nil interval means
@@ -374,22 +398,24 @@ public final class UsageViewModel: ObservableObject {
 
     /// The DeepSeek half of the menu bar, resolved from the current report.
     ///
-    /// A stale report keeps its amount and adds the warning marker; a report with nothing
-    /// attributable shows `DS —` with a warning. A zero balance can never be produced here.
-    private func deepSeekMenuBarContent(report input: ProviderReport? = nil) -> MenuBarDeepSeekContent {
+    /// A stale report keeps its amount and adds the warning marker; a report with
+    /// nothing attributable shows `DS1 —` with a warning. A zero balance can
+    /// never be produced here.
+    private func deepSeekMenuBarContent(code: String, report input: ProviderReport? = nil) -> MenuBarDeepSeekContent {
         guard let report = input ?? deepSeekReport else {
-            return MenuBarDeepSeekContent(currency: nil, amount: nil, isCached: false)
+            return MenuBarDeepSeekContent(code: code, currency: nil, amount: nil, isCached: false)
         }
         let isCached = report.connection == .stale
         let usable = report.connection == .connected || report.connection == .stale
         guard usable, !report.balances.isEmpty else {
-            return MenuBarDeepSeekContent(currency: nil, amount: nil, isCached: isCached)
+            return MenuBarDeepSeekContent(code: code, currency: nil, amount: nil, isCached: isCached)
         }
         let resolution = DeepSeekMenuBarResolver.resolve(balances: report.balances,
                                                          savedCurrency: menuBarPreferences.deepSeekCurrency)
-        return MenuBarDeepSeekContent(currency: resolution.currency,
-                                      amount: resolution.amount,
-                                      isCached: isCached)
+        return MenuBarDeepSeekContent(code: code,
+                                       currency: resolution.currency,
+                                       amount: resolution.amount,
+                                       isCached: isCached)
     }
 
     // MARK: - Lifecycle

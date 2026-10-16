@@ -118,13 +118,13 @@ final class AntigravityProviderTests: XCTestCase {
     }
     func testGoogleMenuBarShowsOnlyReportedPeriods() throws {
         let groups = try parse(#"{"groups":[{"displayName":"Gemini","buckets":[{"window":"5h","remainingFraction":0.8}]}]}"#)
-        let content = MenuBarContentBuilder.make(source: .antigravity(shortLabel: "G1", group: groups[0], isCached: false), now: Date(), mode: .full)
-        XCTAssertEqual(content.text, "G1 Gemini 5H 80%")
+        let content = MenuBarContentBuilder.make(source: .antigravity(code: "G1", group: groups[0], isCached: false), now: Date())
+        XCTAssertEqual(content.text, "G1 80%")
         XCTAssertEqual(content.fiveHour.segmentCount, 5)
         XCTAssertEqual(content.weekly.segmentCount, 0)
         XCTAssertFalse(content.accessibilityText.contains("周额度"))
         XCTAssertEqual(content.attention, .none)
-        let missing = MenuBarContentBuilder.make(source: .antigravity(shortLabel: "G1", group: nil, isCached: true), now: Date(), mode: .full)
+        let missing = MenuBarContentBuilder.make(source: .antigravity(code: "G1", group: nil, isCached: true), now: Date())
         XCTAssertFalse(missing.showsTimeBars)
         XCTAssertEqual(missing.attention, .warning)
     }
@@ -145,8 +145,8 @@ final class AntigravityProviderTests: XCTestCase {
     }
 
     func testMissingSelectedGroupStaysUnavailable() {
-        let content = MenuBarContentBuilder.make(source: .antigravity(shortLabel: "G2", group: nil,
-            isCached: false, missingGroup: true), now: Date(), mode: .full)
+        let content = MenuBarContentBuilder.make(source: .antigravity(code: "G2", group: nil,
+            isCached: false, missingGroup: true), now: Date())
         XCTAssertEqual(content.text, "G2 额度组不可用")
         XCTAssertEqual(content.attention, .warning)
         XCTAssertFalse(content.showsTimeBars)

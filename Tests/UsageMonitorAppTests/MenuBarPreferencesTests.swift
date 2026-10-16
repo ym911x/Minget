@@ -114,16 +114,16 @@ final class MenuBarPreferencesTests: XCTestCase {
         let preferences = MenuBarPreferences(defaults: defaults)
         let model = makeModel(defaults: defaults, preferences: preferences)
 
-        guard case .chatGPT(let labelA, _, _) = model.menuBarSource() else {
+        guard case .chatGPT(let codeA, _, _) = model.menuBarSource() else {
             return XCTFail("account A must be the default source")
         }
-        XCTAssertEqual(labelA, "A")
+        XCTAssertEqual(codeA, "O1")
 
         preferences.selection = .profile("chatgpt-b")
-        guard case .chatGPT(let labelB, _, _) = model.menuBarSource() else {
+        guard case .chatGPT(let codeB, _, _) = model.menuBarSource() else {
             return XCTFail("account B must be selectable")
         }
-        XCTAssertEqual(labelB, "B")
+        XCTAssertEqual(codeB, "O2")
 
         preferences.selection = .deepSeek
         guard case .deepSeek = model.menuBarSource() else {
@@ -136,16 +136,16 @@ final class MenuBarPreferencesTests: XCTestCase {
         let preferences = MenuBarPreferences(defaults: defaults)
         let model = makeModel(defaults: defaults, preferences: preferences)
 
-        let a = model.menuBarContent(for: .full)
-        XCTAssertTrue(a.text.hasPrefix("A "), a.text)
+        let a = model.menuBarContent()
+        XCTAssertTrue(a.text.hasPrefix("O1 "), a.text)
 
         preferences.selection = .profile("chatgpt-b")
-        let b = model.menuBarContent(for: .full)
-        XCTAssertTrue(b.text.hasPrefix("B "), b.text)
+        let b = model.menuBarContent()
+        XCTAssertTrue(b.text.hasPrefix("O2 "), b.text)
 
         preferences.selection = .deepSeek
-        let deepSeek = model.menuBarContent(for: .full)
-        XCTAssertEqual(deepSeek.text, "DS —", "no balance yet, and never a fabricated zero")
+        let deepSeek = model.menuBarContent()
+        XCTAssertEqual(deepSeek.text, "DS1 —", "no balance yet, and never a fabricated zero")
         XCTAssertEqual(deepSeek.attention, .warning)
         XCTAssertFalse(deepSeek.showsTimeBars, "the DeepSeek source shows no reset-time rows")
         XCTAssertNotEqual(a.sizeSignature, deepSeek.sizeSignature)

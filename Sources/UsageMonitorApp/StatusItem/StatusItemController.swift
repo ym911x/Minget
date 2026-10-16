@@ -3,28 +3,6 @@ import Combine
 import SwiftUI
 import UsageMonitorCore
 
-/// Widths the two production menu bar modes need, measured from the real SwiftUI content.
-///
-/// Measuring the actual hosting view is what makes the truncation check in
-/// `MenuBarSpaceFacts` meaningful: the state machine compares the width the app asked for
-/// with the width macOS actually gave the item.
-enum MenuBarLabelMetrics {
-
-    static let horizontalPadding: CGFloat = 12
-
-    /// Measures the natural width of each mode. Re-measured when the underlying numbers
-    /// change, because "78%" and "100%" differ by a character.
-    static func widths(labelProvider: (MenuBarSpaceMode) -> AnyView) -> [MenuBarSpaceMode: CGFloat] {
-        var result: [MenuBarSpaceMode: CGFloat] = [:]
-        for mode in MenuBarSpaceMode.allCases {
-            let hosting = NSHostingView(rootView: labelProvider(mode))
-            hosting.frame = NSRect(origin: .zero, size: NSSize(width: 400, height: NSStatusBar.system.thickness))
-            result[mode] = max(18, ceil(hosting.fittingSize.width) + horizontalPadding)
-        }
-        return result
-    }
-}
-
 /// Owns the `NSStatusItem`, the detail popover and the detail window.
 ///
 /// v1.1 replaces the previous `MenuBarExtra` with a directly managed `NSStatusItem` so the
@@ -32,14 +10,14 @@ enum MenuBarLabelMetrics {
 /// - the item is registered with `NSStatusBar.system.statusItem(withLength:)`, so it is a
 ///   real system menu bar item rather than an unregistered `NSStatusItem` instance,
 /// - a stable `autosaveName` keeps the item where the user put it across relaunches,
-/// - the label steps down full → compact as the available menu bar space shrinks,
-///   with hysteresis in `MenuBarSpaceStateMachine` so the mode cannot flap,
+/// - the label has had one fixed width since 1.6.8, so its length never changes with
+///   the values it shows; when macOS cannot render the item at all — hidden, over the
+///   sensor housing, off the visible area, or clipped — the detail window opens so the
+///   user still sees the data,
 /// - the popover reuses the same SwiftUI detail view as before; no extra floating window is
 ///   created for it,
 /// - a click outside the popover closes it and still reaches its original target
 ///   (v1.0.2 requirement 4), while the regular detail window keeps normal window behaviour,
-/// - when the item is not visible at launch (occluded by the notch or hidden by macOS), the
-///   detail window opens automatically so the user still has a way to see the data,
 /// - `uninstall` reverses everything at exit: the geometry monitor stops, the popover and
 ///   the detail window close, and the item is handed back to the system status bar.
 ///
@@ -70,21 +48,14 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private var model: UsageViewModel?
     private var lastGoogleAccountCount = 0
     private var stateMachine = MenuBarSpaceStateMachine()
-    /// Widths the two modes were last measured at. `private(set)` so the wiring tests can
-    /// prove the item is sized from a measurement rather than from the per-mode fallback.
-    private(set) var widths: [MenuBarSpaceMode: CGFloat] = [:]
-    /// Signature of the content the current widths were measured from. `private(set)` so the
-    /// wiring tests can prove a time-only update does not invalidate it.
-    private(set) var labelSignature: String?
     private var monitor: MenuBarSpaceMonitor?
     private var cancellables: Set<AnyCancellable> = []
     private var hasAutoOpenedDetailWindow = false
-    /// Width currently applied to the status item. `private(set)` for the wiring tests.
+    /// Width currently applied to the status item. `private(set)` for the wiring
+    /// tests, which prove the item is sized from the fixed label width.
     private(set) var appliedWidth: CGFloat = 0
     /// Until this moment, frame changes to our own window are not treated as space events.
     var selfResizeSettlesAt = Date.distantPast
-
-    var currentMode: MenuBarSpaceMode { stateMachine.mode }
 
     /// Introspection for the wiring tests: the item is registered and has content.
     var isInstalled: Bool { statusItem != nil }
@@ -135,26 +106,24 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         button.action = #selector(statusItemClicked(_:))
         button.sendAction(on: [.leftMouseDown, .rightMouseDown])
 
-        // Measure before the first paint. `apply` then sizes the item from the real label
-        // content instead of from the per-mode fallback, and the first geometry check has a
-        // real baseline to compare the granted width against (v1.0.2 §3.2, §3.3).
-        measureWidths(for: model)
-        apply(mode: stateMachine.mode)
+        // Size the item from the fixed label width before the first paint, so the
+        // first geometry check has a real baseline to compare the granted width
+        // against (v1.0.2 §3.3). The width never changes after this; the label
+        // observes the model itself.
+        apply()
 
         let monitor = MenuBarSpaceMonitor(controller: self, interval: Self.geometryCheckInterval)
         self.monitor = monitor
         monitor.start()
 
-        // Re-measure as soon as the displayed content changes instead of waiting for the
-        // periodic check, so a width change (78% → 100%) never shows a stale-sized item.
-        // The hop through the main queue keeps the work off the model's mutation stack, and
-        // `noteContentMayHaveChanged` ignores the once-a-second tick, so the item is not
-        // re-measured every second (v1.0.2 §4.4).
+        // The label observes the model itself, so a content update costs the
+        // controller nothing. This sink only keeps a visible popover sized to
+        // its content, and notices a change in the Google account count for the
+        // same reason.
         model.objectWillChange
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
-                        self?.noteContentMayHaveChanged()
                         self?.resizeVisiblePanel()
                         if let self, let count = self.model?.google.accounts.count,
                            count != self.lastGoogleAccountCount {
@@ -171,7 +140,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }.store(in: &cancellables)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.initialLayoutDelay) { [weak self] in
-            MainActor.assumeIsolated { self?.checkGeometry(spaceEvent: true) }
+            MainActor.assumeIsolated { self?.checkGeometry() }
         }
     }
 
@@ -196,84 +165,34 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
         statusItem = nil
         model = nil
-        widths = [:]
-        labelSignature = nil
         appliedWidth = 0
         hasAutoOpenedDetailWindow = false
         stateMachine = MenuBarSpaceStateMachine()
         selfResizeSettlesAt = .distantPast
     }
 
-    /// Requests a geometry check without assuming the width changed. Used by the geometry
-    /// monitor's own cadence; content-driven remeasurement goes through
-    /// `noteContentMayHaveChanged`.
-    func refreshLabel() {
-        monitor?.requestCheck()
-    }
-
-    /// Called after any model change, including the clock tick. The item is
-    /// re-measured only when the text or the warning marker actually changed, so a pure time
-    /// update costs one string comparison and no layout work (v1.0.2 §4.4).
-    func noteContentMayHaveChanged() {
-        guard let model, statusItem != nil else { return }
-        let signature = model.menuBarSizeSignature
-        guard Self.shouldRemeasure(cachedSignature: labelSignature, newSignature: signature) else { return }
-        labelSignature = signature
-        measureWidths(for: model)
-        apply(mode: stateMachine.mode)
-    }
-
-    /// Pure remeasure rule, testable without AppKit: only a changed size signature — the
-    /// mode, the quota text or the warning marker — justifies rebuilding the hosting views.
-    static func shouldRemeasure(cachedSignature: String?, newSignature: String) -> Bool {
-        cachedSignature != newSignature
-    }
-
-    /// Measures the natural width of every mode from the real label content.
-    ///
-    /// This is the only place the widths come from, so the item is never sized by a guess for
-    /// longer than the first layout pass (v1.0.2 §3.2: the per-mode fallback is a starting
-    /// point that must be replaced by the real measurement).
-    private func measureWidths(for model: UsageViewModel) {
-        widths = MenuBarLabelMetrics.widths { mode in
-            AnyView(MenuBarLabelView(model: model, mode: mode))
-        }
-    }
-
     /// Notification-driven entry point from the monitor.
-    func checkGeometry(spaceEvent: Bool) {
-        guard let model, let item = statusItem else { return }
-        if spaceEvent { stateMachine.noteSpaceEvent() }
+    ///
+    /// The item's width is a fixed constant, so the only question a
+    /// geometry observation can answer is whether macOS can currently
+    /// render the item at all. When it cannot, the detail window opens
+    /// after our own resize has settled, so a transient layout pass
+    /// never pops a window.
+    func checkGeometry() {
+        guard let item = statusItem else { return }
 
-        let signature = model.menuBarSizeSignature
-        let previousWidths = widths
-        if Self.shouldRemeasure(cachedSignature: labelSignature, newSignature: signature) {
-            labelSignature = signature
-            measureWidths(for: model)
-        }
+        // The truncation rule compares the width macOS granted with the
+        // width the app asked for. The asked width is the fixed label
+        // width, so the baseline is honest from the first observation on;
+        // the pre-1.6.8 fallback-as-baseline made a roomy menu bar look
+        // truncated, which 1.1.2 forbids.
+        let facts = Self.facts(for: item, requestedWidth: appliedWidth)
+        // `requested` is what the app asked for; the frame width in
+        // `facts` is what macOS granted. Both are geometry only, no
+        // content.
+        Diagnostics.log("menu bar \(facts.diagnosticSummary) requested:\(Int(appliedWidth.rounded()))")
 
-        // The truncation rule compares the width macOS granted with the width the app asked
-        // for. Until the applied mode has a real measurement there is no honest baseline, so
-        // `requestedWidth` is 0 for that one observation and `isTruncated` stays false. Using
-        // the fallback as the baseline made a roomy menu bar look truncated and stepped the
-        // item down to a partial `5H` label, which 1.1.2 forbids.
-        let baseline = widths[stateMachine.mode] == nil ? 0 : appliedWidth
-        let facts = Self.facts(for: item, requestedWidth: baseline)
-        // `requested` is what the app measured and asked for; the frame width in `facts` is what
-        // macOS granted. Both are geometry only, no content.
-        Diagnostics.log("menu bar \(facts.diagnosticSummary) requested:\(Int(appliedWidth.rounded())) baseline:\(Int(baseline.rounded())) mode:\(stateMachine.mode.description)")
-
-        let decision = stateMachine.apply(facts)
-        if case .change(let mode, _) = decision {
-            apply(mode: mode)
-        } else if widths != previousWidths {
-            apply(mode: stateMachine.mode)
-        }
-
-        // Compact is the last honest menu-bar representation. If macOS still cannot render
-        // that complete two-quota label, reuse the existing hidden-item detail-window path
-        // after our resize has settled instead of leaving a clipped `5H` fragment behind.
-        if stateMachine.mode == .compact, !facts.isRendered {
+        if case .openDetailWindow = stateMachine.apply(facts) {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.selfResizeSettleInterval) { [weak self] in
                 MainActor.assumeIsolated { self?.openDetailWindowIfItemIsHidden() }
             }
@@ -282,9 +201,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     // MARK: - Display
 
-    private func apply(mode: MenuBarSpaceMode) {
+    /// Sizes the item to the fixed label width and installs the label.
+    /// Runs once at install: the width is a constant and the label
+    /// observes the model itself afterwards.
+    private func apply() {
         guard let statusItem else { return }
-        let width = widths[mode] ?? MenuBarLabelMetrics.fallbackWidth(for: mode)
+        let width = MenuBarLabelMetrics.itemWidth
         statusItem.length = width
         appliedWidth = width
         selfResizeSettlesAt = Date().addingTimeInterval(Self.selfResizeSettleInterval)
@@ -294,7 +216,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         button.title = ""
         button.subviews.forEach { $0.removeFromSuperview() }
         let padding = MenuBarLabelMetrics.horizontalPadding
-        let hosting = MenuBarHostingView(rootView: MenuBarLabelView(model: model, mode: mode))
+        let hosting = MenuBarHostingView(rootView: MenuBarLabelView(model: model))
         hosting.autoresizingMask = [.width, .height]
         hosting.frame = NSRect(x: padding / 2, y: 0,
                                width: max(1, width - padding),
@@ -695,7 +617,7 @@ final class MenuBarSpaceMonitor {
         // Screen set changed: a display was connected, removed, or the arrangement moved.
         observers.append((center, center.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                      object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.report(spaceEvent: true) }
+            MainActor.assumeIsolated { self?.report() }
         }))
 
         // The Mac woke: menu bar space is often renegotiated around sleep and wake. This
@@ -704,8 +626,8 @@ final class MenuBarSpaceMonitor {
         // (v1.0.2 §4.4).
         let workspaceCenter = NSWorkspace.shared.notificationCenter
         observers.append((workspaceCenter, workspaceCenter.addObserver(forName: NSWorkspace.didWakeNotification,
-                                                                      object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.report(spaceEvent: true) }
+                                                                       object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.report() }
         }))
 
         // The item moved or was resized. AppKit has no single frame-change notification, so
@@ -721,7 +643,7 @@ final class MenuBarSpaceMonitor {
 
         // Fallback check. Pure local geometry: no network, no private API.
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.report(spaceEvent: false) }
+            MainActor.assumeIsolated { self?.report() }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
@@ -746,31 +668,20 @@ final class MenuBarSpaceMonitor {
         guard moved else { return }
         let settlesAt = controller?.selfResizeSettlesAt ?? .distantPast
         guard Date() >= settlesAt else { return }
-        report(spaceEvent: true)
+        report()
     }
 
     /// Public hook so a model update can trigger a check without waiting for the timer.
     func requestCheck() {
-        report(spaceEvent: false)
+        report()
     }
 
-    private func report(spaceEvent: Bool) {
+    private func report() {
         guard let controller else { return }
         if let frame = controller.statusItem?.button?.window?.frame {
             lastObservedFrame = frame
         }
-        controller.checkGeometry(spaceEvent: spaceEvent)
-    }
-}
-
-extension MenuBarLabelMetrics {
-    /// Used before the first measurement completes, so the item is never zero-width.
-    static func fallbackWidth(for mode: MenuBarSpaceMode) -> CGFloat {
-        switch mode {
-        case .full: return 132
-        // Keep enough room for the compact two-quota title before the first real measurement.
-        case .compact: return 92
-        }
+        controller.checkGeometry()
     }
 }
 

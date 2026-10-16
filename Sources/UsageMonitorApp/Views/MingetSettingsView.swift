@@ -177,36 +177,48 @@ struct MingetSettingsView: View {
 
     @ViewBuilder private var menuBarSections: some View {
         Section {
-            // A vertical radio group in the fixed order account A, account B, DeepSeek. Only
-            // one source can be selected; the stored value is a stable profile id, never an
+            // A vertical radio group in the fixed order ChatGPT accounts,
+            // DeepSeek, then Gemini. Each row carries the account code
+            // (`O1`, `DS1`, `G1`) in front of its name — the same code the
+            // menu bar shows, resolved through the one method, so the list
+            // and the menu bar can never disagree. Only one source can be
+            // selected; the stored value is a stable profile id, never an
             // index (REQUIREMENTS.md §6.1).
             Picker("菜单栏显示", selection: $menuBarPreferences.selection) {
                 ForEach(model.coordinator.profileIDs, id: \.self) { profileID in
-                    Text(profileName(profileID)).tag(MenuBarPreferences.Selection.profile(profileID))
+                    Text("\(model.menuBarCode(for: .profile(profileID))) " + profileName(profileID))
+                        .tag(MenuBarPreferences.Selection.profile(profileID))
                 }
                 if model.accountRegistry == nil {
-                    Text(displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek)).tag(MenuBarPreferences.Selection.deepSeek)
+                    Text("\(model.menuBarCode(for: .deepSeek)) " + displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek))
+                        .tag(MenuBarPreferences.Selection.deepSeek)
                 } else {
                     ForEach(model.managedAccounts.filter { $0.platform == .deepseek && !$0.removalPending }) { row in
-                        Text(model.accountName(row)).tag(row.id == "deepseek" ? MenuBarPreferences.Selection.deepSeek : .apiAccount(row.id))
+                        let selection = row.id == "deepseek" ? MenuBarPreferences.Selection.deepSeek : .apiAccount(row.id)
+                        Text("\(model.menuBarCode(for: selection)) " + model.accountName(row))
+                            .tag(selection)
                     }
                     if case .profile(let id) = menuBarPreferences.selection, !model.coordinator.profileIDs.contains(id) {
-                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.profile(id))
+                        Text("\(model.menuBarCode(for: .profile(id))) 账号已移除，请重新选择")
+                            .tag(MenuBarPreferences.Selection.profile(id))
                     }
                     if case .apiAccount(let id) = menuBarPreferences.selection, !model.managedAccounts.contains(where: { $0.id == id && !$0.removalPending }) {
-                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.apiAccount(id))
+                        Text("\(model.menuBarCode(for: .apiAccount(id))) 账号已移除，请重新选择")
+                            .tag(MenuBarPreferences.Selection.apiAccount(id))
                     }
                     if menuBarPreferences.selection == .deepSeek, !model.managedAccounts.contains(where: { $0.id == "deepseek" && !$0.removalPending }) {
-                        Text("账号已移除，请重新选择").tag(MenuBarPreferences.Selection.deepSeek)
+                        Text("\(model.menuBarCode(for: .deepSeek)) 账号已移除，请重新选择")
+                            .tag(MenuBarPreferences.Selection.deepSeek)
                     }
                 }
                 ForEach(model.google.accounts) { state in
-                    Text(model.google.displayName(state.account) + " · Google")
+                    Text("\(model.menuBarCode(for: .google(state.id))) " + model.google.displayName(state.account) + " · Google")
                         .tag(MenuBarPreferences.Selection.google(state.id))
                 }
                 if case .google(let id) = menuBarPreferences.selection,
                    !model.google.accounts.contains(where: { $0.id == id }) {
-                    Text("Google 账号暂不可用").tag(MenuBarPreferences.Selection.google(id))
+                    Text("\(model.menuBarCode(for: .google(id))) Google 账号暂不可用")
+                        .tag(MenuBarPreferences.Selection.google(id))
                 }
             }
             .pickerStyle(.radioGroup)

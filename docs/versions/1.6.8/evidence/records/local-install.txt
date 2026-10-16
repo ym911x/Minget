@@ -1,0 +1,42 @@
+# 1.6.8 本机安装记录
+
+时间：2026-10-16 18:57 +08（本记录为**修正版**安装；当轮 18:25 曾装入过一版菜单栏布局有缺陷的 1.6.8，已由本次构建替换，正式路径当前为该版本）
+分支：codex/minget-1-6-8（起点 codex/minget-1-6-7@1a0a172，即 1.6.7 提交）
+
+## 正式路径
+
+- /Applications/Minget.app：CFBundleShortVersionString = 1.6.8
+- 可执行文件 SHA-256：97c2635dd0d2e5672474ce347a776cd6659a9fac5999643731f92d6bdf84be49
+- 签名：Minget Local Signing；codesign --verify --strict 通过（bundle 与两个内嵌可执行文件）
+- 个人目录兼容链接 `$HOME/Applications/Minget.app` 仍指向正式路径，未被替换成第二份实例
+
+## 构建
+
+- 命令：scripts/build.sh（Release，暂存/归档均在本机临时目录，安装后再次严格校验）
+- 安装前后可执行文件哈希一致（staged == installed，均为 97c2635d…）
+- 安装后重新启动 1.6.8（PID 56388），供真实界面复验
+
+## 替换前的 1.6.7 备份
+
+- 路径：$HOME/Applications/Minget Backups/1.6.7-before-1.6.8-20261016-182500/Minget.app
+- 可执行文件 SHA-256：a17b561023b3000b492ebd19b2d31d082c2d0d9deb2864f0de4120ebaed53672（与替换前的正式路径一致）
+- 替换前旧版已正常退出，安装后重新启动 1.6.8
+
+## 菜单栏几何（本轮固定常量）
+
+- `textBudget = ceil(实测宽度(O1 100% 100%) = 79) + 2 = 81 pt`（不因标记、中文回退、不可用文案或 DeepSeek 币种加宽）
+- `labelWidth = 81 pt`、`horizontalPadding = 12 pt`、`itemWidth = 93 pt`
+- 收缩下限：配额/回退文案 `textShrinkFactor = 0.85`，余额行 `balanceMinimumFactor = 0.75`
+
+## 源码指纹（本轮改动）
+
+- Sources/UsageMonitorCore/Utilities/MenuBarContent.swift  7a6c75fc5741f9cd5cb9f240f318aef052df1861589abb6380499ab66b83498e
+- Sources/UsageMonitorCore/Utilities/MenuBarSpaceState.swift  eecc005470c82dfc8a0156cc4c47788c6f0f936987150528f3cf3810e6a002eb
+- Sources/UsageMonitorCore/Utilities/UsageFormatting.swift  f0cd29896d8b89ed5f02cbdf6aaafdf4db545ffb1e65125ae3607f4975073703
+- Sources/UsageMonitorApp/Views/MenuBarLabelView.swift  adb300fc1dce5f55efd23c93d982d40a9d46cc80b22290d09f6f14d1e2b31f8b
+- Sources/UsageMonitorApp/StatusItem/StatusItemController.swift  cb436cf85db88f981c441a83ca576959e53a99fce7dd83e2b27483b9d5bc5356
+- Sources/UsageMonitorApp/ViewModels/UsageViewModel.swift  eda4ec609380a888008e7d266fe0940310edb68ad4ebf281c42440e1585d0e75
+- Sources/UsageMonitorApp/Views/MingetSettingsView.swift  1644a0fa69c066842a0769cb19852d7814c1a23374bdf0c5302d03e15f8757d0
+- Tests/UsageMonitorAppTests/MenuBarCodeTests.swift  74a3bc80950eddf053cf91963e83399598336235060c0e7dcfbbb76a1e1f372e
+- Tests/UsageMonitorAppTests/MenuBarLabelWiringTests.swift  a37a35b3bac0378a2c2e0bdccab448a4279ce28c3735992327ff4449ec6dd8a1
+- VERSION  90af28d20938c6eb31204d9096a5db8b593f1e976c0d4bda63a4821febe47146

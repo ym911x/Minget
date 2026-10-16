@@ -4,11 +4,15 @@ import XCTest
 @testable import UsageMonitorCore
 @testable import UsageMonitorApp
 
-/// v1.0.2 §8.1.9, §8.1.10 and §8.1.11: the width/no-extra-work/lifecycle behaviour that
-/// only the real App module can show.
+/// The width behaviour that only the real App module can show.
 ///
-/// These tests drive real AppKit objects inside the XCTest host process. They never start the
-/// Codex service and never touch the network or the keychain.
+/// Since 1.6.8 the status item's length is a fixed constant: the same for every
+/// source, every value and every warning state. These tests pin that invariant
+/// against the real label view — the marker's reserved slot, the text budget
+/// every renderable text fits inside, and the DeepSeek balance ladder.
+///
+/// They drive real AppKit objects inside the XCTest host process. They never
+/// start the Codex service and never touch the network or the keychain.
 @MainActor
 final class MenuBarLabelWiringTests: XCTestCase {
 
@@ -31,23 +35,23 @@ final class MenuBarLabelWiringTests: XCTestCase {
                               providerRefreshInterval: 3600)
     }
 
-    /// Content for one ChatGPT account, through the 1.3.0 source-based builder.
+    /// Content for one ChatGPT account, through the source-based builder.
     private func content(_ display: UsageDisplay,
-                         label: String = "A",
-                         connection: UsageService.ConnectionState = .connected,
-                         mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .chatGPT(shortLabel: label, display: display,
+                         code: String = "O1",
+                         connection: UsageService.ConnectionState = .connected) -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .chatGPT(code: code, display: display,
                                                     connectionState: connection),
-                                   now: Date(), mode: mode)
+                                   now: Date())
     }
 
     private func deepSeekContent(currency: String?, amount: Decimal?,
                                  cached: Bool = false,
-                                 mode: MenuBarSpaceMode = .full) -> MenuBarContent {
-        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(currency: currency,
+                                 code: String = "DS1") -> MenuBarContent {
+        MenuBarContentBuilder.make(source: .deepSeek(MenuBarDeepSeekContent(code: code,
+                                                                            currency: currency,
                                                                             amount: amount,
                                                                             isCached: cached)),
-                                   now: Date(), mode: mode)
+                                   now: Date())
     }
 
     private static func isolatedDefaults() -> UserDefaults {
@@ -64,56 +68,85 @@ final class MenuBarLabelWiringTests: XCTestCase {
                                resetsAt: Date().addingTimeInterval(kind == .fiveHour ? 3600 : 86_400))
     }
 
-    // MARK: §8.1.9 Widths across modes and percentages
+    private func liveSnapshot(fiveHourPercent: Double = 78, weeklyPercent: Double = 42) -> UsageSnapshot {
+        UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: fiveHourPercent),
+                      weekly: window(.weekly, remainingPercent: weeklyPercent),
+                      fetchedAt: Date(), source: .codexAppServer)
+    }
 
-    func testMeasuredWidthsArePositiveAndOrderedForEveryMode() {
-        let model = makeModel()
-        let widths = MenuBarLabelMetrics.widths { mode in
-            AnyView(MenuBarLabelView(model: model, mode: mode))
+    // MARK: The fixed width
+
+    /// The width is exactly the widest quota label the menu bar shows — both
+    /// percentages at 100 % behind a two-character code — plus a 2 pt rounding
+    /// margin. Nothing else widens it.
+    func testTheLabelWidthIsTheWidestQuotaLabel() {
+        let widest = MenuBarLabelContent.estimatedTextWidth("O1 100% 100%")
+        XCTAssertEqual(MenuBarLabelMetrics.textBudget, ceil(widest) + 2)
+        XCTAssertEqual(MenuBarLabelMetrics.labelWidth, MenuBarLabelMetrics.textBudget)
+        XCTAssertEqual(MenuBarLabelMetrics.itemWidth,
+                       MenuBarLabelMetrics.labelWidth + MenuBarLabelMetrics.horizontalPadding)
+        // The DeepSeek line with its currency is wider than the budget on purpose: the
+        // ladder omits the currency instead of widening every item.
+        XCTAssertLessThan(MenuBarLabelMetrics.textBudget,
+                          MenuBarLabelContent.estimatedBalanceWidth("DS1 CNY 123.45"))
+    }
+
+    /// The quota labels and the balance forms that must fit do fit. The Chinese
+    /// fallbacks and a long balance are allowed to be longer than the budget: they
+    /// shrink inside it instead of widening the item, which is what
+    /// `testEverySourceMeasuresTheSameFixedWidth` pins.
+    func testTheQuotaLabelsAndBalanceFormsFitTheTextBudget() {
+        let budget = MenuBarLabelMetrics.textBudget
+        for text in ["O1 100% 100%", "O2 100% 100%", "G1 100% 100%", "G3 100% 100%",
+                     "O1 — —", "O1 9% 9%", "G1 —"] {
+            XCTAssertLessThanOrEqual(MenuBarLabelContent.estimatedTextWidth(text), budget, text)
         }
-        for mode in MenuBarSpaceMode.allCases {
-            XCTAssertNotNil(widths[mode], "\(mode.description) must be measured")
-            XCTAssertGreaterThan(widths[mode] ?? 0, 0, "\(mode.description) must never be zero-width")
+        for text in ["DS1 9.00", "DS1 123.45", "DS1 —"] {
+            XCTAssertLessThanOrEqual(MenuBarLabelContent.estimatedBalanceWidth(text), budget, text)
         }
-        // Full carries a separator and both rows; compact drops the separator while retaining
-        // both quota values and both rows.
-        XCTAssertGreaterThan(widths[.full] ?? 0, widths[.compact] ?? 0)
     }
 
-    func testTheWidestPercentageProducesTheWidestText() {
-        // 100% is one character wider than 9%. The estimator uses the same 11 pt system font
-        // the label draws with, so this is a real measurement of the layout input.
-        let narrow = UsageFormatting.menuBarTitle(fiveHour: window(.fiveHour, remainingPercent: 9),
-                                                  weekly: window(.weekly, remainingPercent: 9))
-        let wide = UsageFormatting.menuBarTitle(fiveHour: window(.fiveHour, remainingPercent: 100),
-                                                weekly: window(.weekly, remainingPercent: 100))
-        XCTAssertEqual(narrow, "5H 9% | W 9%")
-        XCTAssertEqual(wide, "5H 100% | W 100%")
-        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(wide),
-                             MenuBarLabelContent.estimatedTextWidth(narrow))
+    /// The label's own frame is the fixed width, so the hosting view reports the
+    /// same width for every source and every state.
+    func testEverySourceMeasuresTheSameFixedWidth() {
+        let live = liveSnapshot()
+        let contents: [(String, MenuBarContent)] = [
+            ("chatGPT 78%", content(.live(live))),
+            ("chatGPT 100%", content(.live(liveSnapshot(fiveHourPercent: 100, weeklyPercent: 100)))),
+            ("chatGPT 9%", content(.live(liveSnapshot(fiveHourPercent: 9, weeklyPercent: 9)))),
+            ("chatGPT no data", content(.unavailable(.rpcFailed(.other)), code: "O2", connection: .disconnected)),
+            ("chatGPT cached", content(.stale(live, .rpcFailed(.other)))),
+            ("deepSeek balance", deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"))),
+            ("deepSeek no data", deepSeekContent(currency: nil, amount: nil)),
+            ("unavailable", MenuBarContentBuilder.make(source: .unavailable("请重新选择"), now: Date())),
+        ]
+
+        for (name, built) in contents {
+            let measured = fittingWidth(MenuBarLabelContent(content: built))
+            XCTAssertEqual(measured, MenuBarLabelMetrics.labelWidth, accuracy: 0.5,
+                           "\(name): every source draws inside the same fixed width")
+        }
     }
 
-    func testTheUnknownPlaceholderIsMeasuredLikeAnyOtherText() {
-        let placeholder = UsageFormatting.menuBarTitle(fiveHour: nil, weekly: nil)
-        XCTAssertEqual(placeholder, "5H – | W –")
-        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(placeholder), 0)
-    }
+    /// The marker's slot is reserved in every state, so a cached or failed read
+    /// cannot change the item's length.
+    func testTheWarningMarkerDoesNotChangeTheWidth() {
+        let live = liveSnapshot()
+        let normal = content(.live(live))
+        let warned = content(.stale(live, .rpcFailed(.other)))
 
-    func testTheWarningMarkerOnlyEverAddsLeadingRoom() {
-        // The marker is a separate leading element, so it cannot make the quota text wider and
-        // cannot change the rows' meaning even when it appears and disappears.
-        let text = UsageFormatting.menuBarTitle(fiveHour: window(.fiveHour, remainingPercent: 78),
-                                                weekly: window(.weekly, remainingPercent: 42))
-        let before = MenuBarLabelContent.estimatedTextWidth(text)
-        let after = MenuBarLabelContent.estimatedTextWidth(text)
-        XCTAssertEqual(before, after, "the same text is always the same width, marker or not")
+        XCTAssertEqual(normal.attention, .none)
+        XCTAssertEqual(warned.attention, .warning)
+        XCTAssertEqual(normal.text, warned.text, "the marker must not be part of the text")
+        XCTAssertEqual(fittingWidth(MenuBarLabelContent(content: normal)),
+                       fittingWidth(MenuBarLabelContent(content: warned)),
+                       "the marker lives in a reserved slot, so it cannot resize the item")
     }
-
-    // MARK: Both rows span the full text width
 
     func testFiveAndSevenSegmentsSpanTheSameTotalWidth() {
-        // v1.0.2 §3.2: different segment lengths, identical row width.
-        let width: CGFloat = 132
+        // v1.0.2 §3.2: different segment lengths, identical row width. Since 1.6.8
+        // that width is the fixed text budget.
+        let width = MenuBarLabelMetrics.textBudget
         let five = ResetTimeBarsView.segmentWidth(count: 5, totalWidth: width)
         let seven = ResetTimeBarsView.segmentWidth(count: 7, totalWidth: width)
         XCTAssertLessThan(seven, five, "seven segments are individually shorter")
@@ -127,172 +160,74 @@ final class MenuBarLabelWiringTests: XCTestCase {
         XCTAssertEqual(ResetTimeBarsView.segmentWidth(count: 0, totalWidth: 100), 0)
     }
 
-    // MARK: The rows span exactly the text container
+    // MARK: The DeepSeek balance ladder
 
-    /// v1.0.2 §3.2: the label's width is decided by the quota text; the rows consume that
-    /// width. If the rows could influence it, the status item would be sized by the bars.
-    func testLabelWidthIsExactlyTheQuotaTextWidth() {
-        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
-                                     weekly: window(.weekly, remainingPercent: 42),
-                                     fetchedAt: Date(), source: .codexAppServer)
-        let display = UsageDisplay.live(snapshot)
-
-        for mode in [MenuBarSpaceMode.full, .compact] {
-            let built = content(display, mode: mode)
-            let textWidth = MenuBarLabelContent.estimatedTextWidth(built.text)
-            let measured = fittingWidth(MenuBarLabelContent(content: built))
-            XCTAssertEqual(measured, textWidth, accuracy: 0.5,
-                           "\(mode.description): the label must be exactly the text width")
-            // And the rows use that same width for both rows.
-            XCTAssertEqual(ResetTimeBarsView.segmentWidth(count: 5, totalWidth: measured) * 5
-                           + ResetTimeBarsView.segmentGap * 4, measured, accuracy: 0.01)
-            XCTAssertEqual(ResetTimeBarsView.segmentWidth(count: 7, totalWidth: measured) * 7
-                           + ResetTimeBarsView.segmentGap * 6, measured, accuracy: 0.01)
-        }
+    func testABalanceThatAlreadyFitsIsUnchanged() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 9.00")
+        XCTAssertEqual(fitted.text, "DS1 9.00")
+        XCTAssertEqual(fitted.scale, 1)
     }
 
-    func testTheWarningMarkerOnlyWidensTheLeadingSlot() {
-        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
-                                     weekly: window(.weekly, remainingPercent: 42),
-                                     fetchedAt: Date(), source: .codexAppServer)
-        let normal = content(.live(snapshot), mode: .full)
-        let warned = content(.stale(snapshot, .rpcFailed(.other)), mode: .full)
-
-        XCTAssertEqual(normal.attention, .none)
-        XCTAssertEqual(warned.attention, .warning)
-        XCTAssertEqual(normal.text, warned.text, "the marker must not be part of the text")
-
-        let normalWidth = fittingWidth(MenuBarLabelContent(content: normal))
-        let warnedWidth = fittingWidth(MenuBarLabelContent(content: warned))
-        XCTAssertGreaterThan(warnedWidth, normalWidth, "the marker takes a leading slot")
-        XCTAssertLessThan(warnedWidth - normalWidth, 20, "exactly one small marker, not a word")
+    /// The balance line with its currency is wider than the budget at 13 pt, so
+    /// the currency code goes first — the user may omit it — and the amount
+    /// survives untouched.
+    func testTheLadderDropsTheCurrencyBeforeShrinking() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 CNY 1234.56")
+        XCTAssertEqual(fitted.text, "DS1 1234.56", "the code and the amount stay; only the currency goes")
+        XCTAssertLessThanOrEqual(MenuBarLabelContent.estimatedBalanceWidth(fitted.text, scale: fitted.scale),
+                                 MenuBarLabelMetrics.textBudget)
     }
 
-    func testCompactLabelKeepsBothQuotaValuesAndRows() {
-        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
-                                     weekly: window(.weekly, remainingPercent: 42),
-                                     fetchedAt: Date(), source: .codexAppServer)
-        let built = content(.live(snapshot), mode: .compact)
-        XCTAssertEqual(built.text, "A 78% 42%")
-        XCTAssertTrue(built.showsTimeBars)
-        let measured = fittingWidth(MenuBarLabelContent(content: built))
-        XCTAssertEqual(measured, MenuBarLabelContent.estimatedTextWidth(built.text), accuracy: 0.5)
+    /// A realistic long balance (six digits) still shows every digit: the line shrinks
+    /// exactly as far as the measurement requires.
+    func testALongBalanceShrinksJustEnoughToKeepEveryDigit() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 123456.78")
+        XCTAssertEqual(fitted.text, "DS1 123456.78")
+        XCTAssertLessThan(fitted.scale, 1)
+        XCTAssertGreaterThan(fitted.scale, MenuBarLabelMetrics.balanceMinimumFactor)
+        XCTAssertLessThanOrEqual(MenuBarLabelContent.estimatedBalanceWidth(fitted.text, scale: fitted.scale),
+                                 MenuBarLabelMetrics.textBudget)
     }
 
-    // MARK: 1.3.0: three sources, each measured
-
-    /// The two accounts must be distinguishable on the menu bar, and both must still fit the
-    /// compact fallback width.
-    func testBothAccountsAndDeepSeekAreMeasurableInBothModes() {
-        let snapshot = UsageSnapshot(fiveHour: window(.fiveHour, remainingPercent: 78),
-                                     weekly: window(.weekly, remainingPercent: 42),
-                                     fetchedAt: Date(), source: .codexAppServer)
-        let contents: [(String, MenuBarContent)] = [
-            ("A full", content(.live(snapshot), label: "A", mode: .full)),
-            ("B full", content(.live(snapshot), label: "B", mode: .full)),
-            ("A compact", content(.live(snapshot), label: "A", mode: .compact)),
-            ("B compact", content(.live(snapshot), label: "B", mode: .compact)),
-            ("DS full", deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)),
-            ("DS compact", deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)),
-            ("DS no data", deepSeekContent(currency: nil, amount: nil, mode: .compact)),
-        ]
-
-        for (name, built) in contents {
-            let measured = fittingWidth(MenuBarLabelContent(content: built))
-            let textWidth = MenuBarLabelContent.estimatedTextWidth(built.text)
-            XCTAssertGreaterThan(measured, 0, "\(name) must never measure as zero width")
-            XCTAssertGreaterThanOrEqual(measured, textWidth - 0.5,
-                                        "\(name): the label is at least its text width")
-            if built.attention == .none && built.showsTimeBars {
-                XCTAssertEqual(measured, textWidth, accuracy: 0.5,
-                               "\(name): ChatGPT with no warning marker is exactly its text width")
-            }
-        }
-
-        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(contents[0].1.text),
-                             MenuBarLabelContent.estimatedTextWidth(contents[2].1.text),
-                             "full mode is wider than compact for the same account")
+    /// An absurd amount reaches the type floor rather than losing digits to the
+    /// currency decision; the floor is far beyond any real DeepSeek balance.
+    func testAnAbsurdAmountStopsAtTheTypeFloor() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 CNY 1234567890123.45")
+        XCTAssertEqual(fitted.text, "DS1 1234567890123.45", "the code and the amount survive")
+        XCTAssertEqual(fitted.scale, MenuBarLabelMetrics.balanceMinimumFactor)
     }
 
-    func testDeepSeekSourceHasNoTimeRowsAndIsNarrowerThanTheChatGPTFullLabel() {
-        let deepSeek = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)
-        XCTAssertFalse(deepSeek.showsTimeBars)
-        let deepSeekWidth = fittingWidth(MenuBarLabelContent(content: deepSeek))
-        // Without the two rows the DeepSeek label is a single text line.
-        XCTAssertGreaterThan(deepSeekWidth, 0)
-        XCTAssertGreaterThan(deepSeekWidth, MenuBarLabelContent.estimatedTextWidth(deepSeek.text),
-                             "the DeepSeek line uses larger type and deliberate token spacing")
+    func testTheLadderKeepsTheUnnamedCurrencyPosition() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 — 123.45")
+        XCTAssertEqual(fitted.text, "DS1 — 123.45", "an unnamed currency keeps its position")
+        XCTAssertLessThanOrEqual(MenuBarLabelContent.estimatedBalanceWidth(fitted.text, scale: fitted.scale),
+                                 MenuBarLabelMetrics.textBudget)
     }
 
-    func testDeepSeekFullModeIsMoreOpenThanCompactMode() {
-        let full = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .full)
-        let compact = deepSeekContent(currency: "CNY", amount: Decimal(string: "123.45"), mode: .compact)
-        XCTAssertEqual(full.text, "DS CNY 123.45")
-        XCTAssertEqual(compact.text, "DS CNY 123.45")
-        XCTAssertGreaterThan(fittingWidth(MenuBarLabelContent(content: full)),
-                             fittingWidth(MenuBarLabelContent(content: compact)))
-        XCTAssertEqual(MenuBarLabelContent.deepSeekFullFontSize, 13)
-        XCTAssertEqual(MenuBarLabelContent.deepSeekCompactFontSize, 12)
+    func testAMissingBalanceIsNeverWidenedByTheLadder() {
+        let fitted = MenuBarLabelContent.fittedBalanceText("DS1 —")
+        XCTAssertEqual(fitted.text, "DS1 —")
+        XCTAssertEqual(fitted.scale, 1)
     }
 
-    /// A longer balance widens the item, so the source change must be re-measured rather than
-    /// reusing the previous width.
-    func testTheSameSourceAtDifferentAmountsChangesTheMeasuredWidth() {
-        let small = deepSeekContent(currency: "CNY", amount: Decimal(string: "9.00"), mode: .compact)
-        let large = deepSeekContent(currency: "USD", amount: Decimal(string: "1234567.89"), mode: .compact)
-        XCTAssertGreaterThan(MenuBarLabelContent.estimatedTextWidth(large.text),
-                             MenuBarLabelContent.estimatedTextWidth(small.text))
-        XCTAssertNotEqual(small.sizeSignature, large.sizeSignature)
-    }
+    // MARK: The item is sized from the fixed width
 
-    /// Fitting width of the real label view, measured the same way the status item measures it.
-    private func fittingWidth<V: View>(_ view: V) -> CGFloat {
-        let hosting = NSHostingView(rootView: view)
-        hosting.frame = NSRect(x: 0, y: 0, width: 400, height: NSStatusBar.system.thickness)
-        return ceil(hosting.fittingSize.width)
-    }
-
-    func testCompactFallbackWidthFitsTheCompactTextForEverySource() {
-        let compact = MenuBarLabelMetrics.fallbackWidth(for: .compact)
-        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("A 78% 42%"))
-        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("B 78% 42%"))
-        XCTAssertGreaterThanOrEqual(compact, MenuBarLabelContent.estimatedTextWidth("DS —"))
-        let full = MenuBarLabelMetrics.fallbackWidth(for: .full)
-        XCTAssertGreaterThanOrEqual(full, MenuBarLabelContent.estimatedTextWidth("A 5H 78% | W 42%"))
-    }
-
-    // MARK: §8.1.9 The item is sized from a measurement, not from the fallback
-
-    /// v1.0.2 §3.2/§3.3 regression: the per-mode fallback is only a starting point. `install`
-    /// must replace it with the real measurement before the first geometry check, otherwise a
-    /// roomy menu bar is reported as truncated (fallback 132 pt against a granted ~116 pt) and
-    /// the item steps down to an invalid partial label.
-    func testInstallSizesTheItemFromAMeasurementNotTheFallback() {
+    func testInstallSizesTheItemFromTheFixedWidth() {
         let controller = StatusItemController()
         controller.install(model: makeModel())
 
-        XCTAssertFalse(controller.widths.isEmpty, "install must measure before the first check")
-        let measuredFull = controller.widths[MenuBarSpaceMode.full]
-        XCTAssertNotNil(measuredFull)
-        XCTAssertEqual(controller.appliedWidth, measuredFull,
-                       "the applied width must be the measured width")
-        XCTAssertNotEqual(controller.appliedWidth, MenuBarLabelMetrics.fallbackWidth(for: .full),
-                          "the fallback must not survive the first layout pass")
+        XCTAssertEqual(controller.appliedWidth, MenuBarLabelMetrics.itemWidth,
+                       "the item's length is the fixed label width plus its padding")
+        XCTAssertEqual(controller.statusItem?.length, MenuBarLabelMetrics.itemWidth,
+                       "the status bar is asked for exactly that width")
 
         controller.uninstall()
     }
 
-    /// The measured widths stay ordered after a real measurement, so full remains wider than
-    /// the compact two-quota representation.
-    func testInstalledWidthsKeepTheModeOrdering() {
-        let controller = StatusItemController()
-        controller.install(model: makeModel())
-        XCTAssertGreaterThan(controller.widths[.full] ?? 0, controller.widths[.compact] ?? 0)
-        controller.uninstall()
-    }
-
-    // MARK: §8.1.10 A time-only update costs no work
-    func testDrawingTheCountdownRepeatedlyDoesNotFetchOrRemeasure() async {
+    /// Content changes redraw the label, never resize the item: this is the 1.6.8
+    /// replacement for the old "remeasure only when the signature changed" rule,
+    /// and it is a stronger guarantee.
+    func testContentChangesNeverResizeTheItem() async {
         let counter = FactoryCounter()
         let model = makeModel(factory: { counter.value += 1; throw UsageError.appServerStartupFailed(.launchFailed) })
 
@@ -303,30 +238,35 @@ final class MenuBarLabelWiringTests: XCTestCase {
 
         let controller = StatusItemController()
         controller.install(model: model)
-        // Apply the current content once so the measured signature exists, then watch it.
-        controller.noteContentMayHaveChanged()
-        let signatureBefore = controller.labelSignature
-        XCTAssertNotNil(signatureBefore, "the first content pass establishes the signature")
+        let widthAfterInstall = controller.appliedWidth
+        XCTAssertEqual(widthAfterInstall, MenuBarLabelMetrics.itemWidth)
 
-        // Re-render the content and re-run the content-change path many times; this is exactly
-        // what the once-a-second tick does.
+        // Re-render the content many times; this is what the once-a-second tick does.
         for _ in 0..<20 {
-            _ = model.menuBarContent(for: .full, now: Date())
-            _ = model.menuBarContent(for: .compact, now: Date())
-            _ = model.menuBarSizeSignature
-            controller.noteContentMayHaveChanged()
+            _ = model.menuBarContent(now: Date())
+            _ = model.menuBarContent(now: Date().addingTimeInterval(60))
         }
+        controller.checkGeometry()
+        controller.checkGeometry()
 
         XCTAssertEqual(counter.value, fetchCountAfterStart,
                        "drawing the countdown must not trigger another service fetch")
-        XCTAssertEqual(controller.labelSignature, signatureBefore,
-                       "a time-only update must not invalidate the measured widths")
+        XCTAssertEqual(controller.appliedWidth, widthAfterInstall,
+                       "the item's length never changes after install")
 
         controller.uninstall()
         model.stop()
     }
 
-    // MARK: §8.1.11 Dismiss-monitor lifecycle
+    /// Fitting width of the real label view, measured the way the status item was
+    /// measured before 1.6.8.
+    private func fittingWidth<V: View>(_ view: V) -> CGFloat {
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(x: 0, y: 0, width: 400, height: NSStatusBar.system.thickness)
+        return ceil(hosting.fittingSize.width)
+    }
+
+    // MARK: Dismiss-monitor lifecycle
 
     func testStatusButtonDeactivationDoesNotCloseBeforeTheButtonAction() throws {
         let monitor = PopoverDismissMonitor()
@@ -399,7 +339,7 @@ final class MenuBarLabelWiringTests: XCTestCase {
         XCTAssertFalse(controller.isMonitorRunning)
         XCTAssertFalse(controller.isDismissMonitorInstalled)
         XCTAssertNil(controller.statusItem)
-        XCTAssertNil(controller.labelSignature)
+        XCTAssertEqual(controller.appliedWidth, 0)
     }
 
     func testClosingThePanelIsSafeWhenItWasNeverOpened() {

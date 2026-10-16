@@ -50,7 +50,7 @@ final class ManagedAccountTests: XCTestCase {
         try await waitUntil { model.managedAccounts.count == 1 }
         XCTAssertEqual(model.managedAccounts.first?.id, b.id)
         XCTAssertEqual(model.menuBarPreferences.selection, .apiAccount(a.id))
-        XCTAssertEqual(model.menuBarContent(for: .full).text, "账号已移除，请重新选择")
+        XCTAssertEqual(model.menuBarContent().text, "请重新选择")
         XCTAssertTrue(store.load(.init(rawValue: b.credentialAccount!), interaction: .disallowed).isAvailable)
         XCTAssertTrue(store.load(.init(rawValue: a.credentialAccount!), interaction: .disallowed).isMissing)
     }
