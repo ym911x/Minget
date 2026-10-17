@@ -1,7 +1,7 @@
 232843f1e8dd7dcc0356a04fce5acd31edec8b87af8dbbee735b44dac995ad90  ./ACCEPTANCE.md
 789af6e03254ead0f43f554548e8230f44c17f55db179a80f80e5c60bb5b0629  ./IMPLEMENTATION_REPORT.md
 d27ae83cfeb76f42f77b344d75f3b2df3c6029207aa80ecf26864d22e47f0213  ./IMPLEMENTATION_TASKS.md
-a73be6cd5ac3e9a37ed02d22b92c5a55b16d76d776caa3ac447c68882d2185f2  ./PUBLICATION.md
+f4d838bd43b219b583cda62fd4e76d58fc473717586b4d0cb271026e16317334  ./PUBLICATION.md
 c696dee1ca103bae6422b6711485451b1c3fff79af15311f88ac7eb5a2bddd58  ./RELEASE_NOTES.md
 b979ed82e694278c21de5bc1ad7d9d00f8c431979cfebdbd99150427c9126836  ./REQUIREMENTS.md
 6ee8ef6a4f3440e11523b021f3b12cef4c00a670cfacb5abf9e24443d0c7c8be  ./REVIEW.md
@@ -9,4 +9,7 @@ bab8b3afde41286a21b448c0d34f10f89219a2adc04268c28deb0fe4f1f228cb  ./ROLLBACK.md
 b15c9ad2a919da203e7ee480ab01732a97d870431a5a09b3dbcf1ff78278dd5e  ./evidence/logs/publication-swift-tests.log
 348c1394dcd9495989495b25ae50702c929b621329636a6f63c74e1118dc03f3  ./evidence/logs/release-build-install.log
 9aede44385fd44601593a43a484d5ce70dcaa42afee6b8dd29eab9a5f6937788  ./evidence/logs/swift-tests.log
+f147de2ed638c94575bfadbd2450373a42b4da8c8e50311ab170a47e4d31364c  ./evidence/records/github-ci-summary.json
+693bcca4346633694b66feca20996d2b15d3e1fba76e56b86d6c230e5fa8d7ce  ./evidence/records/github-release-summary.json
 d9654a775c66c7bb9fa1b1386b54dd24f308df2468257d189c84d63dcecf5d1a  ./evidence/records/local-install.txt
+d8f7f1e4b98f4349a30ab213da3be240b4850c700069cd8227d1877c7099f262  ./evidence/records/public-source-verification.txt

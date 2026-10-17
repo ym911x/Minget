@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-当前迭代：[1.6.9](1.6.9/REQUIREMENTS.md)，刷新范围与频率优化，本机已由用户验收、发布准备完成待推送。最近完成并已公开的版本为 [1.6.8](1.6.8/IMPLEMENTATION_REPORT.md)：菜单栏项目长度固定、上排改为「代号 + 百分比」、代号规范为 `O1`/`G1`/`DS1` 并与设置列表对应；本机完整回归 693 项通过，Release 严格签名装入正式路径，见 [验收](1.6.8/ACCEPTANCE.md)。1.6.7（设置窗口视觉统一）已随 1.6.8 合并公开；Latest 为 1.6.8，CI 通过，见 [发布记录](1.6.8/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+最近发布：[1.6.9](1.6.9/PUBLICATION.md)，刷新范围与频率优化，已公开发布为 Latest（标签 v1.6.9 指向 `04c3ffa`，远端 CI 与 Release 核验通过，公开源码归档与标签逐文件一致）；本机完整回归 706 项通过，Release 严格签名装入正式路径，用户已复验，见 [验收](1.6.9/ACCEPTANCE.md)。上一版本 [1.6.8](1.6.8/IMPLEMENTATION_REPORT.md)：菜单栏项目长度固定、上排改为「代号 + 百分比」、代号规范为 `O1`/`G1`/`DS1` 并与设置列表对应，本机完整回归 693 项通过，见 [发布记录](1.6.8/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
 
 ## 状态表
 
@@ -40,7 +40,7 @@
 
 | 1.6.8 | 已发布 Latest，用户复验及 CI 通过 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ 示例渲染 |
 
-| 1.6.9 | 本机已验收，发布准备完成待推送 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
+| 1.6.9 | 已发布 Latest，用户复验、CI 与 Release 核验通过 | REQUIREMENTS.md | IMPLEMENTATION_TASKS.md | IMPLEMENTATION_REPORT.md | REVIEW.md | ACCEPTANCE.md | RELEASE_NOTES.md | 本目录 evidence/ |
 
 ## 各版本的额外资料
 

@@ -1,0 +1,10 @@
+1.6.9 公开源码归档核验
+时间：2026-10-17 16:41:39 +08
+
+下载：https://github.com/ym911x/Minget/archive/refs/tags/v1.6.9.tar.gz
+字节数：27455402
+SHA-256：3de0dc3ea3633ef63a7db4cc355cd294bf631a8170d65572b3a6a92af90073bd
+
+解包文件数：624（git archive v1.6.9 为 624）
+diff -r 结果：无差异（退出码 0）
+VERSION：1.6.9
