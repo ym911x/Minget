@@ -5,13 +5,20 @@ import UsageMonitorCore
 
 /// Drives the menu bar UI and the detail panel.
 ///
-/// Three independent refresh loops live here:
-/// - two ChatGPT profiles, every 60 seconds, each on its own long-lived `codex app-server`
-///   child under its own `CODEX_HOME`. Both profiles are refreshed in parallel inside one
-///   cycle, so one slow or signed-out account cannot delay the other
-///   (REQUIREMENTS.md §4.1, IMPLEMENTATION_TASKS.md §2);
-/// - DeepSeek, every 5 minutes, over HTTPS with its own credential;
-/// - the DeepSeek public status page, every 5 minutes, unauthenticated.
+/// Refresh scopes since 1.6.9 (REQUIREMENTS.md §1–§3):
+/// - the menu bar displays exactly one source, and one loop maintains exactly that source
+///   on its own cadence: a ChatGPT profile adapts at 30/60/120 seconds, a DeepSeek,
+///   Command Code or Google source at five minutes, and the 1.4.0 low-usage setting may
+///   shorten the displayed source's interval;
+/// - every other account has no background loop at all. It is read once when a page that
+///   shows it is opened or switched to, and only when the page's accounts have not all
+///   been attempted within the last five minutes;
+/// - manual paths (the header's refresh, a brand page's refresh, the fire confirmation)
+///   ignore every threshold.
+///
+/// Each ChatGPT profile still owns a long-lived `codex app-server` child under its own
+/// `CODEX_HOME`, and a cycle runs its profiles in parallel so one slow or signed-out
+/// account cannot delay another (REQUIREMENTS.md §4.1, IMPLEMENTATION_TASKS.md §2).
 ///
 /// All fetches run off the main thread; `stop()` hands both drains to a background queue and
 /// reports completion, so the application can defer termination until every owned child is
@@ -87,19 +94,21 @@ public final class UsageViewModel: ObservableObject {
     let providerEngine: ProviderRefreshEngine
 
     private let baseRefreshInterval: TimeInterval
-    private let panelOpenRefreshAge: TimeInterval
     private let providerRefreshInterval: TimeInterval
-    private let providerPanelOpenRefreshAge: TimeInterval
     private let deepSeekStatusReader: DeepSeekStatusReading?
     private let deepSeekStatusRefreshInterval: TimeInterval = 5 * 60
     /// How often the detail page re-evaluates relative timestamps. 30 seconds by default:
     /// the per-second countdown is drawn from `Date()` on demand, so a 1-second tick only
     /// paid for a full page recompute (REQUIREMENTS.md §4.1).
     private let clockInterval: TimeInterval
-    private var lastScheduledCodexRefreshAt: Date?
+    private var lastScheduledMenuBarRefreshAt: Date?
     private var lastWakeRefreshAt: Date?
+    /// When a read was last started for each account, memory only. The page-batch gate reads
+    /// it; Google accounts answer from the Google model, which owns their reads.
+    private let refreshAttempts = RefreshAttemptLedger()
 
-    /// Refresh cadence for the ChatGPT timer, chosen from the known reset times.
+    /// Refresh cadence for the menu bar loop while it displays a ChatGPT profile, chosen
+    /// from that profile's known reset times.
     ///
     /// Near a reset the windows move fast and deserve a 30-second poll; far from any
     /// reset the numbers barely change and 120 seconds is enough; with nothing known
@@ -150,8 +159,6 @@ public final class UsageViewModel: ObservableObject {
     /// with the confirmation rule in core, so the card and the classifier share one constant.
     static let windowConfirmationThreshold: TimeInterval = FireWindowConfirmation.threshold
 
-    private var timer: AnyCancellable?
-    private var providerTimer: AnyCancellable?
     private var menuBarRefreshTimer: AnyCancellable?
     private var clockTimer: AnyCancellable?
     /// Re-publishes when the menu bar source or the DeepSeek currency changes, so the status
@@ -159,8 +166,6 @@ public final class UsageViewModel: ObservableObject {
     private var menuBarPreferenceObserver: AnyCancellable?
     private var clockObservers: [(NotificationCenter, NSObjectProtocol)] = []
     private var refreshTask: Task<Void, Never>?
-    private var providerRefreshTask: Task<Void, Never>?
-    private var menuBarRefreshTask: Task<Void, Never>?
     private var deepSeekStatusTask: Task<Void, Never>?
     var fireTasks: [String: Task<Void, Never>] = [:]
     private var deepSeekStatusCheckedAt: Date?
@@ -176,9 +181,7 @@ public final class UsageViewModel: ObservableObject {
                 commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
                 fireSchedules: FireSchedulePreferences? = nil,
                 refreshInterval: TimeInterval = 60,
-                panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                 providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
-                providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
                 deepSeekStatusReader: DeepSeekStatusReading? = nil,
                 fireConfirmDelay: TimeInterval = 2,
                 fireRetryDelay: TimeInterval = 5,
@@ -193,9 +196,7 @@ public final class UsageViewModel: ObservableObject {
         self.commandCodeFireService = commandCodeFireService
         self.fireSchedules = fireSchedules ?? FireSchedulePreferences()
         self.baseRefreshInterval = refreshInterval
-        self.panelOpenRefreshAge = panelOpenRefreshAge
         self.providerRefreshInterval = providerRefreshInterval
-        self.providerPanelOpenRefreshAge = providerPanelOpenRefreshAge
         self.deepSeekStatusReader = deepSeekStatusReader
         self.fireConfirmDelay = fireConfirmDelay
         self.fireRetryDelay = fireRetryDelay
@@ -213,9 +214,7 @@ public final class UsageViewModel: ObservableObject {
                             commandCodeFireService: CommandCodeFireService = CommandCodeFireService(),
                             fireSchedules: FireSchedulePreferences? = nil,
                             refreshInterval: TimeInterval = 60,
-                            panelOpenRefreshAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh,
                             providerRefreshInterval: TimeInterval = ProviderRefreshEngine.defaultRefreshInterval,
-                            providerPanelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
                             deepSeekStatusReader: DeepSeekStatusReading? = nil,
                             fireConfirmDelay: TimeInterval = 2,
                             fireRetryDelay: TimeInterval = 5,
@@ -229,9 +228,7 @@ public final class UsageViewModel: ObservableObject {
                   commandCodeFireService: commandCodeFireService,
                   fireSchedules: fireSchedules,
                   refreshInterval: refreshInterval,
-                  panelOpenRefreshAge: panelOpenRefreshAge,
                   providerRefreshInterval: providerRefreshInterval,
-                  providerPanelOpenRefreshAge: providerPanelOpenRefreshAge,
                   deepSeekStatusReader: deepSeekStatusReader,
                   fireConfirmDelay: fireConfirmDelay,
                   fireRetryDelay: fireRetryDelay,
@@ -331,7 +328,7 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// Current adaptive decision for the source shown in the menu bar. A nil interval means
-    /// the ordinary detail/provider timer is sufficient and no extra request is scheduled.
+    /// the source is not below any configured threshold, so its own cadence applies.
     public var currentMenuBarRefreshDecision: MenuBarRefreshDecision {
         if accountRegistry != nil, case .unavailable = menuBarSource() { return .inactive }
         let selectedSnapshot: UsageSnapshot?
@@ -340,7 +337,7 @@ public final class UsageViewModel: ObservableObject {
         case .google: return .inactive
         case .profile(let profileID):
             selectedSnapshot = profileState(profileID)?.snapshot
-            normalInterval = currentCodexInterval
+            normalInterval = currentMenuBarBaseInterval
         case .deepSeek, .apiAccount:
             selectedSnapshot = nil
             normalInterval = providerRefreshInterval
@@ -420,7 +417,8 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Starts the app: immediate refresh of both profiles, then on both schedules.
+    /// Starts the app: one immediate read of the source the menu bar displays, then on that
+    /// source's schedule. No other account is read at launch.
     public func start() {
         guard !accountManagementUnavailable else { return }
         Diagnostics.log("viewmodel start")
@@ -430,16 +428,19 @@ public final class UsageViewModel: ObservableObject {
         }
         resumePendingRemovals()
         primeManagedCredentials()
-        google.start()
+        google.start(accountIDs: selectedGoogleAccountIDs)
         scheduleTimers()
         observeClockChanges()
         observeMenuBarPreferences()
         clockTimer = Timer.publish(every: clockInterval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] date in self?.handleClockTick(date) }
-        refresh()
-        refreshProviders(force: false)
-        refreshDeepSeekStatus(force: false)
+        // The launch read of the displayed source. A credential-gated source (an API
+        // connection) is read by the credential pass instead, which is the only moment its
+        // key is known to be readable.
+        if let target = menuBarRefreshTarget(), !target.isCredentialGated {
+            refreshTargets([target], force: false)
+        }
         primeCredentialAccess()
     }
 
@@ -460,14 +461,19 @@ public final class UsageViewModel: ObservableObject {
     }
 
     /// One background credential pass for every provider, so the panel can answer
-    /// "connected?" from memory afterwards.
+    /// "connected?" from memory afterwards. A displayed legacy provider is read once the
+    /// pass settles, because that is the first moment its key is known; a managed API
+    /// account primes and reads through its own runtime, and a profile or Google
+    /// connection was already read at launch.
     private func primeCredentialAccess() {
         wireCredentialPhaseChanges()
         Task { [weak self] in
             guard let self else { return }
             await self.providerEngine.primeCredentials()
             self.publishProviderReports()
-            self.refreshProviders(force: false)
+            if let target = self.menuBarRefreshTarget(), case .providerPlatform = target {
+                self.refreshTargets([target], force: false)
+            }
             // Scheduled Command Code fire is intentionally evaluated only after the
             // non-interactive Keychain priming pass has settled. Otherwise launch and
             // credential loading can race, causing a due row to miss its catch-up window.
@@ -543,21 +549,13 @@ public final class UsageViewModel: ObservableObject {
         pendingManualRefresh = false
         isProviderRefreshing = false
         isDeepSeekStatusRefreshing = false
-        timer?.cancel()
-        providerTimer?.cancel()
         menuBarRefreshTimer?.cancel()
         clockTimer?.cancel()
         menuBarPreferenceObserver?.cancel()
-        timer = nil
-        providerTimer = nil
         menuBarRefreshTimer = nil
         clockTimer = nil
         menuBarPreferenceObserver = nil
         stopObservingClockChanges()
-        providerRefreshTask?.cancel()
-        providerRefreshTask = nil
-        menuBarRefreshTask?.cancel()
-        menuBarRefreshTask = nil
         deepSeekStatusTask?.cancel()
         deepSeekStatusTask = nil
         for task in fireTasks.values { task.cancel() }
@@ -588,66 +586,74 @@ public final class UsageViewModel: ObservableObject {
     /// Serial queue so repeated stop() calls cannot overlap their drains.
     private let joinQueue = DispatchQueue(label: "usagemonitor.viewmodel.join")
 
+    /// Installs the one automatic loop: the menu bar source's own schedule. The detail
+    /// clock is installed by `start()` alongside it.
     private func scheduleTimers() {
-        rescheduleCodexTimer()
-        providerTimer = Timer.publish(every: providerRefreshInterval, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.refreshProviders(force: false)
-                self?.google.refresh(force: false)
-                self?.refreshDeepSeekStatus(force: false)
-            }
         rescheduleMenuBarRefreshTimer()
     }
 
-    /// Current cadence for the ChatGPT timer, from the snapshots on hand.
-    var currentCodexInterval: TimeInterval {
-        Self.codexRefreshInterval(snapshots: coordinator.runtimes.map { $0.state().snapshot },
-                                  baseInterval: baseRefreshInterval)
+    /// The account the menu bar loop maintains, or nil when the current selection cannot be
+    /// read: an empty registry, a removed account, a hand-edited preference.
+    func menuBarRefreshTarget() -> RefreshTarget? {
+        if case .unavailable = menuBarSource() { return nil }
+        return RefreshBatchPolicy.menuBarTarget(selection: menuBarPreferences.selection,
+                                                isRegistryMode: accountRegistry != nil)
+    }
+
+    /// The Google connections the launch may read: only the one the menu bar displays.
+    private var selectedGoogleAccountIDs: Set<String> {
+        if case .google(let email) = menuBarPreferences.selection { return [email] }
+        return []
+    }
+
+    /// The displayed source's own cadence before the low-usage setting shortens it: a
+    /// ChatGPT profile follows its reset distance (30/60/120 s), every other source the
+    /// provider cadence.
+    var currentMenuBarBaseInterval: TimeInterval {
+        switch menuBarPreferences.selection {
+        case .profile(let profileID):
+            return Self.codexRefreshInterval(snapshots: [profileState(profileID)?.snapshot],
+                                             baseInterval: baseRefreshInterval)
+        case .google, .deepSeek, .apiAccount:
+            return providerRefreshInterval
+        }
+    }
+
+    /// The interval the menu bar loop currently runs with, or nil when there is nothing to
+    /// maintain. A pending retry deadline for the displayed profile shortens the wait, and
+    /// the low-usage setting never delays the source beyond its own cadence.
+    var currentMenuBarRefreshInterval: TimeInterval? {
+        guard let target = menuBarRefreshTarget() else { return nil }
+        let interval = currentMenuBarRefreshDecision.interval ?? currentMenuBarBaseInterval
+        guard let profileID = target.chatGPTProfileID,
+              let retryDate = retryDeadline(for: profileID) else { return interval }
+        return Self.retryAwareCodexRefreshInterval(normalInterval: interval,
+                                                   retryDates: [retryDate],
+                                                   now: Date())
+    }
+
+    /// The automatic retry deadline of one profile, or nil when the ladder is not holding it.
+    private func retryDeadline(for profileID: String) -> Date? {
+        guard let runtime = coordinator.runtime(for: profileID),
+              !runtime.service.isManualRetryRequired else { return nil }
+        return runtime.service.automaticRetryGate
     }
 
     /// Exposes the configured detail-page clock cadence to deterministic wiring tests.
     /// The timer itself remains private and is still created only by `start()`.
     var configuredClockInterval: TimeInterval { clockInterval }
 
-    /// Exposes whether the menu-bar-only timer is currently installed, without exposing the
-    /// timer itself or allowing tests to fire it. This keeps source-switch and teardown
-    /// lifecycle checks deterministic instead of waiting 15 real seconds for a tick.
+    /// Exposes the menu bar loop's current interval, or nil when no source is maintained,
+    /// without exposing the timer itself or allowing tests to fire it.
     var configuredMenuBarRefreshInterval: TimeInterval? {
         menuBarRefreshTimer == nil ? nil : lastMenuBarRefreshTimerInterval
     }
 
-    /// Rebuilds the ChatGPT timer only when the cadence actually changed, so a steady
-    /// state keeps one subscription instead of churning one per round.
-    private func rescheduleCodexTimer() {
-        let now = Date()
-        let retryDates = coordinator.automaticRetryDates
-        let retryDeadline = retryDates.filter { $0 > now }.min()
-        let interval = Self.retryAwareCodexRefreshInterval(
-            normalInterval: currentCodexInterval,
-            retryDates: retryDates,
-            now: now
-        )
-        if timer != nil,
-           abs(interval - lastCodexTimerInterval) < 0.001,
-           retryDeadline == lastCodexRetryDeadline { return }
-        timer?.cancel()
-        lastCodexTimerInterval = interval
-        lastCodexRetryDeadline = retryDeadline
-        timer = Timer.publish(every: interval, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in self?.scheduledCodexRefresh() }
-    }
-
-    private var lastCodexTimerInterval: TimeInterval = 0
-    private var lastCodexRetryDeadline: Date?
-
-    /// Creates an additional timer only while the currently selected source is below its
-    /// configured threshold. The ordinary ChatGPT/provider timers remain responsible for all
-    /// other accounts and providers.
+    /// Rebuilds the menu bar loop only when its cadence actually changed, so a steady state
+    /// keeps one subscription instead of churning one per round.
     func rescheduleMenuBarRefreshTimer() {
         guard !isStopped else { return }
-        guard let interval = currentMenuBarRefreshDecision.interval else {
+        guard let interval = currentMenuBarRefreshInterval else {
             menuBarRefreshTimer?.cancel()
             menuBarRefreshTimer = nil
             lastMenuBarRefreshTimerInterval = 0
@@ -661,80 +667,32 @@ public final class UsageViewModel: ObservableObject {
         lastMenuBarRefreshTimerInterval = interval
         menuBarRefreshTimer = Timer.publish(every: interval, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in self?.refreshSelectedMenuBarSource() }
+            .sink { [weak self] _ in self?.scheduledMenuBarRefresh() }
     }
 
     private var lastMenuBarRefreshTimerInterval: TimeInterval = 0
 
-    private func refreshSelectedMenuBarSource() {
-        guard !isStopped, menuBarRefreshTask == nil,
-              currentMenuBarRefreshDecision.isAccelerated else { return }
-
-        switch menuBarPreferences.selection {
-        case .google: return
-        case .profile(let profileID):
-            guard let runtime = coordinator.runtime(for: profileID),
-                  !runtime.state().isFetching else { return }
-            let coordinator = self.coordinator
-            menuBarRefreshTask = Task.detached(priority: .utility) { [weak self] in
-                _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
-                await self?.finishMenuBarProfileRefresh()
-            }
-        case .apiAccount(let id):
-            refreshManagedAPI(id: id, force: false)
-        case .deepSeek:
-            if accountRegistry != nil { refreshManagedAPI(id: "deepseek", force: false); return }
-            let engine = providerEngine
-            menuBarRefreshTask = Task { [weak self] in
-                await engine.refresh(platform: .deepseek, force: false)
-                guard let self, !self.isStopped else { return }
-                self.finishMenuBarProviderRefresh()
-            }
-        }
-    }
-
-    private func finishMenuBarProfileRefresh() {
-        guard !isStopped, !Task.isCancelled else {
-            menuBarRefreshTask = nil
-            return
-        }
-        menuBarRefreshTask = nil
-        publishProfileStates()
-        tick += 1
-        rescheduleMenuBarRefreshTimer()
-    }
-
-    private func finishMenuBarProviderRefresh() {
-        guard !isStopped, !Task.isCancelled else {
-            menuBarRefreshTask = nil
-            return
-        }
-        menuBarRefreshTask = nil
-        publishProviderReports()
-        tick += 1
-        rescheduleMenuBarRefreshTimer()
-    }
-
-    /// One scheduled round, then a cadence re-check: near a reset the next round comes
-    /// sooner, far from any reset it backs off.
-    private func scheduledCodexRefresh() {
+    /// One scheduled round of the menu bar loop, then a cadence re-check: near a reset the
+    /// next round comes sooner, far from any reset it backs off. Internal so a test can run
+    /// one round without waiting for the real timer.
+    func scheduledMenuBarRefresh() {
         guard !isStopped else { return }
         if let lastWake = lastWakeRefreshAt,
            Self.isInsideWakeCooldown(now: Date(), previous: lastWake) {
             return
         }
-        lastScheduledCodexRefreshAt = Date()
-        refresh()
-        rescheduleCodexTimer()
+        lastScheduledMenuBarRefreshAt = Date()
+        if let target = menuBarRefreshTarget() { refreshTargets([target], force: false) }
+        rescheduleMenuBarRefreshTimer()
     }
 
-    /// One throttled refresh after sleep: healthy profiles use their existing app-server and
-    /// read only rate limits; only an unhealthy client falls back to the ordinary full read.
-    /// Neither route re-opens the failure budget.
+    /// One throttled refresh after sleep, scoped like every other automatic path: only the
+    /// source the menu bar displays is woken. A healthy profile reuses its existing
+    /// app-server and reads rate limits only; an unhealthy client falls back to the ordinary
+    /// full read. Neither route re-opens the failure budget.
     func refreshAfterWake(now: Date = Date()) {
-        if !isStopped { google.refresh(force: false, now: now, afterWake: true) }
-        guard !isStopped, !isRefreshing else { return }
-        if let lastScheduled = lastScheduledCodexRefreshAt,
+        guard !isStopped, let target = menuBarRefreshTarget() else { return }
+        if let lastScheduled = lastScheduledMenuBarRefreshAt,
            Self.isInsideWakeCooldown(now: now, previous: lastScheduled) {
             return
         }
@@ -742,30 +700,34 @@ public final class UsageViewModel: ObservableObject {
            Self.isInsideWakeCooldown(now: now, previous: lastWake) {
             return
         }
+        guard let profileID = target.chatGPTProfileID else {
+            lastWakeRefreshAt = now
+            switch target {
+            case .googleAccount(let email):
+                google.refresh(force: false, now: now, afterWake: true, accountIDs: [email])
+            case .apiAccount, .providerPlatform:
+                refreshTargets([target], force: false)
+            case .chatGPTProfile:
+                break
+            }
+            return
+        }
+        guard !isRefreshing else { return }
         lastWakeRefreshAt = now
         isRefreshing = true
         let coordinator = self.coordinator
-        let profileIDs = coordinator.profileIDs
+        let attempts = refreshAttempts
         refreshTask = Task.detached(priority: .utility) { [weak self] in
-            await withTaskGroup(of: String?.self) { group in
-                for profileID in profileIDs {
-                    group.addTask {
-                        switch coordinator.probeAfterWake(profileID: profileID) {
-                        case .refreshed:
-                            return profileID
-                        case .needsFullRefresh:
-                            _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
-                            return profileID
-                        case .suppressed:
-                            return nil
-                        }
-                    }
-                }
-                for await completedProfileID in group {
-                    if let completedProfileID {
-                        await self?.publishCompletedProfile(completedProfileID)
-                    }
-                }
+            switch coordinator.probeAfterWake(profileID: profileID) {
+            case .refreshed:
+                attempts.record(.chatGPTProfile(profileID))
+                await self?.publishCompletedProfile(profileID)
+            case .needsFullRefresh:
+                attempts.record(.chatGPTProfile(profileID))
+                _ = coordinator.fetch(profileID: profileID, resetFailureBudget: false)
+                await self?.publishCompletedProfile(profileID)
+            case .suppressed:
+                break
             }
             await self?.finishProfileRefreshCycle()
         }
@@ -780,32 +742,82 @@ public final class UsageViewModel: ObservableObject {
 
     // MARK: - Panel
 
-    /// Called when the user opens the detail: each source is refreshed on its own freshness
-    /// rule, ChatGPT at 30 seconds per profile and the providers at 60 seconds.
-    public func panelWillOpen() {
+    /// Called when the user opens the detail: the page the panel shows is read once, minus
+    /// the menu bar source, and only when its accounts have not all been attempted within
+    /// the batch age. `now` is injectable so the age rule is testable without waiting.
+    func panelWillOpen(tab: DetailPreferences.ProviderTab, now: Date = Date()) {
+        performPageBatch(scope: RefreshBatchScope(tab: tab), now: now)
+    }
+
+    /// The user switched the page inside an open panel. The newly shown page follows the
+    /// same rule, so switching back to a stale page reads it once more.
+    func panelDidSwitchTab(_ tab: DetailPreferences.ProviderTab, now: Date = Date()) {
+        performPageBatch(scope: RefreshBatchScope(tab: tab), now: now)
+    }
+
+    private func performPageBatch(scope: RefreshBatchScope, now: Date = Date()) {
         guard !isStopped else { return }
-        google.refresh(force: false)
-        panelWillOpenCodex()
-        panelWillOpenProviders()
-        refreshDeepSeekStatus(force: false)
+        if scope.showsDeepSeekStatus { refreshDeepSeekStatus(force: false) }
+        let members = pageBatch(scope: scope)
+        guard !members.isEmpty else { return }
+        guard RefreshBatchPolicy.needsRefresh(members, attempts: attempts(for: members), now: now) else { return }
+        refreshTargets(members, force: false)
     }
 
-    /// A cycle is due when *any* profile has no data or has data older than the open-age.
-    /// Both profiles are then refreshed together, so the two cards never disagree about
-    /// which cycle they belong to.
-    private func panelWillOpenCodex() {
-        let due = coordinator.runtimes.contains { runtime in
-            guard let snapshot = runtime.state().snapshot else { return true }
-            return UsageCache.isStale(fetchedAt: snapshot.fetchedAt, maxAge: panelOpenRefreshAge)
+    /// One page's members: the accounts the page shows, minus the menu bar source.
+    func pageBatch(scope: RefreshBatchScope) -> [RefreshTarget] {
+        RefreshBatchPolicy.members(scope: scope,
+                                   selection: menuBarPreferences.selection,
+                                   inventory: refreshInventory,
+                                   isRegistryMode: accountRegistry != nil)
+    }
+
+    /// Every account this launch can read, grouped the way the pages present them.
+    private var refreshInventory: RefreshInventory {
+        var inventory = RefreshInventory()
+        inventory.chatGPTProfileIDs = profileStates.map(\.profile.id)
+        inventory.googleAccountIDs = google.accounts.map(\.id)
+        if accountRegistry != nil {
+            let rows = managedAccounts.filter { !$0.removalPending && $0.platform.apiPlatform != nil }
+            inventory.managedDeepSeekIDs = rows.filter { $0.platform == .deepseek }.map(\.id)
+            inventory.managedCommandCodeIDs = rows.filter { $0.platform == .commandcode }.map(\.id)
+        } else {
+            inventory.legacyDeepSeek = hasAccounts(.deepseek)
+            inventory.legacyCommandCode = hasAccounts(.commandcode)
         }
-        if due { refresh() }
+        return inventory
     }
 
-    private func panelWillOpenProviders() {
-        if accountRegistry != nil { refreshManagedAPIs(force: false); return }
-        for platform in [ProviderPlatform.deepseek, .commandcode] {
-            guard providerEngine.shouldRefreshOnPanelOpen(platform) else { continue }
-            refreshProvider(platform, force: false)
+    /// The recorded attempt time of one account, or nil when it has never been read. Google
+    /// accounts answer from the Google model, which owns their reads.
+    func lastRefreshAttempt(for target: RefreshTarget) -> Date? {
+        if case .googleAccount(let email) = target { return google.lastAttemptAt(accountID: email) }
+        return refreshAttempts.lastAttempt(for: target)
+    }
+
+    func recordRefreshAttempt(_ target: RefreshTarget, at date: Date) {
+        refreshAttempts.record(target, at: date)
+    }
+
+    private func attempts(for targets: [RefreshTarget]) -> [RefreshTarget: Date] {
+        var attempts: [RefreshTarget: Date] = [:]
+        for target in targets { attempts[target] = lastRefreshAttempt(for: target) }
+        return attempts
+    }
+
+    /// Reads an explicit set of accounts. The page batches and the menu bar loop share this
+    /// dispatch, so the scope decision stays in one place.
+    private func refreshTargets(_ targets: [RefreshTarget], force: Bool) {
+        let profileIDs = targets.compactMap(\.chatGPTProfileID)
+        if !profileIDs.isEmpty { refreshProfiles(ids: profileIDs, resetFailureBudget: force) }
+        let googleIDs = targets.compactMap(\.googleAccountID)
+        if !googleIDs.isEmpty { google.refresh(force: force, accountIDs: Set(googleIDs)) }
+        for target in targets {
+            switch target {
+            case .apiAccount(let id): refreshManagedAPI(id: id, force: force)
+            case .providerPlatform(let platform): refreshProvider(platform, force: force)
+            case .chatGPTProfile, .googleAccount: break
+            }
         }
     }
 
@@ -906,7 +918,7 @@ public final class UsageViewModel: ObservableObject {
     public func refreshNow() {
         guard !isStopped else { return }
         google.refresh(force: true)
-        refresh(resetFailureBudget: true)
+        refreshProfiles(ids: coordinator.profileIDs, resetFailureBudget: true)
         if accountRegistry != nil { refreshManagedAPIs(force: true) }
         else { for report in providerReports { refreshProvider(report.platform, force: true) } }
         refreshDeepSeekStatus(force: true)
@@ -923,7 +935,7 @@ public final class UsageViewModel: ObservableObject {
         case .all:
             refreshNow()
         case .chatGPT:
-            refresh(resetFailureBudget: true)
+            refreshProfiles(ids: coordinator.profileIDs, resetFailureBudget: true)
         case .google:
             google.refresh(force: true)
         case .deepSeek:
@@ -994,8 +1006,8 @@ public final class UsageViewModel: ObservableObject {
         return providerEngine.isFetching(platform)
     }
 
-    /// Refreshes every profile in parallel inside one cycle. No request is stacked: a slow
-    /// profile simply finishes later than the other.
+    /// Refreshes the requested profiles in parallel inside one cycle. No request is stacked:
+    /// a slow profile simply finishes later than the other.
     ///
     /// Each group task returns the profile's stable identifier, and the parent consumes the
     /// group in completion order: the moment one profile finishes, its new state is published
@@ -1006,18 +1018,18 @@ public final class UsageViewModel: ObservableObject {
     /// A manual request (`resetFailureBudget: true`) arriving while a cycle runs is never
     /// dropped: it queues exactly one follow-up cycle (1.4.2 §3.1). Automatic callers only
     /// coalesce — the running cycle's fresh results are what they wanted anyway.
-    private func refresh(resetFailureBudget: Bool = false) {
-        guard !isStopped else { return }
+    private func refreshProfiles(ids: [String], resetFailureBudget: Bool = false) {
+        guard !isStopped, !ids.isEmpty else { return }
         if isRefreshing {
             if resetFailureBudget { pendingManualRefresh = true }
             return
         }
         isRefreshing = true
         let coordinator = self.coordinator
-        let profileIDs = coordinator.profileIDs
+        let attempts = refreshAttempts
         refreshTask = Task.detached(priority: .utility) { [weak self] in
             await withTaskGroup(of: String.self) { group in
-                for profileID in profileIDs {
+                for profileID in ids {
                     group.addTask {
                         // Automatic rounds respect the per-profile retry ladder: a profile
                         // whose backoff gate is open is skipped here rather than told
@@ -1027,6 +1039,10 @@ public final class UsageViewModel: ObservableObject {
                             || (!resetFailureBudget && coordinator.isAutomaticRetryGated(profileID: profileID)) {
                             return profileID
                         }
+                        // The attempt is recorded the moment the read is dispatched, on this
+                        // task rather than through the main actor, so a failure still counts
+                        // and a busy main thread never delays the fetch.
+                        attempts.record(.chatGPTProfile(profileID))
                         _ = coordinator.fetch(profileID: profileID,
                                               resetFailureBudget: resetFailureBudget)
                         return profileID
@@ -1071,34 +1087,15 @@ public final class UsageViewModel: ObservableObject {
         if pendingManualRefresh {
             // Exactly one follow-up; it clears the flag itself before the next cycle starts.
             pendingManualRefresh = false
-            refresh(resetFailureBudget: true)
+            refreshProfiles(ids: coordinator.profileIDs, resetFailureBudget: true)
             return
         }
-        rescheduleCodexTimer()
         rescheduleMenuBarRefreshTimer()
-    }
-
-    /// Scheduled provider refresh. Platforms whose contract is unconfirmed are skipped by
-    /// the engine itself, so an unverified endpoint is never polled on a timer.
-    public func refreshProviders(force: Bool) {
-        guard !isStopped else { return }
-        if accountRegistry != nil { refreshManagedAPIs(force: force); return }
-        guard !isProviderRefreshing else { return }
-        isProviderRefreshing = true
-        providerRefreshTask = Task { [weak self] in
-            if force {
-                for platform in [ProviderPlatform.deepseek, .commandcode] {
-                    await self?.providerEngine.refresh(platform: platform, force: true)
-                }
-            } else {
-                await self?.providerEngine.refreshScheduled()
-            }
-            self?.finishProviderRefresh()
-        }
     }
 
     private func refreshProvider(_ platform: ProviderPlatform, force: Bool) {
         guard !isStopped else { return }
+        recordRefreshAttempt(.providerPlatform(platform), at: Date())
         isProviderRefreshing = true
         Task { [weak self] in
             await self?.providerEngine.refresh(platform: platform, force: force)

@@ -105,9 +105,6 @@ public struct ProviderCacheEntry: Codable, Equatable, Sendable {
 /// credential lives in the keychain (v1.1 requirement 6).
 public final class ProviderCache: @unchecked Sendable {
 
-    /// Data older than this is refreshed when the panel opens.
-    public static let maxAgeForPanelOpenRefresh: TimeInterval = 60
-
     private let userDefaults: UserDefaults
     private let storageKey: String
     private let queue = DispatchQueue(label: "usagemonitor.provider-cache")

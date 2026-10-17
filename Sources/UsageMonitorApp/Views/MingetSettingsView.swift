@@ -296,7 +296,7 @@ struct MingetSettingsView: View {
         } header: {
             Text("菜单栏低额度刷新")
         } footer: {
-            sectionNote("阈值按“剩余量严格低于”判断；只加快当前菜单栏选中的账号或余额来源。")
+            sectionNote("阈值按“剩余量严格低于”判断，只加快菜单栏选中的账号或余额来源；菜单栏没显示的账号不再后台刷新，只在打开概览或品牌页时按 5 分钟门槛补刷一次。")
         }
 
         Section {

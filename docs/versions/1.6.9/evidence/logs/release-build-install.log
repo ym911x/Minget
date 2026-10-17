@@ -1,0 +1,81 @@
+== signing identity: Minget Local Signing ==
+== swift build (release) ==
+Building for production...
+[Planning deferred tasks]
+[26 / 43]
+[27 / 44] UsageMonitorCore
+[40 / 84]
+[46 / 84]
+[48 / 84]
+[53 / 84]
+[57 / 84]
+[61 / 84]
+[65 / 84]
+[66 / 84]
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:134:26: [1;33mwarning: [1;39m'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m132 |[0;0m         // C `Boolean`, so the round trip is done in `Bool`.
+[0;36m133 |[0;0m         var previous = DarwinBoolean(true)
+[0;36m134 |[0;0m         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+    [0;36m|[0;0m                          `- [1;33mwarning: [1;39m'SecKeychainGetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m135 |[0;0m         _ = SecKeychainSetUserInteractionAllowed(false)
+[0;36m136 |[0;0m         return {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:135:13: [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m133 |[0;0m         var previous = DarwinBoolean(true)
+[0;36m134 |[0;0m         let readStatus = SecKeychainGetUserInteractionAllowed(&previous)
+[0;36m135 |[0;0m         _ = SecKeychainSetUserInteractionAllowed(false)
+    [0;36m|[0;0m             `- [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m136 |[0;0m         return {
+[0;36m137 |[0;0m             guard readStatus == errSecSuccess else {
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:140:21: [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m138 |[0;0m                 // The previous state could not be read: restore the documented default
+[0;36m139 |[0;0m                 // instead of leaving interaction disabled.
+[0;36m140 |[0;0m                 _ = SecKeychainSetUserInteractionAllowed(true)
+    [0;36m|[0;0m                     `- [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m141 |[0;0m                 return
+[0;36m142 |[0;0m             }
+
+/Users/yuyimeng/Library/Mobile Documents/com~apple~CloudDocs/AIfun/01 Projects/额度显示小组件/Sources/UsageMonitorCore/Providers/ProviderCredentialStore.swift:143:17: [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m141 |[0;0m                 return
+[0;36m142 |[0;0m             }
+[0;36m143 |[0;0m             _ = SecKeychainSetUserInteractionAllowed(previous.boolValue)
+    [0;36m|[0;0m                 `- [1;33mwarning: [1;39m'SecKeychainSetUserInteractionAllowed' was deprecated in macOS 10.10: SecKeychain is deprecated[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m144 |[0;0m         }
+[0;36m145 |[0;0m     }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[68 / 84] UsageMonitorCore
+[76 / 86] UsageMonitorCLI-product
+[78 / 87] UsageMonitorApp-product
+[99 / 120]
+[101 / 120]
+[109 / 120]
+[111 / 120] UsageMonitorCLI-product
+[112 / 120]
+[113 / 120]
+[114 / 120]
+[115 / 120]
+[116 / 120] UsageMonitorApp-product
+[118 / 120] UsageMonitorApp-product
+[119 / 120] UsageMonitorApp-product
+Build complete! (21.92秒)
+== staging /tmp/minget-1.6.9-stage/Minget.app ==
+== codesign (Minget Local Signing) ==
+/tmp/minget-1.6.9-stage/Minget.app: replacing existing signature
+== strict verification in staging ==
+--prepared:/private/tmp/minget-1.6.9-stage/Minget.app/Contents/MacOS/MingetCLI
+--validated:/private/tmp/minget-1.6.9-stage/Minget.app/Contents/MacOS/MingetCLI
+/tmp/minget-1.6.9-stage/Minget.app: valid on disk
+/tmp/minget-1.6.9-stage/Minget.app: satisfies its Designated Requirement
+/tmp/minget-1.6.9-stage/Minget.app/Contents/Info.plist: OK
+== install to /Applications/Minget.app ==
+--prepared:/Applications/Minget.app/Contents/MacOS/MingetCLI
+--validated:/Applications/Minget.app/Contents/MacOS/MingetCLI
+/Applications/Minget.app: valid on disk
+/Applications/Minget.app: satisfies its Designated Requirement
+== archive copy to /tmp/minget-1.6.9-archive/Minget.app ==
+/tmp/minget-1.6.9-archive/Minget.app: valid on disk
+/tmp/minget-1.6.9-archive/Minget.app: satisfies its Designated Requirement
+built:   /Applications/Minget.app
+archive: /tmp/minget-1.6.9-archive/Minget.app

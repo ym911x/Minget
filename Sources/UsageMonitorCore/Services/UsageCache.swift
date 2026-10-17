@@ -11,7 +11,6 @@ import Foundation
 ///   profiles need. A v2 entry is never served to a profile; it is retired by the one-time
 ///   migration in `migrateLegacyCacheIfNeeded(profileID:resolvedAccountID:)`.
 public final class UsageCache: @unchecked Sendable {
-    public static let maxAgeForPanelOpenRefresh: TimeInterval = 30
     public static let stalenessWarnThreshold: TimeInterval = 10 * 60
 
     private let userDefaults: UserDefaults
@@ -25,10 +24,6 @@ public final class UsageCache: @unchecked Sendable {
 
     public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-    }
-
-    public static func isStale(fetchedAt: Date, now: Date = Date(), maxAge: TimeInterval = UsageCache.maxAgeForPanelOpenRefresh) -> Bool {
-        return now.timeIntervalSince(fetchedAt) > maxAge
     }
 
     // MARK: Unattributed store (v1.0 compatibility)

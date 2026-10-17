@@ -78,11 +78,9 @@ public protocol ProviderProbeReading: ProviderReading {
 public final class ProviderRefreshEngine: @unchecked Sendable {
 
     public static let defaultRefreshInterval: TimeInterval = 5 * 60
-    public static let defaultPanelOpenRefreshAge: TimeInterval = ProviderCache.maxAgeForPanelOpenRefresh
 
     private let readers: [ProviderPlatform: ProviderReading]
     private let cache: ProviderCache
-    private let panelOpenRefreshAge: TimeInterval
     private let clock: () -> Date
 
     private struct State {
@@ -118,13 +116,11 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
 
     public init(readers: [ProviderReading],
                 cache: ProviderCache = ProviderCache(),
-                panelOpenRefreshAge: TimeInterval = ProviderRefreshEngine.defaultPanelOpenRefreshAge,
                 clock: @escaping () -> Date = Date.init) {
         var mapped: [ProviderPlatform: ProviderReading] = [:]
         for reader in readers { mapped[reader.platform] = reader }
         self.readers = mapped
         self.cache = cache
-        self.panelOpenRefreshAge = panelOpenRefreshAge
         self.clock = clock
     }
 
@@ -229,14 +225,6 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
         return readers[platform]
     }
 
-    /// True when the platform's displayed data is older than the panel-open threshold.
-    public func shouldRefreshOnPanelOpen(_ platform: ProviderPlatform) -> Bool {
-        let (state, busy) = locked { (states[platform] ?? State(), inFlight[platform] != nil) }
-        guard !busy else { return false }
-        guard let lastSuccessAt = state.lastSuccessAt else { return true }
-        return clock().timeIntervalSince(lastSuccessAt) > panelOpenRefreshAge
-    }
-
     // MARK: - Credential priming and authorisation
 
     /// One background credential pass for every reader, so every later status question can be
@@ -296,17 +284,6 @@ public final class ProviderRefreshEngine: @unchecked Sendable {
                 continue
             }
             return result
-        }
-    }
-
-    /// Refreshes every configured platform on the periodic schedule. Platforms whose
-    /// contract is unconfirmed are skipped: they are probed on connect and on manual
-    /// refresh, not on a timer.
-    public func refreshScheduled() async {
-        for platform in [ProviderPlatform.deepseek, .commandcode] {
-            guard let reader = readers[platform] else { continue }
-            guard reader.credentialState.isConfigured, reader.isAutomaticRefreshEnabled else { continue }
-            await refresh(platform: platform, force: false)
         }
     }
 

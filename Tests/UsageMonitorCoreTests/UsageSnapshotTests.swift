@@ -62,12 +62,4 @@ final class UsageSnapshotTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(UsageSnapshot.Persisted.self, from: truncated))
     }
 
-    func testCacheFreshnessWindow() {
-        let now = Date()
-        // Fresh: under 30 seconds. Stale: over 30 seconds (IMPLEMENTATION_PLAN.md).
-        XCTAssertFalse(UsageCache.isStale(fetchedAt: now.addingTimeInterval(-10), now: now, maxAge: 30))
-        XCTAssertFalse(UsageCache.isStale(fetchedAt: now.addingTimeInterval(-30), now: now, maxAge: 30))
-        XCTAssertTrue(UsageCache.isStale(fetchedAt: now.addingTimeInterval(-31), now: now, maxAge: 30))
-        XCTAssertTrue(UsageCache.isStale(fetchedAt: now.addingTimeInterval(-8 * 60), now: now, maxAge: 30))
-    }
 }

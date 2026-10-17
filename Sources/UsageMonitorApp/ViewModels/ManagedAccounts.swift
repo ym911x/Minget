@@ -67,12 +67,16 @@ extension UsageViewModel {
             var row = state.account; row.keyFingerprint = state.report.accountID; try? accountRegistry?.upsert(row)
         }
     }
+    /// One background credential pass per managed connection. The only read that may follow
+    /// at launch belongs to the menu bar source, so a credential that arrives late for the
+    /// displayed account is still read without waking every other connection.
     func primeManagedCredentials() {
         guard accountRegistry != nil else { return }
         for runtime in apiRuntimes.values where accountRegistry?.account(runtime.id)?.removalPending == false {
             Task { [weak self] in
                 await runtime.engine.primeCredentials(); self?.publishManagedAPIStates()
-                self?.refreshManagedAPI(id: runtime.id, force: false)
+                guard let self, self.menuBarRefreshTarget() == .apiAccount(runtime.id) else { return }
+                self.refreshManagedAPI(id: runtime.id, force: false)
             }
         }
     }
@@ -83,6 +87,7 @@ extension UsageViewModel {
     }
     func refreshManagedAPI(id: String, force: Bool) {
         guard !isStopped, accountRegistry?.account(id)?.removalPending == false, let runtime = apiRuntimes[id] else { return }
+        recordRefreshAttempt(.apiAccount(id), at: Date())
         // Engine single-flight and credential generations continue to own request coalescing.
         isProviderRefreshing = true
         managedAPITasks[id] = Task { [weak self] in

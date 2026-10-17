@@ -94,8 +94,8 @@ public enum MenuBarRefreshPolicy {
         return .deepSeekBalance
     }
 
-    /// Returns an additional timer interval only for the selected menu-bar source. The
-    /// existing detail refresh interval remains the upper bound, so a user cannot make an
+    /// Returns the interval for the selected menu-bar source while it is below its threshold.
+    /// The source's own cadence remains the upper bound, so a user cannot make an
     /// already-near-reset 30-second ChatGPT loop slower by choosing a 60-second acceleration.
     public static func decision(selection: MenuBarPreferences.Selection,
                                 profileSnapshot: UsageSnapshot?,

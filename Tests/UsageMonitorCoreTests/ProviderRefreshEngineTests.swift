@@ -288,7 +288,7 @@ final class ProviderRefreshEngineTests: XCTestCase {
         XCTAssertEqual(report.connection, .authSuspended)
         XCTAssertTrue(engine.isAuthSuspended(.deepseek))
 
-        await engine.refreshScheduled()
+        await engine.refresh(platform: .deepseek, force: false)
         XCTAssertEqual(reader.readCount, 1, "an auth suspension must stop further automatic reads")
     }
 

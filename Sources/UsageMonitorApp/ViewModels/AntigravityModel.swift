@@ -92,6 +92,13 @@ public final class AntigravityModel: ObservableObject {
         }
     }
     public func connection(for slot: AntigravitySlot) -> AntigravityConnection? { connections.first { $0.slot == slot } }
+
+    /// When a read was last started for this connection, or nil when none was started this
+    /// session. The page-batch gate reads it so Google accounts need no second ledger.
+    func lastAttemptAt(accountID: String) -> Date? {
+        guard let connection = connections.first(where: { $0.email == accountID }) else { return nil }
+        return attempts[connection.uuid]
+    }
     public func loginStatus(for slot: AntigravitySlot) -> String {
         guard let connection = connection(for: slot) else { return "未登录" }
         return suspended.contains(connection.uuid) ? "授权失效，请重新登录" : "已登录：" + connection.email
@@ -177,15 +184,22 @@ public final class AntigravityModel: ObservableObject {
             connections = next; updateRefreshing()
         } catch { feedback = "本机账号记录无法读取，请检查目录权限" }
     }
-    public func start() { stopped = false; refresh(force: false) }
+    /// Starts the model. `accountIDs` scopes the launch read: the app passes the one
+    /// connection the menu bar displays, while tests keep the unscoped (nil) behaviour.
+    public func start(accountIDs: Set<String>? = nil) { stopped = false; refresh(force: false, accountIDs: accountIDs) }
     public func stop() {
         stopped = true; epoch = UUID(); tasks.values.forEach { $0.cancel() }; tasks = [:]; pending = []
         for index in accounts.indices { accounts[index].isFetching = false }
         cancelLogin(); installTask?.cancel(); updateRefreshing()
     }
-    public func refresh(force: Bool, now: Date = Date(), afterWake: Bool = false) {
+    /// Reads connections on the model's own freshness rule. `accountIDs` (a set of emails)
+    /// narrows the read to the accounts a caller owns; nil keeps every connection.
+    public func refresh(force: Bool, now: Date = Date(), afterWake: Bool = false,
+                        accountIDs: Set<String>? = nil) {
         guard !stopped else { return }
-        for connection in connections where registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true {
+        for connection in connections
+        where (accountIDs?.contains(connection.email) ?? true)
+            && registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true {
             if tasks[connection.uuid] != nil { if force { pending.insert(connection.uuid) }; continue }
             if suspended.contains(connection.uuid) && !force { continue }
             if let until = retryUntil[connection.uuid], now < until { continue }

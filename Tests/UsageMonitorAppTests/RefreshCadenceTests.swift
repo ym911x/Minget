@@ -238,7 +238,7 @@ final class RefreshCadenceTests: XCTestCase {
         XCTAssertFalse(invalidDeepSeek.isAccelerated)
     }
 
-    func testMenuBarTimerFollowsSelectionDisableAndStopLifecycle() throws {
+    func testMenuBarLoopFollowsSelectionAccelerationDisableAndStop() throws {
         let defaults = makeDefaults("menu-bar-timer")
         let preferences = MenuBarPreferences(defaults: defaults)
         let low = UsageSnapshot(
@@ -259,12 +259,13 @@ final class RefreshCadenceTests: XCTestCase {
                                    refreshInterval: 120)
 
         model.start()
-        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 30)
+        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 30,
+                       "the displayed profile is below its threshold, so the loop accelerates")
 
         preferences.selection = .deepSeek
         waitForPreferencePropagation()
-        XCTAssertNil(model.configuredMenuBarRefreshInterval,
-                     "a source without a matching low-usage trigger must cancel the old timer")
+        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 300,
+                       "a source without a low-usage trigger keeps the provider cadence")
 
         preferences.selection = .profile("chatgpt-a")
         waitForPreferencePropagation()
@@ -272,7 +273,8 @@ final class RefreshCadenceTests: XCTestCase {
 
         preferences.lowUsageRefreshEnabled = false
         waitForPreferencePropagation()
-        XCTAssertNil(model.configuredMenuBarRefreshInterval)
+        XCTAssertEqual(model.configuredMenuBarRefreshInterval, 120,
+                       "disabling the acceleration leaves the source's own cadence")
 
         model.stop()
         XCTAssertNil(model.configuredMenuBarRefreshInterval)
@@ -306,25 +308,19 @@ final class RefreshCadenceTests: XCTestCase {
                                                           previous: previous))
     }
 
-    func testWakeProbesHealthyProfileAndFullyRefreshesOnlyFailedProfile() async throws {
+    func testWakeOnlyProbesTheDisplayedProfile() async throws {
         let defaults = makeDefaults("wake-ab")
         let initial = snapshot(fiveHourResetsAt: Self.now.addingTimeInterval(3600))
         let refreshed = snapshot(fiveHourResetsAt: Self.now.addingTimeInterval(7200))
         let clientA = WakeClient(snapshot: refreshed)
         let failedB = WakeClient(snapshot: initial)
-        let replacementB = WakeClient(snapshot: refreshed)
-        let factoryLock = NSLock()
-        var bFactoryCalls = 0
         let coordinator = CodexProfilesCoordinator { profile in
             if profile.id == "chatgpt-a" {
                 return UsageService(factory: { clientA }, cache: UsageCache(userDefaults: defaults),
                                     profileID: profile.id, restartDelay: 0)
             }
-            return UsageService(factory: {
-                factoryLock.lock(); defer { factoryLock.unlock() }
-                bFactoryCalls += 1
-                return bFactoryCalls == 1 ? failedB : replacementB
-            }, cache: UsageCache(userDefaults: defaults), profileID: profile.id, restartDelay: 0)
+            return UsageService(factory: { failedB }, cache: UsageCache(userDefaults: defaults),
+                                profileID: profile.id, restartDelay: 0)
         }
         _ = coordinator.fetch(profileID: "chatgpt-a")
         _ = coordinator.fetch(profileID: "chatgpt-b")
@@ -339,11 +335,7 @@ final class RefreshCadenceTests: XCTestCase {
         XCTAssertEqual(clientA.startCalls, 1, "healthy A reuses its existing child")
         XCTAssertEqual(clientA.accountReads, 1, "A's wake probe must not read identity")
         XCTAssertEqual(clientA.rateLimitReads, 2, "A performs exactly one wake quota read")
-        XCTAssertEqual(failedB.stopCalls, 1, "B's failed client is retired")
-        XCTAssertEqual(bFactoryCalls, 2, "only B creates a replacement client")
-        XCTAssertEqual(replacementB.startCalls, 1)
-        XCTAssertEqual(replacementB.accountReads, 1, "B's fallback is the ordinary full refresh")
-        XCTAssertEqual(replacementB.rateLimitReads, 1)
+        XCTAssertEqual(failedB.stopCalls, 0, "the wake refresh never touches a hidden profile")
         model.stop()
     }
 
@@ -352,12 +344,12 @@ final class RefreshCadenceTests: XCTestCase {
                                    cache: UsageCache(userDefaults: makeDefaults("clock")),
                                    restartDelay: 0)
         let defaults = makeModel("clock-defaults", service: service)
-        XCTAssertEqual(defaults.currentCodexInterval, 60)
+        XCTAssertEqual(defaults.currentMenuBarBaseInterval, 60)
         XCTAssertEqual(defaults.configuredClockInterval, 30)
 
         let injected = makeModel("clock-injected", service: service,
                                  refreshInterval: 17, clockInterval: 23)
-        XCTAssertEqual(injected.currentCodexInterval, 17)
+        XCTAssertEqual(injected.currentMenuBarBaseInterval, 17)
         XCTAssertEqual(injected.configuredClockInterval, 23)
     }
 

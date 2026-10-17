@@ -1,0 +1,25 @@
+1.6.9 本机安装记录
+时间：2026-10-17 10:12:35 +08
+
+VERSION = 1.6.9
+构建命令：MINGET_BUILD_SCRATCH_DIR=/tmp/minget-1.6.9-release MINGET_STAGING_DIR=/tmp/minget-1.6.9-stage/Minget.app MINGET_ARCHIVE_PATH=/tmp/minget-1.6.9-archive/Minget.app ./scripts/build.sh
+
+安装前后可执行文件 SHA-256：
+68c09e577943bd22e9f8c390b57c21304b1ab0fe738effb0969e2cd6f6fde7ae  /Applications/Minget.app/Contents/MacOS/UsageMonitor
+
+备份（替换前的 1.6.8）：
+/Users/yuyimeng/Applications/Minget Backups/1.6.8-before-1.6.9-20261017-101124/Minget.app
+97c2635dd0d2e5672474ce347a776cd6659a9fac5999643731f92d6bdf84be49  /Users/yuyimeng/Applications/Minget Backups/1.6.8-before-1.6.9-20261017-101124/Minget.app/Contents/MacOS/UsageMonitor
+
+严格签名校验（正式路径）：
+--prepared:/Applications/Minget.app/Contents/MacOS/MingetCLI
+--validated:/Applications/Minget.app/Contents/MacOS/MingetCLI
+/Applications/Minget.app: valid on disk
+/Applications/Minget.app: satisfies its Designated Requirement
+
+Info.plist 版本：
+1.6.9
+staging / 正式路径 / 归档三处可执行文件哈希：
+68c09e577943bd22e9f8c390b57c21304b1ab0fe738effb0969e2cd6f6fde7ae  /tmp/minget-1.6.9-stage/Minget.app/Contents/MacOS/UsageMonitor
+68c09e577943bd22e9f8c390b57c21304b1ab0fe738effb0969e2cd6f6fde7ae  /Applications/Minget.app/Contents/MacOS/UsageMonitor
+68c09e577943bd22e9f8c390b57c21304b1ab0fe738effb0969e2cd6f6fde7ae  /tmp/minget-1.6.9-archive/Minget.app/Contents/MacOS/UsageMonitor

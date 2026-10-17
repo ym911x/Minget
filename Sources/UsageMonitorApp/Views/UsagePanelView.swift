@@ -143,7 +143,10 @@ struct UsagePanelView: View {
         .padding(DetailPageLayout.margin)
         .frame(width: DetailPageLayout.pageWidth, height: viewport, alignment: .top)
         .background(.regularMaterial)
-        .onAppear { if refreshOnAppear { model.panelWillOpen() } }
+        .onAppear { if refreshOnAppear { model.panelWillOpen(tab: preferences.effectiveTab) } }
+        .onChange(of: preferences.selectedTab) { _ in
+            if refreshOnAppear { model.panelDidSwitchTab(preferences.effectiveTab) }
+        }
     }
 
     @ViewBuilder
