@@ -1,0 +1,23 @@
+--- a/Tests/UsageMonitorAppTests/RefreshScopeTests.swift
++++ b/Tests/UsageMonitorAppTests/RefreshScopeTests.swift
+@@ -416,4 +416,20 @@
+         }
+         XCTAssertTrue(manualRead, "a manual refresh reads every account regardless of the gate")
+     }
++    func testOpeningPageWhileLaunchReadIsInFlightMustStillReadHiddenProfile() async {
++        let harness = makeHarness("overlap-at-launch")
++        harness.model.start()
++        defer { harness.model.stop() }
++        // Both calls execute on the main actor with no suspension in between, so the
++        // displayed profile's launch round has not completed when the page opens.
++        XCTAssertTrue(harness.model.isRefreshing)
++        harness.model.panelWillOpen(tab: .chatGPT)
++        let launchRead = await waitUntil { harness.profileReads("chatgpt-a") == 1 }
++        XCTAssertTrue(launchRead)
++        let settled = await waitUntil { !harness.model.isRefreshing }
++        XCTAssertTrue(settled)
++        let hiddenRead = await waitUntil(timeout: 1) { harness.profileReads("chatgpt-b") == 1 }
++        XCTAssertTrue(hiddenRead, "opening a page must not lose the hidden profile when another profile is in flight")
++    }
++
+ }

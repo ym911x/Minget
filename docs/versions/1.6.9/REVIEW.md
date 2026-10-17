@@ -34,3 +34,9 @@
 - 真实请求节奏（菜单栏来源的频率、页面补刷的 5 分钟门槛）需在正式安装版上用真实账号复验，自动测试只能证明判定逻辑与派发范围。
 - 切换菜单栏来源后，新来源第一次读取仍等它自己的节奏到点（与 1.6.8 相同）。
 - 台账是进程内内存数据，重启后页面第一次打开必定补刷一次。
+
+## 发布后独立复核补充（2026-10-17）
+
+发现尚未修复的 P2：菜单栏某个 ChatGPT 账号刷新期间打开概览或 ChatGPT 页面，另一个账号的自动补刷会被全局 `isRefreshing` 直接丢弃，当前刷新结束后不会补上。隔离副本的 RefreshScopeTests 共 15 项，14 项既有测试通过，新增并发场景失败。详见 [复核记录](evidence/records/post-publication-review.md)、[确定性复现补丁](evidence/records/post-publication-overlap-regression.patch) 与 [测试日志](evidence/logs/post-publication-refresh-scope.log)。原 706 项回归和原用户验收记录保持原结论，本次不能记为无问题通过。
+
+等待当前刷新结束后点品牌页「刷新」或页头「刷新全部」可绕过。v1.6.9 已在本次请求前公开发布，标签与 App 保持原样；修复应进入后续补丁。

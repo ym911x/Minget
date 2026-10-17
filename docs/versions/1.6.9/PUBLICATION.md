@@ -22,3 +22,9 @@
 - 公开源码归档核验：下载 v1.6.9 源码 tar.gz（27455402 字节，SHA-256 `3de0dc3ea3633ef63a7db4cc355cd294bf631a8170d65572b3a6a92af90073bd`），与 `git archive v1.6.9` 逐文件比对一致（各 624 个文件，`diff -r` 无差异），`VERSION` 为 1.6.9，见 `evidence/records/public-source-verification.txt`。
 - 本机正式 App 仍为已由用户验收的 1.6.9，本次发布没有重建或替换安装包；三份既有 releases 文档删除仍只在本地工作区，公开源码保留原文件。
 - 刘海机型现场、VoiceOver 现场、第二台 Mac 与其他历史待验收项继续保留，不因发布改记通过。
+
+## 发布后独立复核补充（2026-10-17）
+
+发现尚未修复的 P2：菜单栏某个 ChatGPT 账号刷新期间打开概览或 ChatGPT 页面，另一个账号的自动补刷会被全局 `isRefreshing` 直接丢弃，当前刷新结束后不会补上。隔离副本的 RefreshScopeTests 共 15 项，14 项既有测试通过，新增并发场景失败。详见 [复核记录](evidence/records/post-publication-review.md)、[确定性复现补丁](evidence/records/post-publication-overlap-regression.patch) 与 [测试日志](evidence/logs/post-publication-refresh-scope.log)。原 706 项回归和原用户验收记录保持原结论，本次不能记为无问题通过。
+
+等待当前刷新结束后点品牌页「刷新」或页头「刷新全部」可绕过。v1.6.9 已在本次请求前公开发布，标签与 App 保持原样；修复应进入后续补丁。

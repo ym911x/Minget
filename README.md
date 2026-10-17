@@ -11,6 +11,8 @@ Minget 是一个 macOS 菜单栏应用，用于集中查看多个隔离的 ChatG
 
 ## v1.6.9：刷新范围与频率优化
 
+已发布 [v1.6.9](https://github.com/ym911x/Minget/releases/tag/v1.6.9)。发布后独立复核发现 ChatGPT 并发刷新可能丢弃页面补刷，已知问题与绕过方式见 [审核记录](docs/versions/1.6.9/evidence/records/post-publication-review.md)。
+
 刷新范围收窄为「显示什么刷什么」：菜单栏显示哪一个来源，就只有一条循环维护它，其余账号不再有后台周期刷新。打开概览页或品牌页（含面板内切换标签与独立详情窗口）时，补刷该页面中未在菜单栏显示的账号，其他品牌不动；一批账号全部在 5 分钟内有取数就整批跳过，只能手动刷新，刷新失败同样计入门槛。启动与唤醒也只在菜单栏来源上工作。菜单栏来源的节奏与设置里的低额度加速规则不变（ChatGPT 30/60/120 秒自适应，DeepSeek、Command Code、Google 约 5 分钟，加速 15/30/60 秒）。DeepSeek 官方状态页不再后台定时，随概览或 DeepSeek 页显示、距上次读取超过 5 分钟才读一次。
 
 独立完整回归 706 项，701 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径。真实界面复验状态见 [1.6.9 验收](docs/versions/1.6.9/ACCEPTANCE.md)，改动与证据见 [1.6.9 实施记录](docs/versions/1.6.9/IMPLEMENTATION_REPORT.md)。
@@ -224,11 +226,11 @@ Google 官方 Antigravity CLI 1.2.13 双账号登录、独立目录、只读 `/u
 
 ## 当前版本
 
-- 当前版本：`1.6.6`，发布状态见 [发布记录](docs/versions/1.6.6/PUBLICATION.md)；安装和验收见 [当前状态](PROJECT_STATUS.md)。
-- 公开发布核验以 [当前发布记录](docs/versions/1.6.6/PUBLICATION.md) 为准。
+- 当前版本：`1.6.9`，发布状态见 [发布记录](docs/versions/1.6.9/PUBLICATION.md)；安装和验收见 [当前状态](PROJECT_STATUS.md)。
+- 公开发布核验以 [当前发布记录](docs/versions/1.6.9/PUBLICATION.md) 为准。
 - 平台：macOS 13 及以上，Apple Silicon；Google 接入固定官方 CLI 1.2.13。
 - 分发：源码；本机签名包仅用于本地验收，不作为公开 Release 附件。
-- [发布说明](docs/versions/1.6.6/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.6/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)
+- [发布说明](docs/versions/1.6.9/RELEASE_NOTES.md) · [验收台账](docs/versions/1.6.9/ACCEPTANCE.md) · [变更记录](CHANGELOG.md) · [后续规划](ROADMAP.md)
 
 ## 已实现功能
 

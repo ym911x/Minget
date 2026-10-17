@@ -1,0 +1,51 @@
+Building for debugging...
+[1 / 2] UsageMonitorAppTests-product
+Build complete! (0.20秒)
+Test Suite 'Selected tests' started at 2026-10-17 17:31:06.757.
+Test Suite 'UsageMonitorCoreTests.xctest' started at 2026-10-17 17:31:06.758.
+Test Suite 'UsageMonitorCoreTests.xctest' passed at 2026-10-17 17:31:06.758.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-17 17:31:06.758.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'Selected tests' started at 2026-10-17 17:31:06.805.
+Test Suite 'UsageMonitorAppTests.xctest' started at 2026-10-17 17:31:06.805.
+Test Suite 'RefreshScopeTests' started at 2026-10-17 17:31:06.806.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testABatchPastTheAgeReadsAgain]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testABatchPastTheAgeReadsAgain]' passed (0.046 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testBatchGateSkipsOnlyWhenEveryMemberWasAttemptedRecently]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testBatchGateSkipsOnlyWhenEveryMemberWasAttemptedRecently]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testBatchMembersExcludeTheDisplayedAccountAndStayInsideThePage]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testBatchMembersExcludeTheDisplayedAccountAndStayInsideThePage]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testFailedAttemptsStillCloseTheBatchGate]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testFailedAttemptsStillCloseTheBatchGate]' passed (0.545 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testLaunchReadsOnlyTheDisplayedProfile]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testLaunchReadsOnlyTheDisplayedProfile]' passed (0.180 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testLegacyPlatformsOnlyEnterTheBatchWithAConfiguredCredential]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testLegacyPlatformsOnlyEnterTheBatchWithAConfiguredCredential]' passed (0.001 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testManualRefreshIgnoresTheBatchGate]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testManualRefreshIgnoresTheBatchGate]' passed (0.212 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testMenuBarLoopReadsOnlyTheDisplayedSource]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testMenuBarLoopReadsOnlyTheDisplayedSource]' passed (0.236 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testMenuBarTargetMapsEverySelectionKind]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testMenuBarTargetMapsEverySelectionKind]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testOpeningPageWhileLaunchReadIsInFlightMustStillReadHiddenProfile]' started.
+<isolated-review>/Tests/UsageMonitorAppTests/RefreshScopeTests.swift:432: error: -[UsageMonitorAppTests.RefreshScopeTests testOpeningPageWhileLaunchReadIsInFlightMustStillReadHiddenProfile] : XCTAssertTrue failed - opening a page must not lose the hidden profile when another profile is in flight
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testOpeningPageWhileLaunchReadIsInFlightMustStillReadHiddenProfile]' failed (1.090 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testOpeningTheOverviewReadsEveryHiddenAccountOnce]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testOpeningTheOverviewReadsEveryHiddenAccountOnce]' passed (0.183 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testRegistryModeBatchExcludesTheDisplayedManagedAccount]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testRegistryModeBatchExcludesTheDisplayedManagedAccount]' passed (0.000 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testSwitchingToABrandPageReadsOnlyThatBrand]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testSwitchingToABrandPageReadsOnlyThatBrand]' passed (0.201 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testTheDisplayedDeepSeekBalanceIsExcludedFromEveryPageBatch]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testTheDisplayedDeepSeekBalanceIsExcludedFromEveryPageBatch]' passed (0.030 seconds).
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testTheWholeBatchReadsTogetherWhenOneMemberIsStale]' started.
+Test Case '-[UsageMonitorAppTests.RefreshScopeTests testTheWholeBatchReadsTogetherWhenOneMemberIsStale]' passed (0.040 seconds).
+Test Suite 'RefreshScopeTests' failed at 2026-10-17 17:31:09.573.
+	 Executed 15 tests, with 1 failure (0 unexpected) in 2.766 (2.767) seconds
+Test Suite 'UsageMonitorAppTests.xctest' failed at 2026-10-17 17:31:09.573.
+	 Executed 15 tests, with 1 failure (0 unexpected) in 2.766 (2.768) seconds
+Test Suite 'Selected tests' failed at 2026-10-17 17:31:09.573.
+	 Executed 15 tests, with 1 failure (0 unexpected) in 2.766 (2.768) seconds
+Note: Some test targets reported failures:
+  - UsageMonitorAppTests (XCTest)
