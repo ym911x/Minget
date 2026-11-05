@@ -168,10 +168,10 @@ struct UsagePanelView: View {
                         Text(model.google.feedback).font(.system(size: 11)).foregroundStyle(.secondary)
                         Button("管理连接") { onAccounts?() }
                         Spacer()
-                    }.padding(12).frame(height: AntigravityOverviewCard.height)
+                    }.padding(12).frame(height: AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota))
                 }
                 ForEach(model.google.accounts) { state in
-                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account))
+                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account), showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
                 }
             }
             if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {
@@ -213,7 +213,7 @@ struct UsagePanelView: View {
                 + (preferences.showDeepSeek ? deepSeekAccountCount : 0) + (preferences.showCommandCode ? commandCodeAccountCount : 0)
             return chrome + CGFloat(count) * (OverviewAccountRow.height + gap)
         case .chatGPT: return chrome + CGFloat(max(1, chatGPTAccountCount)) * (DetailPageLayout.codexCardHeight + gap)
-        case .google: return chrome + CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height + gap)
+        case .google: return chrome + CGFloat(max(1, googleAccountCount)) * (AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota) + gap)
         case .deepSeek: return chrome + CGFloat(max(1, deepSeekAccountCount)) * (DetailPageLayout.deepSeekCardHeight + gap)
         case .commandCode: return chrome + CGFloat(max(1, commandCodeAccountCount)) * (DetailPageLayout.commandCodeCardHeight + gap)
         }
@@ -239,7 +239,7 @@ struct UsagePanelView: View {
             let card: CGFloat
             switch platform {
             case .chatGPT: card = DetailPageLayout.codexCardHeight
-            case .google: card = AntigravityOverviewCard.height
+            case .google: card = AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
             case .deepseek: card = DetailPageLayout.deepSeekCardHeight
             case .commandcode: card = DetailPageLayout.commandCodeCardHeight
             }

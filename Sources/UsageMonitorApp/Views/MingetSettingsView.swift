@@ -286,6 +286,14 @@ struct MingetSettingsView: View {
         } footer: {
             sectionNote("概览显示所有账号摘要；选择服务后查看完整额度。更多账号可在“账号”页添加和管理。隐藏卡片不会改变菜单栏来源或停止刷新。")
         }
+        Section {
+            Toggle("显示 Claude 和 GPT 额度", isOn: $preferences.showGoogleClaudeGPTQuota)
+                .disabled(!preferences.showGoogle)
+        } header: {
+            Text("Gemini 额度")
+        } footer: {
+            sectionNote("作用于所有 Gemini 账号，仅影响详情显示。")
+        }
     }
 
     // MARK: - Refresh and fire

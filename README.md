@@ -1,5 +1,7 @@
 # 明明有数 · Minget
 
+当前版本 **1.6.10**：设置 → 详情显示新增「显示 Claude 和 GPT 额度」开关，默认开启，所有 Gemini 账号共享并记住选择。关闭后完整隐藏对应额度块，卡片间距与 OpenAI 统一。仅改变详情展示，不改变取数及菜单栏选择。 详情见 [验收](docs/versions/1.6.10/ACCEPTANCE.md)。
+
 [![CI](https://github.com/ym911x/Minget/actions/workflows/ci.yml/badge.svg)](https://github.com/ym911x/Minget/actions/workflows/ci.yml)
 
 <img src="assets/brand/minget-app-icon-1024.png" alt="Minget M² Logo" width="128">

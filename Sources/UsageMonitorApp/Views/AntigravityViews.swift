@@ -69,6 +69,10 @@ struct AntigravityOverviewCard: View {
     static let height: CGFloat = 318
     let state: AntigravityAccountState
     let displayName: String
+    var showClaudeGPTQuota = true
+    static func height(showClaudeGPTQuota: Bool) -> CGFloat {
+        showClaudeGPTQuota ? height : 186
+    }
     private var groups: [AntigravityQuotaGroup] { state.snapshot?.groups ?? [] }
     private var primary: AntigravityQuotaGroup? { QuotaPresentation.primaryGroup(groups) }
 
@@ -90,7 +94,7 @@ struct AntigravityOverviewCard: View {
                 }.font(.system(size: 11))
             }
             // Every other reported pool is drawn in place, directly under the primary one.
-            ForEach(QuotaPresentation.otherGroups(groups)) { group in
+            ForEach(QuotaPresentation.otherGroups(groups, showClaudeGPTQuota: showClaudeGPTQuota)) { group in
                 VStack(alignment: .leading, spacing: 12) {
                     Text(group.label).font(.system(size: 13, weight: .semibold))
                     quotaRows(group, tint: QuotaPresentation.tint(for: group))
@@ -100,7 +104,7 @@ struct AntigravityOverviewCard: View {
                     }
                 }
             }
-        }.quotaCardSurface().frame(minHeight: DetailPageLayout.codexCardHeight)
+        }.quotaCardSurface()
             .accessibilityElement(children: .contain)
     }
 

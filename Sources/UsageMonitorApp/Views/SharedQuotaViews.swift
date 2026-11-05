@@ -66,8 +66,8 @@ enum QuotaPresentation {
     }
 
     /// The groups drawn after the primary one, in the order the service reported them.
-    static func otherGroups(_ groups: [AntigravityQuotaGroup]) -> [AntigravityQuotaGroup] {
-        groups.filter { $0.id != primaryGroup(groups)?.id }
+    static func otherGroups(_ groups: [AntigravityQuotaGroup], showClaudeGPTQuota: Bool = true) -> [AntigravityQuotaGroup] {
+        groups.filter { $0.id != primaryGroup(groups)?.id && (showClaudeGPTQuota || $0.label != "Claude and GPT models") }
     }
 
     /// The shared pool that covers Claude and GPT models carries Claude's own colour; the

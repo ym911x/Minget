@@ -22,6 +22,10 @@ final class DetailPreferences: ObservableObject {
 
     private let defaults: UserDefaults
 
+    @Published var showGoogleClaudeGPTQuota: Bool {
+        didSet { defaults.set(showGoogleClaudeGPTQuota, forKey: "detail.showGoogleClaudeGPTQuota") }
+    }
+
     @Published var showGoogle: Bool {
         didSet {
             defaults.set(showGoogle, forKey: "detail.showGoogle")
@@ -60,6 +64,7 @@ final class DetailPreferences: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        self.showGoogleClaudeGPTQuota = defaults.object(forKey: "detail.showGoogleClaudeGPTQuota") as? Bool ?? true
         let showG = defaults.object(forKey: "detail.showGoogle") as? Bool ?? false
         self.showGoogle = showG
         let showDS = defaults.object(forKey: Key.showDeepSeek) as? Bool ?? true
