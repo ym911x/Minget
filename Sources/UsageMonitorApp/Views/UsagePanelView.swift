@@ -172,7 +172,9 @@ struct UsagePanelView: View {
                     }.padding(12).frame(height: AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota))
                 }
                 detailCards(model.google.accounts) { state in
-                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account), showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
+                    AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account),
+                                            showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota,
+                                            showArgonQuota: preferences.showGoogleArgonQuota)
                 }
             }
             if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {
@@ -260,7 +262,15 @@ struct UsagePanelView: View {
             let card: CGFloat
             switch platform {
             case .chatGPT: card = DetailPageLayout.codexCardHeight
-            case .google: card = AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
+            case .google:
+                let base = AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
+                let standardHeight = CGFloat(count) * (base + DetailPageLayout.rowSpacing)
+                guard preferences.showGoogleArgonQuota else { return standardHeight }
+                return model.google.accounts.reduce(standardHeight) { height, state in
+                    guard let argon = state.snapshot?.groups.first(where: { $0.label == QuotaPresentation.argonGroupName }) else { return height }
+                    // Section title and gap, plus the rows this account actually reported.
+                    return height + 28 + CGFloat(argon.buckets.count) * 52
+                }
             case .deepseek: card = DetailPageLayout.deepSeekCardHeight
             case .commandcode: card = DetailPageLayout.commandCodeCardHeight
             }

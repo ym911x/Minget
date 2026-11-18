@@ -1,3 +1,7 @@
+# 当前本机版本 · 1.6.12
+
+`codex/minget-1-6-12` 从 1.6.11 的 `717eb44` 开发，已在本机正式路径安装并重启。Google 详情卡按实际周期显示 Gemini 4 Argon，支持独立开关。见[验收](docs/versions/1.6.12/ACCEPTANCE.md)。远端发布版为 1.6.10。以下为历史版本记录。
+
 # 当前开发任务 · 1.6.11
 
 开发分支 `codex/minget-1-6-11` 基于 `973366f`，本版本实现 Google 套餐显示与多账号详情拖动排序。2026-11-18 已按用户确认将 1.6.11 装入正式路径并重启，远端发布基线为 1.6.10。当前记录见 [需求](docs/versions/1.6.11/REQUIREMENTS.md)、[实施任务](docs/versions/1.6.11/IMPLEMENTATION_TASKS.md)、[验收](docs/versions/1.6.11/ACCEPTANCE.md)。

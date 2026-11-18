@@ -14,6 +14,7 @@ final class DetailPreferences: ObservableObject {
     static let shared = DetailPreferences()
 
     private enum Key {
+        static let showGoogleArgonQuota = "detail.showGoogleArgonQuota"
         static let showDeepSeek = "detail.showDeepSeek"
         static let showCommandCode = "detail.showCommandCode"
         static let displayMode = "detail.displayMode.v1"
@@ -24,6 +25,10 @@ final class DetailPreferences: ObservableObject {
 
     @Published var showGoogleClaudeGPTQuota: Bool {
         didSet { defaults.set(showGoogleClaudeGPTQuota, forKey: "detail.showGoogleClaudeGPTQuota") }
+    }
+
+    @Published var showGoogleArgonQuota: Bool {
+        didSet { defaults.set(showGoogleArgonQuota, forKey: Key.showGoogleArgonQuota) }
     }
 
     @Published var showGoogle: Bool {
@@ -65,6 +70,7 @@ final class DetailPreferences: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.showGoogleClaudeGPTQuota = defaults.object(forKey: "detail.showGoogleClaudeGPTQuota") as? Bool ?? true
+        self.showGoogleArgonQuota = defaults.object(forKey: Key.showGoogleArgonQuota) as? Bool ?? true
         let showG = defaults.object(forKey: "detail.showGoogle") as? Bool ?? false
         self.showGoogle = showG
         let showDS = defaults.object(forKey: Key.showDeepSeek) as? Bool ?? true

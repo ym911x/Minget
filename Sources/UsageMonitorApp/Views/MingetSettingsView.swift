@@ -289,6 +289,8 @@ struct MingetSettingsView: View {
         Section {
             Toggle("显示 Claude 和 GPT 额度", isOn: $preferences.showGoogleClaudeGPTQuota)
                 .disabled(!preferences.showGoogle)
+            Toggle("显示 Gemini 4 Argon 额度", isOn: $preferences.showGoogleArgonQuota)
+                .disabled(!preferences.showGoogle)
         } header: {
             Text("Gemini 额度")
         } footer: {

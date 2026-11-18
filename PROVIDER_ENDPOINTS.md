@@ -25,6 +25,10 @@
 
 1.6.3 实测追加：第三个 Google 账号的官方 CLI 返回地区资格检查错误（ERROR，num_turns/total_tokens=0）。新增固定分类 `accountRegionUnavailable`，无额度快照不标记缓存。此证据证明目标身份已连接但额度被资格检查拒绝，不证明该账号真实取数成功。详见 `docs/versions/1.6.3/GOOGLE_ELIGIBILITY_FIX.md`。
 
+## Google / Gemini 4 Argon（1.6.12）
+
+官方 CLI 的 `/usage` 在一个本机 Pro 账号返回名为 `Gemini 4 Argon` 的独立组。该次仅含 `weekly` 桶，提供剩余比例和重置时间。此口径按实际账号和本次响应判断。详见[脱敏核对记录](docs/versions/1.6.12/evidence/usage.md)。
+
 ## Google 账号套餐（1.6.11）
 
 2026-11-18 在四个已登记的隔离账号上验证了固定版本 Antigravity CLI 1.2.13。官方 `/usage` 的结构化数据含额度组和说明。另在 CLI 欢迎页的版本标题下，已登录邮箱所在行实际给出 `Google AI Pro` 或 `Google AI Ultra`。本机四次通过生产读取路径验证了对应身份和套餐，属于 A 级证据。

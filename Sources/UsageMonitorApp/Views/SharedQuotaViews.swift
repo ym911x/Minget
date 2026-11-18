@@ -65,15 +65,23 @@ enum QuotaPresentation {
         groups.first { $0.label == "Gemini Models" || $0.id == "gemini" }
     }
 
+    static let argonGroupName = "Gemini 4 Argon"
+
     /// The groups drawn after the primary one, in the order the service reported them.
-    static func otherGroups(_ groups: [AntigravityQuotaGroup], showClaudeGPTQuota: Bool = true) -> [AntigravityQuotaGroup] {
-        groups.filter { $0.id != primaryGroup(groups)?.id && (showClaudeGPTQuota || $0.label != "Claude and GPT models") }
+    static func otherGroups(_ groups: [AntigravityQuotaGroup], showClaudeGPTQuota: Bool = true,
+                            showArgonQuota: Bool = true) -> [AntigravityQuotaGroup] {
+        let primaryID = primaryGroup(groups)?.id
+        return groups.filter { group in
+            group.id != primaryID
+                && (showClaudeGPTQuota || group.label != "Claude and GPT models")
+                && (showArgonQuota || group.label != argonGroupName)
+        }
     }
 
-    /// The shared pool that covers Claude and GPT models carries Claude's own colour; the
-    /// primary group keeps the level colours every other card uses.
+    /// Argon and the primary Gemini pool use the standard remaining-quota colours.
     static func tint(for group: AntigravityQuotaGroup) -> QuotaUsageTint {
-        group.id == primaryGroup([group])?.id ? .levels : .claudeModels
+        if group.label == argonGroupName { return .levels }
+        return group.id == primaryGroup([group])?.id ? .levels : .claudeModels
     }
 }
 

@@ -70,6 +70,7 @@ struct AntigravityOverviewCard: View {
     let state: AntigravityAccountState
     let displayName: String
     var showClaudeGPTQuota = true
+    var showArgonQuota = true
     static func height(showClaudeGPTQuota: Bool) -> CGFloat {
         showClaudeGPTQuota ? height : 186
     }
@@ -101,7 +102,7 @@ struct AntigravityOverviewCard: View {
                 }.font(.system(size: 11))
             }
             // Every other reported pool is drawn in place, directly under the primary one.
-            ForEach(QuotaPresentation.otherGroups(groups, showClaudeGPTQuota: showClaudeGPTQuota)) { group in
+            ForEach(QuotaPresentation.otherGroups(groups, showClaudeGPTQuota: showClaudeGPTQuota, showArgonQuota: showArgonQuota)) { group in
                 VStack(alignment: .leading, spacing: 12) {
                     Text(group.label).font(.system(size: 13, weight: .semibold))
                     quotaRows(group, tint: QuotaPresentation.tint(for: group))
@@ -116,14 +117,17 @@ struct AntigravityOverviewCard: View {
     }
 
     @ViewBuilder private func quotaRows(_ group: AntigravityQuotaGroup?, tint: QuotaUsageTint) -> some View {
-        QuotaWindowBlock(label: "5 小时", kind: .fiveHour,
-                         window: group?.buckets.first { $0.kind == .fiveHour }?.rateLimitWindow,
-                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .fiveHour }?.resetsAt,
-                         tint: tint)
-        QuotaWindowBlock(label: "周额度", kind: .weekly,
-                         window: group?.buckets.first { $0.kind == .weekly }?.rateLimitWindow,
-                         isCached: state.hasCachedData, resetDate: group?.buckets.first { $0.kind == .weekly }?.resetsAt,
-                         tint: tint)
+        let reportedOnly = group?.label == QuotaPresentation.argonGroupName
+        let fiveHour = group?.buckets.first { $0.kind == .fiveHour }
+        let weekly = group?.buckets.first { $0.kind == .weekly }
+        if !reportedOnly || fiveHour != nil {
+            QuotaWindowBlock(label: "5 小时", kind: .fiveHour, window: fiveHour?.rateLimitWindow,
+                             isCached: state.hasCachedData, resetDate: fiveHour?.resetsAt, tint: tint)
+        }
+        if !reportedOnly || weekly != nil {
+            QuotaWindowBlock(label: "周额度", kind: .weekly, window: weekly?.rateLimitWindow,
+                             isCached: state.hasCachedData, resetDate: weekly?.resetsAt, tint: tint)
+        }
         ForEach(group?.buckets.filter { $0.kind == .unknown } ?? []) { bucket in
             HStack {
                 Text(bucket.label)

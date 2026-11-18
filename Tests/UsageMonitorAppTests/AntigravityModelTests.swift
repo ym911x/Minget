@@ -35,6 +35,46 @@ final class AntigravityModelTests: XCTestCase {
         detail.showGoogle = false
         XCTAssertEqual(detail.selectedTab, .all)
     }
+    func testArgonVisibilityIsIndependentAndRestored() {
+        let name = "ArgonVisibility." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let prefs = DetailPreferences(defaults: defaults)
+        XCTAssertTrue(prefs.showGoogleArgonQuota)
+        let labels = ["Gemini Models", "Gemini 4 Argon", "Claude and GPT models", "Other"]
+        let groups = labels.map { AntigravityQuotaGroup(id: $0, label: $0, models: [], buckets: []) }
+        func visible() -> [String] {
+            QuotaPresentation.otherGroups(groups, showClaudeGPTQuota: prefs.showGoogleClaudeGPTQuota,
+                                          showArgonQuota: prefs.showGoogleArgonQuota).map(\.label)
+        }
+        prefs.showGoogleArgonQuota = false
+        XCTAssertFalse(DetailPreferences(defaults: defaults).showGoogleArgonQuota)
+        XCTAssertEqual(visible(), [labels[2], labels[3]])
+        prefs.showGoogleClaudeGPTQuota = false
+        XCTAssertEqual(visible(), [labels[3]])
+        prefs.showGoogleArgonQuota = true
+        XCTAssertEqual(visible(), [labels[1], labels[3]])
+        XCTAssertEqual(QuotaPresentation.tint(for: groups[1]), .levels)
+    }
+
+    func testArgonCardOnlyReservesRowsForReportedWindows() throws {
+        if ProcessInfo.processInfo.environment["CI"] == "true" { throw XCTSkip("Needs macOS WindowServer") }
+        let sample = account("example")
+        func height(_ windows: [String], visible: Bool = true) -> CGFloat {
+            let group = AntigravityQuotaGroup(id: "argon", label: "Gemini 4 Argon", models: [],
+                buckets: windows.map { AntigravityQuotaBucket(id: $0, label: $0, window: $0, remainingFraction: nil, resetsAt: nil) })
+            let snapshot = AntigravitySnapshot(accountIdentity: sample.identity, groups: [group], fetchedAt: Date())
+            let state = AntigravityAccountState(account: sample, snapshot: snapshot, isCached: false)
+            let card = AntigravityOverviewCard(state: state, displayName: "Example", showArgonQuota: visible)
+            return NSHostingView(rootView: card.frame(width: 400)).fittingSize.height
+        }
+        let weekly = height(["weekly"])
+        XCTAssertGreaterThan(weekly, height(["weekly"], visible: false))
+        XCTAssertGreaterThan(height(["weekly", "5h"]), weekly)
+        XCTAssertEqual(height(["5h"]), weekly, accuracy: 1)
+        XCTAssertEqual(height(["weekly"], visible: false), height(["weekly", "5h"], visible: false))
+    }
+
     func testRenderGoogleCardWithTwoPeriodsAndUnknownField() throws {
         if ProcessInfo.processInfo.environment["CI"] == "true" { throw XCTSkip("Needs macOS WindowServer") }
         let groups = try AntigravityCLIReport.parse(Data(#"{"status":"SUCCESS","num_turns":0,"usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0},"command":{"name":"usage","data":{"groups":[{"name":"Gemini","buckets":[{"id":"gemini-5h","window":"5h","name":"5 小时","remaining_fraction":0.45,"reset_time":"2026-09-30T00:00:00Z"},{"id":"gemini-weekly","window":"weekly","name":"周额度","remaining_fraction":0.8,"reset_time":"2026-10-05T00:00:00Z"}]},{"name":"Claude","buckets":[{"id":"unknown","name":"模型额度"}]}]}}}"#.utf8))

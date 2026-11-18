@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-最新开发版 [1.6.11](1.6.11/ACCEPTANCE.md) 增加 Google 套餐显示与详情卡排序。最新发布版为 [1.6.10](1.6.10/PUBLICATION.md)。
+最新开发版 [1.6.12](1.6.12/ACCEPTANCE.md) 优化 Gemini 4 Argon 额度显示，增加独立开关。最新发布版为 [1.6.10](1.6.10/PUBLICATION.md)。
 
 ## 状态表
 
