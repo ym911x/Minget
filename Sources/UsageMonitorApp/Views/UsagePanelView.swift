@@ -84,6 +84,7 @@ struct UsagePanelView: View {
     @ObservedObject private var preferences: DetailPreferences
     @ObservedObject private var displayNames: DisplayNamePreferences
     @ObservedObject private var orderPreferences: OverviewAccountOrderPreferences
+    @State private var detailPanelID = UUID()
     /// Live reorder drag state. It is held here, not in a row, so the 30-second timeline
     /// refresh inside each row can never reset an in-flight drag.
     @State private var dragActiveID: String?
@@ -154,7 +155,7 @@ struct UsagePanelView: View {
         VStack(alignment: .leading, spacing: DetailPageLayout.rowSpacing) {
             if preferences.effectiveTab == .all { overviewRows }
             if preferences.effectiveTab == .chatGPT {
-                ForEach(model.profileStates) { state in
+                detailCards(model.profileStates) { state in
                     CodexProfileCard(state: state,
                                      displayName: displayNames.displayName(for: state.profile.id)) {
                         model.fire(profileID: state.profile.id)
@@ -170,13 +171,13 @@ struct UsagePanelView: View {
                         Spacer()
                     }.padding(12).frame(height: AntigravityOverviewCard.height(showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota))
                 }
-                ForEach(model.google.accounts) { state in
+                detailCards(model.google.accounts) { state in
                     AntigravityOverviewCard(state: state, displayName: model.google.displayName(state.account), showClaudeGPTQuota: preferences.showGoogleClaudeGPTQuota)
                 }
             }
             if preferences.showDeepSeek && preferences.effectiveTab == .deepSeek {
                 if model.accountRegistry != nil {
-                    ForEach(model.managedAPIStates.filter { $0.account.platform == .deepseek }) { state in
+                    detailCards(model.managedAPIStates.filter { $0.account.platform == .deepseek }) { state in
                         DeepSeekOverviewCard(report: state.report, status: model.deepSeekStatus, displayName: model.accountName(state.account), openSettings: { onAccounts?() })
                     }
                 } else {
@@ -185,7 +186,7 @@ struct UsagePanelView: View {
             }
             if preferences.showCommandCode && preferences.effectiveTab == .commandCode {
                 if model.accountRegistry != nil {
-                    ForEach(model.managedAPIStates.filter { $0.account.platform == .commandcode }) { state in
+                    detailCards(model.managedAPIStates.filter { $0.account.platform == .commandcode }) { state in
                         CommandCodeOverviewCard(report: state.report, displayName: model.accountName(state.account), fireState: model.managedCommandFireState(state.id), onFire: { model.fireManagedCommandCode(id: state.id) }, openSettings: { onAccounts?() })
                     }
                 } else {
@@ -202,6 +203,26 @@ struct UsagePanelView: View {
             }
         }
         .padding(.top, DetailPageLayout.rowSpacing)
+    }
+
+    private func detailCards<Account: Identifiable, Card: View>(_ accounts: [Account],
+        @ViewBuilder card: @escaping (Account) -> Card) -> some View where Account.ID == String {
+        let byID = Dictionary(accounts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let ids = orderPreferences.resolvedOrder(currentIDs: accounts.map(\.id))
+        return ForEach(ids.compactMap { byID[$0] }) { account in
+            if ids.count > 1 {
+                card(account)
+                    .modifier(DetailAccountDropTarget(payload: .init(panelID: detailPanelID, accountID: account.id),
+                        orderedIDs: ids, move: { source, target in
+                            withAnimation(Self.reorderAnimation) {
+                                orderPreferences.moveInDetail(source, onto: target, brandIDs: ids,
+                                    allIDs: overviewRows(includingHidden: true).map(\.id))
+                            }
+                        }))
+            } else {
+                card(account)
+            }
+        }
     }
 
     static func preferredHeight(for preferences: DetailPreferences, googleAccountCount: Int = 2, chatGPTAccountCount: Int = 2, deepSeekAccountCount: Int = 1, commandCodeAccountCount: Int = 1) -> CGFloat {
@@ -357,14 +378,16 @@ struct UsagePanelView: View {
         }
     }
 
-    private var overviewBaseRows: [OverviewRowItem] {
+    private var overviewBaseRows: [OverviewRowItem] { overviewRows(includingHidden: false) }
+
+    private func overviewRows(includingHidden: Bool) -> [OverviewRowItem] {
         var rows: [OverviewRowItem] = model.profileStates.map { state in
             .account(id: state.id, service: .chatGPT, name: displayNames.displayName(for: state.id),
                      status: state.connectionText, summary: .codex(state.snapshot), isCached: state.isStale) {
                 preferences.selectedTab = .chatGPT
             }
         }
-        if preferences.showGoogle {
+        if includingHidden || preferences.showGoogle {
             if model.google.accounts.isEmpty {
                 rows.append(.placeholder(id: "google-empty", service: .gemini, name: "Gemini", status: "未连接") { onAccounts?() })
             }
@@ -376,8 +399,8 @@ struct UsagePanelView: View {
         }
         if model.accountRegistry != nil {
             rows += model.managedAPIStates.filter {
-                $0.account.platform == .deepseek && preferences.showDeepSeek
-                    || $0.account.platform == .commandcode && preferences.showCommandCode
+                $0.account.platform == .deepseek && (includingHidden || preferences.showDeepSeek)
+                    || $0.account.platform == .commandcode && (includingHidden || preferences.showCommandCode)
             }.map { state in
                 let report = state.report
                 return .account(id: state.account.id,
@@ -392,7 +415,7 @@ struct UsagePanelView: View {
                 }
             }
         } else {
-            if preferences.showDeepSeek {
+            if includingHidden || preferences.showDeepSeek {
                 let report = report(for: .deepseek)
                 rows.append(.account(id: DisplayNamePreferences.ServiceID.deepSeek, service: .deepSeek,
                                      name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.deepSeek),
@@ -400,7 +423,7 @@ struct UsagePanelView: View {
                                      summary: .balances(report.connection == .connected || report.connection == .stale ? report.balances : []),
                                      isCached: report.connection == .stale) { preferences.selectedTab = .deepSeek })
             }
-            if preferences.showCommandCode {
+            if includingHidden || preferences.showCommandCode {
                 let report = report(for: .commandcode)
                 rows.append(.account(id: DisplayNamePreferences.ServiceID.commandCode, service: .commandCode,
                                      name: displayNames.displayName(for: DisplayNamePreferences.ServiceID.commandCode),
@@ -900,6 +923,7 @@ struct DeepSeekOverviewCard: View {
         HStack(alignment: .center, spacing: 10) {
             BrandImage(asset: .deepSeekWhale, fallbackSystemName: "drop.fill")
                 .frame(width: Self.logoSize, height: Self.logoSize)
+                .detailAccountDragHandle(name: displayName)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -1316,6 +1340,7 @@ struct CommandCodeHeaderIdentity: View {
         HStack(alignment: .center, spacing: 8) {
             CommandCodeLogomark()
                 .frame(width: 26, height: 26)
+                .detailAccountDragHandle(name: displayName)
             VStack(alignment: .leading, spacing: 0) {
                 Text(displayName)
                     .font(.system(size: 15, weight: .semibold))

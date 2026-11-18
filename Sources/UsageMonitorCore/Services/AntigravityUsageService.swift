@@ -1,7 +1,7 @@
 import Foundation
 
 public protocol AntigravityUsageReading: Sendable {
-    func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot
+    func read(connection: AntigravityConnection, home: URL, previousPlan: AntigravityPlanObservation?) async throws -> AntigravitySnapshot
 }
 
 private final class AntigravityCancellation: @unchecked Sendable {
@@ -23,9 +23,15 @@ private final class AntigravityCancellation: @unchecked Sendable {
     func value() -> Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
 }
 
+public extension AntigravityUsageReading {
+    func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
+        try await read(connection: connection, home: home, previousPlan: nil)
+    }
+}
+
 public struct AntigravityUsageService: AntigravityUsageReading {
     public init() {}
-    public func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
+    public func read(connection: AntigravityConnection, home: URL, previousPlan: AntigravityPlanObservation?) async throws -> AntigravitySnapshot {
         let cancellation = AntigravityCancellation()
         return try await withTaskCancellationHandler(operation: {
             try Task.checkCancellation()
@@ -40,8 +46,18 @@ public struct AntigravityUsageService: AntigravityUsageReading {
                         guard FileManager.default.fileExists(atPath: home.path) else { throw AntigravityCLIProcess.Failure.invalidEnvironment }
                         let output = try AntigravityCLIProcess(executable: environment.executable, home: environment.home,
                             appData: environment.appData, workingDirectory: environment.workspace).run(isCancelled: cancellation.value)
+                        let fetchedAt = Date()
+                        let plan: AntigravityPlanObservation
+                        if let previousPlan, previousPlan.isRecent(at: fetchedAt) {
+                            plan = previousPlan
+                        } else {
+                            let session = AntigravityLoginSession(environment: environment)
+                            let name = session.readPlan(for: connection.email, isCancelled: cancellation.value)
+                            plan = AntigravityPlanObservation(name: name, checkedAt: Date())
+                        }
+                        guard !cancellation.value() else { throw CancellationError() }
                         continuation.resume(returning: AntigravitySnapshot(accountIdentity: connection.account.identity,
-                            groups: output.groups, fetchedAt: Date()))
+                            groups: output.groups, fetchedAt: fetchedAt, plan: plan))
                     } catch { continuation.resume(throwing: error) }
                 }
             }

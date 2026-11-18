@@ -15,6 +15,23 @@ final class AntigravityLoginSessionTests: XCTestCase {
         let environment = AntigravityCLIEnvironment(executable: URL(fileURLWithPath: "/bin/sh"), home: root.appendingPathComponent("profile"))
         return (root, AntigravityLoginSession(testEnvironment: environment, arguments: [file.path]))
     }
+    func testPlanReadWaitsForTierAndChecksTheBoundEmail() throws {
+        let script = """
+        printf '\\033[2J\\033[HAntigravity CLI 1.2.13\\nsynthetic@example.com'
+        sleep 0.1
+        printf ' (Google AI Ultra)\\n'
+        sleep 0.15
+        """
+        let (root, session) = try fixture(script)
+        defer { try? FileManager.default.removeItem(at: root) }
+        XCTAssertNil(session.readPlan(for: "synthetic@example.com", timeout: 1, isCancelled: { false }))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: session.environment.home.path))
+        try session.environment.prepare()
+        XCTAssertEqual(session.readPlan(for: "synthetic@example.com", timeout: 2, isCancelled: { false }), "Google AI Ultra")
+        XCTAssertNil(session.readPlan(for: "other@example.com", timeout: 2, isCancelled: { false }))
+        XCTAssertNil(session.readPlan(for: "synthetic@example.com", isCancelled: { true }))
+    }
+
     func testCodeSubmissionAllowsSubsequentTermsAndNeverDisplaysCode() throws {
         let code = "SYNTHETIC_SECRET_CODE_123456"
         let url = "https://accounts.google.com/o/oauth2/v2/auth?client_id=test.apps.googleusercontent.com&response_type=code&code_challenge=test&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback"

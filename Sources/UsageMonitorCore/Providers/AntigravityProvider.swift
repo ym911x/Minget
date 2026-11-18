@@ -54,8 +54,20 @@ public struct AntigravityQuotaGroup: Codable, Equatable, Identifiable, Sendable 
     public let buckets: [AntigravityQuotaBucket]
 }
 
+/// A missing name means the official header supplied no verified plan for this account.
+public struct AntigravityPlanObservation: Codable, Equatable, Sendable {
+    public let name: String?
+    public let checkedAt: Date
+
+    func isRecent(at date: Date) -> Bool {
+        let age = date.timeIntervalSince(checkedAt)
+        return age >= 0 && age < (name == nil ? 3600 : 86_400)
+    }
+}
+
 public struct AntigravitySnapshot: Codable, Equatable, Sendable {
     public let accountIdentity: String
     public let groups: [AntigravityQuotaGroup]
     public let fetchedAt: Date
+    public var plan: AntigravityPlanObservation? = nil
 }

@@ -135,7 +135,7 @@ private final class ExampleCodexClient: CodexAppServerProviding {
 }
 
 struct PublicScreenshotReader: AntigravityUsageReading {
-    func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
+    func read(connection: AntigravityConnection, home: URL, previousPlan: AntigravityPlanObservation?) async throws -> AntigravitySnapshot {
         let a = connection.slot == .a
         let iso = ISO8601DateFormatter()
         let reset = Date().addingTimeInterval(3 * 3600)
@@ -149,7 +149,9 @@ struct PublicScreenshotReader: AntigravityUsageReading {
                 AntigravityQuotaBucket(id: "3p-weekly", label: "Weekly Limit Remaining", window: "weekly", remainingFraction: a ? 0.6475 : 0.9310, resetsAt: reset.addingTimeInterval(6 * 86400))
             ])
         ]
+        let sampleDate = iso.date(from: "2026-10-01T02:00:00Z")!
         return AntigravitySnapshot(accountIdentity: connection.account.identity, groups: groups,
-                                   fetchedAt: iso.date(from: "2026-10-01T02:00:00Z")!)
+                                   fetchedAt: sampleDate, plan: AntigravityPlanObservation(
+                                    name: a ? "Google AI Pro" : "Google AI Ultra", checkedAt: sampleDate))
     }
 }

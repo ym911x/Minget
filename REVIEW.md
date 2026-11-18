@@ -1,15 +1,3 @@
-# 当前版本审核：1.6.9
+# 1.6.11 审核
 
-v1.6.9 已公开发布为 Latest，发布提交 `04c3ffa` 的远端 CI 测试与应用构建通过；原本机回归 706 项（701 通过、5 项既有跳过、0 失败），正式安装版 1.6.9 的严格签名和指纹复核通过。此前用户现场验收结论保留。
-
-2026-10-17 追加独立审核发现 **P2：不同 ChatGPT 账号并发刷新时丢弃页面补刷**。菜单栏账号刷新尚未结束时打开概览或 ChatGPT 页面，待补刷账号被全局 `isRefreshing` 直接跳过，结束后也不会补上。隔离副本新增确定性用例失败，同组 14 项既有测试通过，当前问题尚未修复。不能用原回归或已发布状态代替该新增场景的通过结论。
-
-等待当前刷新结束后点品牌页「刷新」或「刷新全部」可绕过；修复应进入后续补丁，保留 v1.6.9 发布标签。
-
-- [项目状态](PROJECT_STATUS.md)
-- [当前独立审核与复现证据](docs/versions/1.6.9/evidence/records/post-publication-review.md)
-- [版本审核](docs/versions/1.6.9/REVIEW.md)
-- [验收台账](docs/versions/1.6.9/ACCEPTANCE.md)
-- [发布记录](docs/versions/1.6.9/PUBLICATION.md)
-
-刘海机型现场、VoiceOver、第二台 Mac 与其他历史边界继续待验收。三份既有 releases 文档删除留在本地工作区，未纳入发布；历史审核保留在各版本目录。
+Google 套餐来源、身份校验、旧缓存兼容和账号排序的审核记录见[版本审核](docs/versions/1.6.11/REVIEW.md)，实际验证范围见[验收记录](docs/versions/1.6.11/ACCEPTANCE.md)。

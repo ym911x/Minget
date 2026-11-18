@@ -169,6 +169,30 @@ final class OverviewReorderTests: XCTestCase {
         XCTAssertEqual(OverviewReorder.resolve(currentIDs: ["only"], preferred: ["only"]), ["only"])
     }
 
+    func testDetailDropChangesOnlyItsBrandsSlotsAndPersistsForBothPages() {
+        let defaults = makeDefaults("detail")
+        let preferences = OverviewAccountOrderPreferences(defaults: defaults)
+        let all = ["g1", "chat", "g2", "ds", "g3", "cc"]
+        preferences.commit(all, visibleIDs: all)
+        XCTAssertTrue(preferences.moveInDetail("g3", onto: "g1", brandIDs: ["g1", "g2", "g3"], allIDs: all))
+
+        let restored = OverviewAccountOrderPreferences(defaults: defaults)
+        XCTAssertEqual(restored.resolvedOrder(currentIDs: all), ["g3", "chat", "g1", "ds", "g2", "cc"])
+        XCTAssertEqual(restored.resolvedOrder(currentIDs: ["g1", "g2", "g3", "g4"]), ["g3", "g1", "g2", "g4"])
+    }
+
+    func testInvalidOrNoOpDetailDropLeavesPreferenceUntouched() {
+        let defaults = makeDefaults("invalid-detail")
+        let preferences = OverviewAccountOrderPreferences(defaults: defaults)
+        let brand = ["g1", "g2"]
+        let all = ["g1", "chat", "g2"]
+        XCTAssertFalse(preferences.moveInDetail("g1", onto: "g1", brandIDs: brand, allIDs: all))
+        XCTAssertFalse(preferences.moveInDetail("g1", onto: "chat", brandIDs: brand, allIDs: all))
+        XCTAssertFalse(preferences.moveInDetail("chat", onto: "g1", brandIDs: brand, allIDs: all))
+        XCTAssertFalse(preferences.moveInDetail("g2", onto: "g1", brandIDs: brand, allIDs: ["g1", "chat"]))
+        XCTAssertNil(defaults.stringArray(forKey: OverviewAccountOrderPreferences.storageKey))
+    }
+
     // MARK: row geometry
 
     func testRowPitchMatchesTheDrawGeometry() {

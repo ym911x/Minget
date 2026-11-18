@@ -4,7 +4,7 @@
 
 `v1.0.0` 的基线已冻结在 [../archive/v1.0/](../archive/v1.0/README.md)，不在本目录。
 
-最近发布：[1.6.9](1.6.9/PUBLICATION.md)，刷新范围与频率优化，已公开发布为 Latest（标签 v1.6.9 指向 `04c3ffa`，远端 CI 与 Release 核验通过，公开源码归档与标签逐文件一致）；本机完整回归 706 项通过，Release 严格签名装入正式路径，用户已复验，见 [验收](1.6.9/ACCEPTANCE.md)。上一版本 [1.6.8](1.6.8/IMPLEMENTATION_REPORT.md)：菜单栏项目长度固定、上排改为「代号 + 百分比」、代号规范为 `O1`/`G1`/`DS1` 并与设置列表对应，本机完整回归 693 项通过，见 [发布记录](1.6.8/PUBLICATION.md)。当前入口为 [PROJECT_STATUS.md](../../PROJECT_STATUS.md)。
+最新开发版 [1.6.11](1.6.11/ACCEPTANCE.md) 增加 Google 套餐显示与详情卡排序。最新发布版为 [1.6.10](1.6.10/PUBLICATION.md)。
 
 ## 状态表
 

@@ -5,7 +5,7 @@ import Combine
 /// Pure ordering rules for the account overview, kept out of the view so the append, prune
 /// and move behaviour is testable without hosting anything.
 ///
-/// The overview is the only surface this order influences. Account identity, refresh, the
+/// The overview and brand details share this display order. Account identity, refresh, the
 /// managed-account list, menu bar candidates and fire schedules keep their existing order.
 enum OverviewReorder {
 
@@ -76,7 +76,7 @@ enum OverviewReorder {
 /// Local order of the account overview rows, chosen by dragging a row's logo.
 ///
 /// Only a local list of stable account identifiers is stored. No credential, balance or
-/// connection reference lives here, and no other surface reads this order.
+/// connection reference lives here.
 final class OverviewAccountOrderPreferences: ObservableObject {
 
     static let shared = OverviewAccountOrderPreferences()
@@ -108,6 +108,25 @@ final class OverviewAccountOrderPreferences: ObservableObject {
         guard next != self.order else { return }
         self.order = next
         persist()
+    }
+
+    /// Reorder only the slots occupied by this brand in the global order. Resolving again
+    /// at drop time keeps other edits and ignores an account removed during the drag.
+    @discardableResult
+    func moveInDetail(_ source: String, onto target: String, brandIDs: [String], allIDs: [String]) -> Bool {
+        let all = resolvedOrder(currentIDs: allIDs)
+        let brand = Set(brandIDs)
+        let current = all.filter(brand.contains)
+        guard source != target, current.contains(source), let destination = current.firstIndex(of: target) else {
+            return false
+        }
+        let moved = OverviewReorder.move(current, id: source, to: destination)
+        var merged = all
+        for (slot, id) in zip(all.indices.filter { brand.contains(all[$0]) }, moved) {
+            merged[slot] = id
+        }
+        commit(merged, visibleIDs: allIDs)
+        return true
     }
 
     private func persist() {

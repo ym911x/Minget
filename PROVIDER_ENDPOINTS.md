@@ -25,6 +25,12 @@
 
 1.6.3 实测追加：第三个 Google 账号的官方 CLI 返回地区资格检查错误（ERROR，num_turns/total_tokens=0）。新增固定分类 `accountRegionUnavailable`，无额度快照不标记缓存。此证据证明目标身份已连接但额度被资格检查拒绝，不证明该账号真实取数成功。详见 `docs/versions/1.6.3/GOOGLE_ELIGIBILITY_FIX.md`。
 
+## Google 账号套餐（1.6.11）
+
+2026-11-18 在四个已登记的隔离账号上验证了固定版本 Antigravity CLI 1.2.13。官方 `/usage` 的结构化数据含额度组和说明。另在 CLI 欢迎页的版本标题下，已登录邮箱所在行实际给出 `Google AI Pro` 或 `Google AI Ultra`。本机四次通过生产读取路径验证了对应身份和套餐，属于 A 级证据。
+
+Minget 在该账号的额度读取成功后按需启动相同沙箱的官方 CLI。只观察欢迎页，等待与绑定邮箱匹配的完整套餐名称，随后回收进程。读取上限为 8 秒，无键盘输入。自动刷新复用 24 小时内的套餐结果，未确认时 1 小时后可重试，手动刷新重新核对。缺失套餐不影响已读额度。详见[核验记录](docs/versions/1.6.11/evidence/verification.md)。
+
 ## Google / Antigravity（1.6.0）
 
 2026-10-01 最新 A 级证据：Minget 正式 A/B 独立 profile 的官方 CLI `/usage`、重启与真实卡片均已对照通过；两个报告 SUCCESS、num_turns 和全部模型 token 为 0。第二 Mac 由用户延期；续期及授权失效未实测。下文较早阶段状态保留供追溯，最新结论见验收台账。

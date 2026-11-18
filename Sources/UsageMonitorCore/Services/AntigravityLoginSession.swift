@@ -126,9 +126,33 @@ public final class AntigravityLoginSession: @unchecked Sendable {
         return text.contains("press enter to") || text.contains("select an option")
     }
     public func run(timeout: TimeInterval = 300, confirmationTimeout: TimeInterval = 45, receive: @escaping @Sendable (Event) -> Void) {
+        runTerminal(timeout: timeout, confirmationTimeout: confirmationTimeout, isCancelled: { false },
+                    receive: receive)
+    }
+
+    /// Observe a signed-in CLI welcome header without sending input or starting onboarding.
+    func readPlan(for email: String, timeout: TimeInterval = 8, isCancelled: () -> Bool) -> String? {
+        var plan: String?
+        runTerminal(timeout: timeout, confirmationTimeout: 0, isCancelled: isCancelled, inspectScreen: { screen in
+            if let header = AntigravityTerminal.accountHeader(in: screen) {
+                guard header.email == email else { return true }
+                plan = header.plan
+                return plan != nil
+            }
+            return Self.onboardingDisplay(screen) != nil || screen.contains("Authentication required.")
+                || screen.contains("https://")
+        }, receive: { _ in })
+        return plan
+    }
+
+    private func runTerminal(timeout: TimeInterval, confirmationTimeout: TimeInterval, isCancelled: () -> Bool,
+                             inspectScreen: ((String) -> Bool)? = nil, receive: @escaping @Sendable (Event) -> Void) {
         var finalEvent: Event?
         defer { if let finalEvent { receive(finalEvent) } }
-        do { try environment.prepare(); if testArguments == nil { try AntigravityCLILocator.validate(environment.executable) } }
+        do {
+            if inspectScreen == nil { try environment.prepare() }
+            if testArguments == nil { try AntigravityCLILocator.validate(environment.executable) }
+        }
         catch { finalEvent = .failed(.launch); return }
         var primary: Int32 = -1, secondary: Int32 = -1
         var size = winsize(ws_row: 40, ws_col: 120, ws_xpixel: 0, ws_ypixel: 0)
@@ -156,6 +180,7 @@ public final class AntigravityLoginSession: @unchecked Sendable {
         let env = environment.environment(interactive: true).map { strdup($0) }
         defer { (args + env).forEach { free($0) } }
         var argv = args + [nil], envp = env + [nil], pid: pid_t = 0
+        guard !isCancelled() else { return }
         let result = argv.withUnsafeMutableBufferPointer { a in envp.withUnsafeMutableBufferPointer { e in
             posix_spawn(&pid, launchPath, &actions, &attributes, a.baseAddress!, e.baseAddress!)
         } }
@@ -170,7 +195,7 @@ public final class AntigravityLoginSession: @unchecked Sendable {
         var previous = "", url: URL?, previousURL: URL?
         while true {
             lock.lock(); let stop = cancelled, submitted = codeSubmitted, codeTime = submittedAt, currentStage = stage, failedInput = inputFailed; lock.unlock()
-            if stop { return }
+            if stop || isCancelled() { return }
             if failedInput { finalEvent = .failed(.inputFailed); return }
             if currentStage == .verifying, let codeTime,
                ProcessInfo.processInfo.systemUptime - codeTime >= confirmationTimeout {
@@ -181,11 +206,15 @@ public final class AntigravityLoginSession: @unchecked Sendable {
             if count > 0 {
                 raw.append(contentsOf: buffer.prefix(count))
                 guard raw.count <= 524_288 else { finalEvent = .failed(.outputLimit); return }
+                let screen = AntigravityTerminal.screen(raw)
+                if let inspectScreen {
+                    if inspectScreen(screen) { return }
+                    continue
+                }
                 let terminal = String(decoding: raw, as: UTF8.self)
                 let enabled = terminal.range(of: "\u{1B}[?2004h", options: .backwards)
                 let disabled = terminal.range(of: "\u{1B}[?2004l", options: .backwards)
                 lock.lock(); bracketedPaste = enabled != nil && (disabled == nil || enabled!.lowerBound > disabled!.lowerBound); lock.unlock()
-                let screen = AntigravityTerminal.screen(raw)
                 // Only recognized onboarding screens accept navigation. Never forward input
                 // to the model prompt. After code submission, show curated onboarding labels
                 // instead of any terminal text which could contain a code echo or fragment.

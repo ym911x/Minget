@@ -1,3 +1,7 @@
+# 当前开发任务 · 1.6.11
+
+开发分支 `codex/minget-1-6-11` 基于 `973366f`，本版本实现 Google 套餐显示与多账号详情拖动排序。正式安装和远端发布基线为 1.6.10。当前记录见 [需求](docs/versions/1.6.11/REQUIREMENTS.md)、[实施任务](docs/versions/1.6.11/IMPLEMENTATION_TASKS.md)、[验收](docs/versions/1.6.11/ACCEPTANCE.md)。
+
 # 当前项目状态：1.6.10
 
 2026-11-05：用户复验通过，正式 App 已安装 1.6.10；已发布 v1.6.10 为 Latest，远端 CI 测试与打包通过。main 已同步发布提交 436e1f0，无活动开发任务。入口：[验收](docs/versions/1.6.10/ACCEPTANCE.md)。三份 releases 文档删除仍保留本地，不提交。以下为历史基线，不代表当前状态。

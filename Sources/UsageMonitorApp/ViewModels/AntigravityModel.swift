@@ -211,17 +211,21 @@ public final class AntigravityModel: ObservableObject {
                     } ?? false
                 if !crossedReset { continue }
             }
-            launch(connection, now: now)
+            launch(connection, now: now, force: force)
         }
     }
-    private func launch(_ connection: AntigravityConnection, now: Date) {
+    private func launch(_ connection: AntigravityConnection, now: Date, force: Bool) {
         let id = connection.uuid, currentEpoch = epoch
         attempts[id] = now
         if let index = accounts.firstIndex(where: { $0.id == connection.email }) { accounts[index].isFetching = true }
         tasks[id] = Task { [weak self] in
             guard let self else { return }
             let result: Result<AntigravitySnapshot, Error>
-            do { result = .success(try await reader.read(connection: connection, home: store.home(id))) }
+            let previousPlan = force ? nil : accounts.first { $0.id == connection.email }?.snapshot?.plan
+            do {
+                result = .success(try await reader.read(connection: connection, home: store.home(id),
+                                                        previousPlan: previousPlan))
+            }
             catch { result = .failure(error) }
             guard epoch == currentEpoch, !stopped, !Task.isCancelled, registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true, connections.contains(connection),
                   let index = accounts.firstIndex(where: { $0.id == connection.email }) else { return }
@@ -253,7 +257,7 @@ public final class AntigravityModel: ObservableObject {
                 if failure.isAuthenticationFailure { suspended.insert(id) }
             }
             persist(); tasks[id] = nil; updateRefreshing()
-            if pending.remove(id) != nil && !suspended.contains(id) && registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true { launch(connection, now: Date()) }
+            if pending.remove(id) != nil && !suspended.contains(id) && registry?.accounts.first(where: { $0.googleSlot == connection.slot.rawValue })?.removalPending != true { launch(connection, now: Date(), force: true) }
         }
         updateRefreshing()
     }

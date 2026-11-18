@@ -151,6 +151,7 @@ struct AccountCardHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 ServiceMark(service: service)
+                    .detailAccountDragHandle(name: name)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.system(size: 15, weight: .semibold)).lineLimit(1).help(name)
                     Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)

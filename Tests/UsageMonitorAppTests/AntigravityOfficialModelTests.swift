@@ -14,7 +14,7 @@ private actor OfficialFixtureReader: AntigravityUsageReading {
         failures[id] = failure; delays[id] = delay
     }
     func count(_ id: UUID) -> Int { counts[id, default: 0] }
-    func read(connection: AntigravityConnection, home: URL) async throws -> AntigravitySnapshot {
+    func read(connection: AntigravityConnection, home: URL, previousPlan: AntigravityPlanObservation?) async throws -> AntigravitySnapshot {
         counts[connection.uuid, default: 0] += 1
         let failure = failures[connection.uuid], delay = delays[connection.uuid, default: 0]
         if delay > 0 { try? await Task.sleep(nanoseconds: delay) } // Deliberately ignores cancellation: test late publication.

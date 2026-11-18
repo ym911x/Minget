@@ -76,12 +76,19 @@ struct AntigravityOverviewCard: View {
     private var groups: [AntigravityQuotaGroup] { state.snapshot?.groups ?? [] }
     private var primary: AntigravityQuotaGroup? { QuotaPresentation.primaryGroup(groups) }
 
+    private var planHelp: String {
+        guard let plan = state.snapshot?.plan else { return "刷新后可核对 Google 套餐" }
+        let time = UsageFormatting.shortDateTime(plan.checkedAt)
+        return plan.name == nil ? "上次尝试核对套餐：\(time)" : "套餐核对时间：\(time)"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AccountCardHeader(service: .gemini, name: displayName, subtitle: "Gemini · Google / Antigravity",
+            AccountCardHeader(service: .gemini, name: displayName, subtitle: "Gemini · " + (state.snapshot?.plan?.name ?? "套餐暂未确认"),
                               identity: state.account.email ?? "账号暂不可用", status: state.statusText,
                               isCached: state.hasCachedData)
                 .frame(height: 50)
+                .help(planHelp)
             quotaRows(primary, tint: .levels)
             if let failure = state.failure {
                 HStack {

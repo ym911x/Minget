@@ -7,6 +7,24 @@ final class AntigravityIdentityAndProfileTests: XCTestCase {
         XCTAssertNil(AntigravityTerminal.identity(in: "Antigravity CLI 1.2.13\nsynthetic@example.com (unverified suffix)"))
         XCTAssertNil(AntigravityTerminal.identity(in: "Antigravity CLI 1.2.13\nnot signed in\nprompt synthetic@example.com (Google AI Pro)"))
     }
+    func testPlanComesOnlyFromTheIdentityHeader() {
+        let header = "Antigravity CLI 1.2.13\nsynthetic@example.com"
+        XCTAssertEqual(AntigravityTerminal.accountHeader(in: header + " (Google AI Ultra)")?.plan, "Google AI Ultra")
+        XCTAssertEqual(AntigravityTerminal.accountHeader(in: header + " (Google AI Pro)")?.plan, "Google AI Pro")
+        XCTAssertNil(AntigravityTerminal.accountHeader(in: header + "\nModel: Gemini Pro")?.plan)
+        XCTAssertNil(AntigravityTerminal.accountHeader(in: header + " (Google AI Ult")?.plan)
+    }
+
+    func testOldSnapshotsHaveNoPlanAndNewObservationsExpire() throws {
+        let old = Data(#"{"accountIdentity":"sample","groups":[],"fetchedAt":0}"#.utf8)
+        XCTAssertNil(try JSONDecoder().decode(AntigravitySnapshot.self, from: old).plan)
+        let now = Date()
+        let known = AntigravityPlanObservation(name: "Google AI Ultra", checkedAt: now)
+        XCTAssertTrue(known.isRecent(at: now.addingTimeInterval(86_399)))
+        XCTAssertFalse(known.isRecent(at: now.addingTimeInterval(86_400)))
+        XCTAssertFalse(known.isRecent(at: now.addingTimeInterval(-1)))
+        XCTAssertFalse(AntigravityPlanObservation(name: nil, checkedAt: now).isRecent(at: now.addingTimeInterval(3600)))
+    }
     func testIdentityRequiresPinnedOfficialHeaderAndAdjacentRow() {
         XCTAssertNil(AntigravityTerminal.identity(in: "Contact other@example.com"))
         XCTAssertNil(AntigravityTerminal.identity(in: "Antigravity CLI 9.9.9\nuser@example.com"))

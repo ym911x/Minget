@@ -9,6 +9,10 @@ public enum AntigravityTerminal {
         return text
     }
     public static func identity(in screen: String) -> String? {
+        accountHeader(in: screen)?.email
+    }
+
+    static func accountHeader(in screen: String) -> (email: String, plan: String?)? {
         let lines = screen.components(separatedBy: "\n")
         for index in lines.indices where lines[index].contains("Antigravity CLI " + AntigravityCLILocator.version) {
             guard index + 1 < lines.count else { continue }
@@ -18,9 +22,12 @@ public enum AntigravityTerminal {
             guard identities.count == 1, let position = identities.first,
                   parts[..<position].allSatisfy({ $0.allSatisfy({ !$0.isASCII || $0 == " " }) }) else { continue }
             let suffix = parts.dropFirst(position + 1).joined(separator: " ")
-            // Google AI Pro is the suffix observed on both real accounts in the pinned CLI.
-            guard suffix.isEmpty || suffix == "(Google AI Pro)" else { continue }
-            return normalizedEmail(String(parts[position]))
+            guard let email = normalizedEmail(String(parts[position])) else { continue }
+            if suffix.isEmpty { return (email, nil) }
+            // The TUI paints the email first, then the parenthesized subscription.
+            guard suffix.range(of: #"^\(Google AI [A-Za-z0-9][A-Za-z0-9 +.-]{0,32}\)$"#,
+                               options: .regularExpression) != nil else { continue }
+            return (email, String(suffix.dropFirst().dropLast()))
         }
         return nil
     }
