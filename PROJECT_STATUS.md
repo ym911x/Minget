@@ -1,6 +1,6 @@
 # 当前版本 · 1.6.12
 
-用户已审核通过本机 1.6.12 并授权同步 GitHub。Google 详情显示 Argon 实际额度周期，并提供独立开关。包括 1.6.11 的 Google 套餐显示和账号拖动排序。[验收记录](docs/versions/1.6.12/ACCEPTANCE.md)
+用户已审核通过本机 1.6.12。已安装的正式应用与 [GitHub 最新正式版 v1.6.12](https://github.com/ym911x/Minget/releases/tag/v1.6.12) 使用同版源码。主目录 main 已快进到发布线。[发布记录](docs/versions/1.6.12/PUBLICATION.md)。Google 详情显示 Argon 实际额度周期，并提供独立开关。包括 1.6.11 的 Google 套餐显示和账号拖动排序。[验收记录](docs/versions/1.6.12/ACCEPTANCE.md)
 
 以下为历史版本记录。
 
