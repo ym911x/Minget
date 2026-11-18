@@ -1,12 +1,8 @@
 # 后续版本路线图
 
-**1.6.12 本机版**在 Google 详情卡按实际周期显示 Gemini 4 Argon，支持在「设置 → 详情显示」独立开关。见[验收记录](docs/versions/1.6.12/ACCEPTANCE.md)。
+**1.6.12** 支持单独开关 Gemini 4 Argon 额度，并按 Google 实际返回的周期显示。此版本同时包含 1.6.11 的 Google 套餐显示和多账号详情拖动排序。见 [更新说明](docs/versions/1.6.12/RELEASE_NOTES.md)和[验收记录](docs/versions/1.6.12/ACCEPTANCE.md)。
 
-**1.6.11 本机开发版**在 Google 账号名称下显示官方套餐。各品牌详情页支持拖动账号图标换位，与汇总页共享顺序。见[验收记录](docs/versions/1.6.11/ACCEPTANCE.md)。
-
-已发布版本 **1.6.10**：设置 → 详情显示新增「显示 Claude 和 GPT 额度」开关，默认开启，所有 Gemini 账号共享并记住选择。关闭后完整隐藏对应额度块，卡片间距与 OpenAI 统一。仅改变详情展示，不改变取数及菜单栏选择。 详情见 [验收](docs/versions/1.6.10/ACCEPTANCE.md)。
-
-最近发布为 **1.6.9 刷新范围与频率优化**：默认只刷菜单栏显示的来源（ChatGPT 30/60/120 秒自适应，DeepSeek、Command Code、Google 约 5 分钟），其余账号仅在打开概览或品牌页时按 5 分钟整批门槛补刷一次；启动与唤醒同样只作用于菜单栏来源，设置里的低额度加速规则与手动刷新路径不变。独立完整回归 706 项，701 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径，用户已复验，见 [验收](docs/versions/1.6.9/ACCEPTANCE.md)。已公开发布为 Latest，GitHub CI 测试与打包通过，标签 v1.6.9 指向 `04c3ffa`，核验见 [发布记录](docs/versions/1.6.9/PUBLICATION.md)。
+历史版本 **1.6.9 刷新范围与频率优化**：默认只刷菜单栏显示的来源（ChatGPT 30/60/120 秒自适应，DeepSeek、Command Code、Google 约 5 分钟），其余账号仅在打开概览或品牌页时按 5 分钟整批门槛补刷一次；启动与唤醒同样只作用于菜单栏来源，设置里的低额度加速规则与手动刷新路径不变。独立完整回归 706 项，701 通过、5 项既有跳过、0 失败；Release 严格签名并装入正式路径，用户已复验，见 [验收](docs/versions/1.6.9/ACCEPTANCE.md)。已公开发布为 Latest，GitHub CI 测试与打包通过，标签 v1.6.9 指向 `04c3ffa`，核验见 [发布记录](docs/versions/1.6.9/PUBLICATION.md)。
 
 上一版本为 **1.6.8 菜单栏固定长度与账号代号**（含未单独发布的 1.6.7）：菜单栏项目长度固定（所有来源、数值与警告状态同一宽度），上排改为「代号 + 百分比」，代号规范为 OpenAI `O1`/`O2`、Gemini `G1`/`G2`/`G3`、DeepSeek `DS1`，且与设置「菜单栏显示」列表一一对应；刘海或空间不足时不再压缩而直接打开详情窗口。独立完整回归 693 项，688 通过、5 跳过、0 失败；Release 严格签名并装入正式路径，真实界面复验见 [验收](docs/versions/1.6.8/ACCEPTANCE.md)，GitHub CI 测试、Release 构建与严格签名通过，核验见 [发布记录](docs/versions/1.6.8/PUBLICATION.md)。当前状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
 
